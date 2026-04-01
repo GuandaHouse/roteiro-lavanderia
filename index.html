@@ -771,11 +771,11 @@ async function fetchListsOnly(id,name){
     if(!Array.isArray(lists)||!lists.length){toast('Nenhuma lista neste quadro','warn');return;}
     let html='<div class="ab info" style="margin-bottom:12px">&#x1F4CB; Quadro: <strong>'+name+'</strong></div>';
     lists.forEach(l=>{
-      html+='<div class="sel-opt" onclick="trelloSelectList(''+l.id+'',''+l.name.replace(/'/g,"\'")+'')">'        +'<div class="sel-opt-icon" style="background:var(--bll)">&#x1F4DD;</div>'        +'<div style="font-weight:600;font-size:14px">'+l.name+'</div>'        +'</div>';
+      html+='<div class="sel-opt" onclick="trelloSelectList(''+l.id+'',''+l.name.replace(/'/g,"\'")+'')"><div class="sel-opt-icon" style="background:var(--bll)">&#x1F4DD;</div><div style="font-weight:600;font-size:14px">'+l.name+'</div></div>';
     });
     _tlistsHtml=html;
     g('trello-lists').innerHTML=html;
-  }catch(e){toast('Erro ao buscar listas: '+e.message,'err');console.error(e);}
+  }catch(e){toast('Erro ao buscar listas: '+e.message,'err');}
 }
 
 function togTC(i){
