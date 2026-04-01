@@ -1076,8 +1076,12 @@ async function calcRoute(){
     leafRoute=L.geoJSON(data.routes[0].geometry,{style:{color:'#6C5CE7',weight:4,opacity:.8}}).addTo(leafMap);
     // Add markers
     leafMap.eachLayer(l=>{if(l instanceof L.Marker)leafMap.removeLayer(l);});
-    geocoded.forEach((c,i)=>{
-      const icon=L.divIcon({className:'',html:'<div style="background:'+(c.tipo==='coleta'?'#00C875':'#0098F7')+';color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)">'+(i+1)+'</div>',iconSize:[26,26],iconAnchor:[13,13]});
+    let markerNum=0;
+    order.forEach(idx=>{
+      const c=clients[idx];
+      if(!c.lat||!c.lng)return;
+      markerNum++;
+      const icon=L.divIcon({className:'',html:'<div style="background:'+(c.tipo==='coleta'?'#00C875':'#0098F7')+';color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)">'+markerNum+'</div>',iconSize:[26,26],iconAnchor:[13,13]});
       L.marker([c.lat,c.lng],{icon}).addTo(leafMap).bindPopup('<strong>'+c.nome+'</strong><br>'+c.endereco);
     });
     leafMap.fitBounds(leafRoute.getBounds(),{padding:[20,20]});
@@ -1095,7 +1099,7 @@ function estimateTimesOSRM(legs){
   const al1=cfg.al1,al2=cfg.al2;
   order.forEach((idx,stop)=>{
     const c=clients[idx];
-    if(stop<legs.length)cur+=legs[stop].duration;
+    if(stop>0&&(stop-1)<legs.length)cur+=legs[stop-1].duration;
     if(al1&&al2){const s=ts(al1),e=ts(al2);if(cur>=s&&cur<e)cur=e;}
     c.estT=st2(cur);c.conflict=false;c.cmsg='';
     if(c.janela==='manha'&&cur>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
