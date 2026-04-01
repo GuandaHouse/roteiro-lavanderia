@@ -782,13 +782,21 @@ async function importTC(){
       const text=card.name+'\n'+(card.desc||'');
       const res=await fetch('/api/anthropic',{method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({apiKey:cfg.akey,body:{model:'claude-sonnet-4-20250514',max_tokens:500,
-          messages:[{role:'user',content:'Analise este card do Trello de uma lavanderia. O titulo segue o formato "Cliente NOME (Tipo) Valor X". A descricao contem endereco, quantidade de tapetes e telefone.\nRetorne APENAS JSON puro sem markdown:\n- "tipo": se o titulo contem "(Coleta)" use "coleta"; se contem "(Entrega)" use "entrega"; senao "vazio"\n- "endereco": APENAS rua e numero em Title Case, SEM complemento (apto/bloco/andar)\n- "complemento": apartamento, bloco, andar, unidade (ex: Apto 45 Bloco B) separado do endereco\n- "telefone": numero de telefone com DDD da descricao (apenas digitos e hifen)\n- "qtd": quantidade de tapetes da descricao (inteiro)\n- "valor": valor numerico do titulo (0 se for Medir ou Pago)\n- "valorTipo": "medir" se titulo conter "Medir", "pago" se conter "Pago", senao "normal"\n- "janela":"livre","hi":"","hf":"","obs":""\nJSON: {"endereco":"","telefone":"","tipo":"vazio","qtd":0,"valor":0,"valorTipo":"normal","janela":"livre","hi":"","hf":"","obs":""}\nTexto: '+text}]}})});
+        body:JSON.stringify({apiKey:cfg.akey,body:{model:'claude-sonnet-4-20250514',max_tokens:600,
+          messages:[{role:'user',content:'Analise este card do Trello de uma lavanderia em Sao Paulo, SP. O titulo segue o formato "Cliente NOME (Tipo) Valor X". A descricao contem endereco, quantidade de tapetes e telefone.\n\nREGRAS DO ENDERECO:\n- Extraia rua e numero em Title Case, SEM complemento\n- CORRIJA abreviacoes: Av->Avenida, R.->Rua, Dr->Doutor, Pres->Presidente\n- COMPLETE nomes abreviados (ex: Dr Altino->Doutor Altino Arantes)\n- Formato obrigatorio: "Logradouro, Numero - Bairro" (ex: "Avenida Doutor Altino Arantes, 77 - Vila Clementino")\n- Se bairro nao estiver na desc, deduza pelo CEP ou pelo nome da rua conhecida de SP\n\nRetorne APENAS JSON puro sem markdown:\n- "tipo": coleta/entrega/vazio\n- "endereco": "Logradouro, Numero - Bairro" em Title Case\n- "complemento": apto/bloco/andar\n- "telefone": DDD+numero com hifen\n- "qtd": tapetes (inteiro)\n- "valor": numerico (0 se Medir/Pago)\n- "valorTipo": medir/pago/normal\n- "janela":"livre","hi":"","hf":"","obs":""\nJSON: {"endereco":"","telefone":"","tipo":"vazio","qtd":0,"valor":0,"valorTipo":"normal","janela":"livre","hi":"","hf":"","obs":""}\nTexto do card:\n'+text}]}})});
       const data=await res.json();
       let ext={};try{ext=JSON.parse((data.content?.[0]?.text||'{}').replace(/```json?|```/g,'').trim());}catch(e){}
       const dv=v('td')||new Date().toISOString().split('T')[0];
       const valTipo=ext.valorTipo==='medir'?'medir':ext.valorTipo==='pago'?'pago':'normal';
-      clients.push({id:Date.now()+Math.random(),nome:card.name,endereco:ext.endereco||'',complemento:ext.complemento||'',tel:ext.telefone||'',tipo:ext.tipo||'entrega',qtd:ext.qtd||0,val:ext.valor||0,valTipo,data:dv,janela:ext.janela||'livre',hi:ext.hi||'',hf:ext.hf||'',obs:ext.obs||'',estT:null,conflict:false,cmsg:''});
+      let endFinal=ext.endereco||'';
+      if(endFinal){try{
+        const gd=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=3&countrycodes=br&viewbox=-47.0,-24.0,-46.0,-23.3&bounded=0&q='+encodeURIComponent(endFinal+', São Paulo, SP'),{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
+        const spR=gd.find(x=>{const la=parseFloat(x.lat),ln=parseFloat(x.lon);return la>-24.0&&la<-23.3&&ln>-47.0&&ln<-46.0;});
+        if(spR){const rd=await fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat='+spR.lat+'&lon='+spR.lon,{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
+          const bairro=rd.address?.suburb||rd.address?.neighbourhood||rd.address?.city_district||'';
+          if(bairro)endFinal=endFinal.replace(/\s*-\s*[^,]+$/,'').trim()+' - '+bairro;}
+      }catch(e){}}
+      clients.push({id:Date.now()+Math.random(),nome:card.name,endereco:endFinal,complemento:ext.complemento||'',tel:ext.telefone||'',tipo:ext.tipo||'entrega',qtd:ext.qtd||0,val:ext.valor||0,valTipo,data:dv,janela:ext.janela||'livre',hi:ext.hi||'',hf:ext.hf||'',obs:ext.obs||'',estT:null,conflict:false,cmsg:''});
       count++;
     }catch(e){}
   }
