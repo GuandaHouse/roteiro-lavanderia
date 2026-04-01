@@ -783,7 +783,7 @@ async function importTC(){
       const res=await fetch('/api/anthropic',{method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({apiKey:cfg.akey,body:{model:'claude-sonnet-4-20250514',max_tokens:600,
-          messages:[{role:'user',content:'Analise este card do Trello de uma lavanderia em Sao Paulo, SP. O titulo segue o formato "Cliente NOME (Tipo) Valor X". A descricao contem endereco, quantidade de tapetes e telefone.\n\nREGRAS DO ENDERECO:\n- Extraia rua e numero em Title Case, SEM complemento\n- CORRIJA abreviacoes: Av->Avenida, R.->Rua, Dr->Doutor, Pres->Presidente\n- COMPLETE nomes abreviados (ex: Dr Altino->Doutor Altino Arantes)\n- Formato obrigatorio: "Logradouro, Numero - Bairro" (ex: "Avenida Doutor Altino Arantes, 77 - Vila Clementino")\n- Se bairro nao estiver na desc, deduza pelo CEP ou pelo nome da rua conhecida de SP\n\nRetorne APENAS JSON puro sem markdown:\n- "tipo": coleta/entrega/vazio\n- "endereco": "Logradouro, Numero - Bairro" em Title Case\n- "complemento": apto/bloco/andar\n- "telefone": DDD+numero com hifen\n- "qtd": tapetes (inteiro)\n- "valor": numerico (0 se Medir/Pago)\n- "valorTipo": medir/pago/normal\n- "janela":"livre","hi":"","hf":"","obs":""\nJSON: {"endereco":"","telefone":"","tipo":"vazio","qtd":0,"valor":0,"valorTipo":"normal","janela":"livre","hi":"","hf":"","obs":""}\nTexto do card:\n'+text}]}})});
+          messages:[{role:'user',content:'Analise este card do Trello de uma lavanderia em Sao Paulo, SP. O titulo segue o formato "Cliente NOME (Tipo) Valor X". A descricao contem endereco, quantidade de tapetes e telefone.\n\nREGRAS DO ENDERECO:\n- Preserve o tipo de logradouro EXATAMENTE como esta na descricao (ex: se estiver "Avenida" mantenha "Avenida", NUNCA troque por "Rua")\n- CORRIJA apenas abreviacoes: "Av." ou "Av " -> "Avenida", "R." -> "Rua", "Al." -> "Alameda", "Dr." -> "Doutor"\n- COMPLETE nomes abreviados (ex: "Dr Altino" -> "Doutor Altino Arantes")\n- Formato obrigatorio: "Logradouro, Numero - Bairro" (ex: "Avenida Doutor Altino Arantes, 77 - Vila Clementino")\n- Se bairro nao estiver na desc, deduza pelo CEP ou pelo nome da rua conhecida de SP\n\nRetorne APENAS JSON puro sem markdown:\n- "tipo": coleta/entrega/vazio\n- "endereco": "Logradouro, Numero - Bairro" em Title Case\n- "complemento": apto/bloco/andar\n- "telefone": DDD+numero com hifen\n- "qtd": tapetes (inteiro)\n- "valor": numerico (0 se Medir/Pago)\n- "valorTipo": medir/pago/normal\n- "janela":"livre","hi":"","hf":"","obs":""\nJSON: {"endereco":"","telefone":"","tipo":"vazio","qtd":0,"valor":0,"valorTipo":"normal","janela":"livre","hi":"","hf":"","obs":""}\nTexto do card:\n'+text}]}})});
       const data=await res.json();
       let ext={};try{ext=JSON.parse((data.content?.[0]?.text||'{}').replace(/```json?|```/g,'').trim());}catch(e){}
       const dv=v('td')||new Date().toISOString().split('T')[0];
@@ -1074,14 +1074,10 @@ async function calcRoute(){
     // Draw route
     if(leafRoute)leafMap.removeLayer(leafRoute);
     leafRoute=L.geoJSON(data.routes[0].geometry,{style:{color:'#6C5CE7',weight:4,opacity:.8}}).addTo(leafMap);
-    // Add markers — todos os clientes com coords, na ordem da rota
+    // Add markers
     leafMap.eachLayer(l=>{if(l instanceof L.Marker)leafMap.removeLayer(l);});
-    let markerNum=0;
-    order.forEach(idx=>{
-      const c=clients[idx];
-      if(!c.lat||!c.lng)return;
-      markerNum++;
-      const icon=L.divIcon({className:'',html:'<div style="background:'+(c.tipo==='coleta'?'#00C875':'#0098F7')+';color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)">'+markerNum+'</div>',iconSize:[26,26],iconAnchor:[13,13]});
+    geocoded.forEach((c,i)=>{
+      const icon=L.divIcon({className:'',html:'<div style="background:'+(c.tipo==='coleta'?'#00C875':'#0098F7')+';color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)">'+(i+1)+'</div>',iconSize:[26,26],iconAnchor:[13,13]});
       L.marker([c.lat,c.lng],{icon}).addTo(leafMap).bindPopup('<strong>'+c.nome+'</strong><br>'+c.endereco);
     });
     leafMap.fitBounds(leafRoute.getBounds(),{padding:[20,20]});
@@ -1099,7 +1095,7 @@ function estimateTimesOSRM(legs){
   const al1=cfg.al1,al2=cfg.al2;
   order.forEach((idx,stop)=>{
     const c=clients[idx];
-    if(stop>0&&(stop-1)<legs.length)cur+=legs[stop-1].duration;
+    if(stop<legs.length)cur+=legs[stop].duration;
     if(al1&&al2){const s=ts(al1),e=ts(al2);if(cur>=s&&cur<e)cur=e;}
     c.estT=st2(cur);c.conflict=false;c.cmsg='';
     if(c.janela==='manha'&&cur>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
