@@ -793,7 +793,7 @@ async function importTC(){
         const gd=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=3&countrycodes=br&viewbox=-47.0,-24.0,-46.0,-23.3&bounded=0&q='+encodeURIComponent(endFinal+', São Paulo, SP'),{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
         const spR=gd.find(x=>{const la=parseFloat(x.lat),ln=parseFloat(x.lon);return la>-24.0&&la<-23.3&&ln>-47.0&&ln<-46.0;});
         if(spR){const rd=await fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat='+spR.lat+'&lon='+spR.lon,{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
-          const bairro=rd.address?.suburb||rd.address?.neighbourhood||rd.address?.city_district||'';
+          const bairro=rd.address?.quarter||rd.address?.neighbourhood||rd.address?.suburb||rd.address?.city_district||'';
           if(bairro)endFinal=endFinal.replace(/\s*-\s*[^,]+$/,'').trim()+' - '+bairro;}
       }catch(e){}}
       clients.push({id:Date.now()+Math.random(),nome:card.name,endereco:endFinal,complemento:ext.complemento||'',tel:ext.telefone||'',tipo:ext.tipo||'entrega',qtd:ext.qtd||0,val:ext.valor||0,valTipo,data:dv,janela:ext.janela||'livre',hi:ext.hi||'',hf:ext.hf||'',obs:ext.obs||'',estT:null,conflict:false,cmsg:''});
