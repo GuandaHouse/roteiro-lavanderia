@@ -1,5 +1,22 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
+<!DOCTYPE html>let endFinal=ext.endereco||'';
+      _pendingCoords=null;
+      if(endFinal){
+        try{
+          let bairroFinal='',latFinal=null,lngFinal=null;
+          // CAMADA 1: CEP via ViaCEP (mais preciso)
+          const cepM=(card.desc||'').match(/\b(\d{5})-?(\d{3})\b/);
+          if(cepM){try{const vc=await fetch('https://viacep.com.br/ws/'+cepM[1]+cepM[2]+'/json/').then(r=>r.json());if(vc&&!vc.erro&&vc.bairro)bairroFinal=vc.bairro;}catch(e){}}
+          // CAMADA 2: Nominatim para coords
+          const gd=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=3&countrycodes=br&viewbox=-47.0,-24.0,-46.0,-23.3&bounded=0&q='+encodeURIComponent(endFinal+', São Paulo, SP'),{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
+          const spR=gd.find(x=>{const la=parseFloat(x.lat),ln=parseFloat(x.lon);return la>-24.0&&la<-23.3&&ln>-47.0&&ln<-46.0;})||gd[0];
+          if(spR){latFinal=parseFloat(spR.lat);lngFinal=parseFloat(spR.lon);}
+          // CAMADA 3: Reverse geocoding se ainda sem bairro
+          if(!bairroFinal&&spR){const rd=await fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat='+spR.lat+'&lon='+spR.lon,{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());bairroFinal=rd.address?.quarter||rd.address?.neighbourhood||rd.address?.suburb||rd.address?.city_district||'';}
+          if(bairroFinal)endFinal=endFinal.replace(/\s*-\s*.+$/,'').trim()+' - '+bairroFinal;
+          if(latFinal&&lngFinal){_pendingCoords={lat:latFinal,lng:lngFinal};try{localStorage.setItem('geo_'+endFinal,JSON.stringify({lat:latFinal,lng:lngFinal,display:endFinal}));}catch(e){}}
+        }catch(e){console.error('geo:',e);}
+      }
+      <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
