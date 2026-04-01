@@ -1004,12 +1004,16 @@ async function nominatim(addr){
   if(_geoCache[addr])return _geoCache[addr];
   const cached=localStorage.getItem('geo_'+addr);
   if(cached){const p=JSON.parse(cached);_geoCache[addr]=p;return p;}
+  const viewbox='&viewbox=-47.0,-24.0,-46.0,-23.3&bounded=0';
   for(let t=0;t<2;t++){
     try{
-      const url='https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q='+encodeURIComponent(addr);
+      const q=encodeURIComponent(addr+', São Paulo, SP');
+      const url='https://nominatim.openstreetmap.org/search?format=json&limit=3&countrycodes=br'+viewbox+'&q='+q;
       const r=await fetch(url,{headers:{'Accept-Language':'pt-BR'}});
       const d=await r.json();
-      const result=d[0]?{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon),display:d[0].display_name}:null;
+      const spResult=d.find(x=>{const la=parseFloat(x.lat),ln=parseFloat(x.lon);return la>-24.0&&la<-23.3&&ln>-47.0&&ln<-46.0;});
+      const best=spResult||d[0];
+      const result=best?{lat:parseFloat(best.lat),lng:parseFloat(best.lon),display:best.display_name}:null;
       if(result){_geoCache[addr]=result;try{localStorage.setItem('geo_'+addr,JSON.stringify(result));}catch(e){}}
       return result;
     }catch(e){if(t===1)console.warn('Nominatim falhou para: '+addr,e);}
