@@ -758,8 +758,24 @@ function trelloBack2(){
     g('trello-lists').style.display='block';
     g('trello-step3').style.display='block';
   } else if(selBoard){
-    trelloSelectBoard(selBoard.id,selBoard.name);
+    fetchListsOnly(selBoard.id,selBoard.name);
   }
+}
+async function fetchListsOnly(id,name){
+  g('trello-lists').innerHTML='<div class="ab info">Buscando listas... <span class="spin"></span></div>';
+  g('trello-lists').style.display='block';
+  g('trello-step4').style.display='none';
+  g('trello-step3').style.display='block';
+  try{
+    const lists=await trelloAPICall('/boards/'+id+'/lists?fields=name,id&filter=open');
+    if(!Array.isArray(lists)||!lists.length){toast('Nenhuma lista neste quadro','warn');return;}
+    let html='<div class="ab info" style="margin-bottom:12px">&#x1F4CB; Quadro: <strong>'+name+'</strong></div>';
+    lists.forEach(l=>{
+      html+='<div class="sel-opt" onclick="trelloSelectList(''+l.id+'',''+l.name.replace(/'/g,"\'")+'')">'        +'<div class="sel-opt-icon" style="background:var(--bll)">&#x1F4DD;</div>'        +'<div style="font-weight:600;font-size:14px">'+l.name+'</div>'        +'</div>';
+    });
+    _tlistsHtml=html;
+    g('trello-lists').innerHTML=html;
+  }catch(e){toast('Erro ao buscar listas: '+e.message,'err');console.error(e);}
 }
 
 function togTC(i){
