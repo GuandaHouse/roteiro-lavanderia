@@ -518,7 +518,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('f-data').value=now.toISOString().split('T')[0];
   loadCfg();renderHist();loadTrelloSelection();
   if(!cfg.tkey||!cfg.ttoken){const el=g('trello-nocred');if(el)el.style.display='block';const s1=g('trello-step1');if(s1)s1.style.display='none';}
-  document.querySelectorAll('.mbg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('on');}));
+  document.querySelectorAll('.mbg').forEach(m=>{let downOnBg=false;m.addEventListener('mousedown',e=>{downOnBg=e.target===m;});m.addEventListener('click',e=>{if(e.target===m&&downOnBg)m.classList.remove('on');downOnBg=false;});});
   document.addEventListener('paste',e=>{
     const img=Array.from(e.clipboardData.items).find(i=>i.type.startsWith('image/'));
     if(img){stab('img',document.querySelectorAll('.tab')[1]);processFile(img.getAsFile());}
@@ -532,6 +532,17 @@ document.addEventListener('DOMContentLoaded',()=>{
 function g(id){return document.getElementById(id);}
 function v(id){return g(id)?.value?.trim()||'';}
 function toast(msg,t){const el=g('toast');el.textContent=msg;el.className='toast show '+(t||'');clearTimeout(window._tt);window._tt=setTimeout(()=>el.className='toast',3200);}
+function fmtBRL(n){return Number(n).toFixed(2).replace('.',',');}
+function fmtNomeValor(nome,val,valTipo){
+  // Padroniza valor no título: "Valor 396" → "Valor R$ 396,00", "Valor medir" mantém, "Valor pago" mantém
+  if(valTipo==='medir'||valTipo==='pago')return nome.replace(/\bvalor\s+[\d.,]+/gi,'Valor '+valTipo.charAt(0).toUpperCase()+valTipo.slice(1));
+  if(val){
+    const fmt='R$ '+fmtBRL(val);
+    // Substitui "Valor 396", "Valor R$ 396", "Valor R$396,00", "Valor medir", "Valor pago" etc
+    return nome.replace(/\bvalor\s+(R\$\s*)?[\d.,]+/gi,'Valor '+fmt).replace(/\bvalor\s+(medir|pago)/gi,'Valor '+fmt);
+  }
+  return nome;
+}
 function closeModal(id){g(id).classList.remove('on');}
 
 function toggleEye(fid,btn){
@@ -800,7 +811,8 @@ async function importTC(){
           if(bairro)endFinal=endFinal.replace(/\s*-\s*[^,]+$/,'').trim()+' - '+bairro;}
       }catch(e){}}
       const pc=_pendingCoords;_pendingCoords=null;
-      clients.push({id:Date.now()+Math.random(),nome:card.name,endereco:endFinal,complemento:ext.complemento||'',tel:ext.telefone||'',tipo:ext.tipo||'entrega',qtd:ext.qtd||0,val:ext.valor||0,valTipo,data:dv,janela:ext.janela||'livre',hi:ext.hi||'',hf:ext.hf||'',obs:ext.obs||'',estT:null,conflict:false,cmsg:'',lat:pc?.lat||null,lng:pc?.lng||null});
+      const nomeFmt=fmtNomeValor(card.name,ext.valor||0,valTipo);
+      clients.push({id:Date.now()+Math.random(),nome:nomeFmt,endereco:endFinal,complemento:ext.complemento||'',tel:ext.telefone||'',tipo:ext.tipo||'entrega',qtd:ext.qtd||0,val:ext.valor||0,valTipo,data:dv,janela:ext.janela||'livre',hi:ext.hi||'',hf:ext.hf||'',obs:ext.obs||'',estT:null,conflict:false,cmsg:'',lat:pc?.lat||null,lng:pc?.lng||null});
       count++;
     }catch(e){}
   }
@@ -955,6 +967,8 @@ function saveEditC(){
   c.qtd=parseInt(g('em-qtd').value)||0;
   c.valTipo=g('em-valtipo').value;
   c.val=c.valTipo==='normal'?parseFloat(g('em-val').value)||0:0;
+  // Atualiza título do cartão com valor formatado
+  c.nome=fmtNomeValor(c.nome,c.val,c.valTipo);
   c.janela=g('em-janela').value;
   c.hi=c.janela==='custom'?g('em-hi').value:'';
   c.hf=c.janela==='custom'?g('em-hf').value:'';
@@ -972,7 +986,7 @@ function renderC(){
   el.innerHTML=order.map((idx,stop)=>{
     const c=clients[idx];
     const jl={livre:'',manha:'\uD83C\uDF05 At\xe9 12h',tarde:'\uD83C\uDF07 Ap\xf3s 12h',custom:'\u23F0 '+c.hi+'\u2013'+c.hf}[c.janela]||'';
-    const vd=c.valTipo==='medir'?'\u2696\uFE0F Medir':c.valTipo==='pago'?'\u2705 Pago':c.val?'R$ '+Number(c.val).toFixed(2):'';
+    const vd=c.valTipo==='medir'?'\u2696\uFE0F Medir':c.valTipo==='pago'?'\u2705 Pago':c.val?'R$ '+fmtBRL(c.val):'';
     return '<div class="cc '+(c.tipo==='coleta'?'col':'ent')+(c.conflict?(c.tipo==='coleta'?' cfl':' cwn'):'')+'" onclick="editC('+c.id+')">'
       +'<div class="sn '+(c.tipo==='coleta'?'c':'e')+'">'+(stop+1)+'</div>'
       +'<div class="ci">'
@@ -1137,7 +1151,7 @@ async function genImage(){
   const cards=order.map((idx,stop)=>{
     const c=clients[idx];
     const isCol=c.tipo==='coleta';
-    const vd=c.valTipo==='medir'?'\u2696\uFE0F Medir':c.valTipo==='pago'?'\u2705 Pago':c.val?'R$ '+Number(c.val).toFixed(2):'';
+    const vd=c.valTipo==='medir'?'\u2696\uFE0F Medir':c.valTipo==='pago'?'\u2705 Pago':c.val?'R$ '+fmtBRL(c.val):'';
     const det=[c.tel?'\uD83D\uDCDE '+c.tel:'',c.qtd?c.qtd+' tapete'+(c.qtd>1?'s':''):'',vd].filter(Boolean).join(' \u00B7 ');
     return `<div style="background:#fff;border:1px solid #E2E4F0;border-left:3.5px solid ${isCol?'#00C875':'#0098F7'};border-radius:8px;padding:11px 12px;margin-bottom:7px;display:flex;gap:10px;align-items:flex-start">
       <div style="width:20px;height:20px;min-width:20px;border-radius:50%;background:${isCol?'#E6FBF3':'#E6F5FF'};color:${isCol?'#00A65E':'#0098F7'};font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:2px">${stop+1}</div>
@@ -1235,7 +1249,7 @@ function genPDF_unused(){
     const parts=[];
     if(c.tel)parts.push('Tel: '+c.tel);
     if(c.qtd)parts.push(c.qtd+' tapete'+(c.qtd>1?'s':''));
-    const vLabel=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+Number(c.val).toFixed(2):'';
+    const vLabel=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';
     if(vLabel)parts.push(vLabel);
     if(c.estT)parts.push('~'+c.estT);
     if(parts.length){doc.setFontSize(8);doc.setTextColor(107,111,142);doc.text(parts.join('   \u2022   '),M+17,ry);ry+=5;}
