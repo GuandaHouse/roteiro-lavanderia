@@ -4,6 +4,13 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v2.3.0 — 02/04/2026 — Melhoria na otimização de rota        ║
+║  ─────────────────────────────────────────                   ║
+║  • Waypoints enviados como ENDEREÇO (não lat/lng) ao Google  ║
+║  • Google agora faz geocoding + otimização em uma só etapa   ║
+║  • Coords dos clientes atualizadas com posição do Google     ║
+║  • Logs detalhados: distância total, duração, cada trecho    ║
+║                                                              ║
 ║  v2.2.0 — 02/04/2026 — Otimização de rota + IA horários      ║
 ║  ─────────────────────────────────────────                   ║
 ║  • Rota otimizada pelo Google (optimizeWaypoints: true)      ║
@@ -1251,12 +1258,26 @@ async function calcRoute(){
     const retAddr=cfg.retaddr||baseAddr;
     const origin=baseAddr;
     const destination=retAddr;
-    const waypoints=geocoded.map(c=>({location:{lat:c.lat,lng:c.lng},stopover:true}));
+    // Envia endereços completos como waypoints para melhor otimização do Google
+    const waypoints=geocoded.map(c=>({location:c.endereco+', São Paulo, SP, Brasil',stopover:true}));
+    console.log('[ROTA DEBUG] Enviando',waypoints.length,'waypoints como ENDEREÇOS (não lat/lng)');
+    console.log('[ROTA DEBUG] Endereços:',geocoded.map(c=>c.endereco));
     const dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({origin,destination,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:true,region:'BR'},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
     // Aplicar waypoint_order do Google — ordem otimizada por distância
     const wpOrder=dirResult.routes[0].waypoint_order;
+    // Calcular distância e duração total da rota otimizada
+    const legs=dirResult.routes[0].legs;
+    const totalDistKm=legs.reduce((s,l)=>s+l.distance.value,0)/1000;
+    const totalDurMin=legs.reduce((s,l)=>s+l.duration.value,0)/60;
     console.log('[ROTA DEBUG] optimizeWaypoints=true');
     console.log('[ROTA DEBUG] waypoint_order do Google:',JSON.stringify(wpOrder));
+    console.log('[ROTA DEBUG] Distância total:',totalDistKm.toFixed(1)+'km | Duração total:',totalDurMin.toFixed(0)+'min');
+    console.log('[ROTA DEBUG] Percurso otimizado:');
+    legs.forEach((l,i)=>{
+      const from=i===0?'BASE':geocoded[wpOrder[i-1]].nome;
+      const to=i===legs.length-1?'RETORNO':geocoded[wpOrder[i]].nome;
+      console.log('  '+(i+1)+'. '+from+' → '+to+': '+l.distance.text+' ('+l.duration.text+')');
+    });
     console.log('[ROTA DEBUG] geocodedIdx (antes):',JSON.stringify(geocodedIdx));
     console.log('[ROTA DEBUG] clientes na ordem original:',geocodedIdx.map(i=>clients[i].nome));
     // Reordena: wpOrder[i] = índice original do waypoint que deve ser visitado na posição i
@@ -1269,14 +1290,22 @@ async function calcRoute(){
     order=newOrder.concat(noCoords);
     if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>m.setMap(null));gMarkers=[];
     gRoute=new google.maps.DirectionsRenderer({map:gMap,directions:dirResult,suppressMarkers:true,polylineOptions:{strokeColor:'#6C5CE7',strokeWeight:4,strokeOpacity:0.8}});
-    // Markers na ordem otimizada do Google
+    // Atualizar coordenadas dos clientes com as posições resolvidas pelo Google
+    wpOrder.forEach((wi,pos)=>{
+      const legIdx=pos; // leg[pos] vai de (pos==0?base:wpOrder[pos-1]) até wpOrder[pos]
+      if(legs[legIdx]&&legs[legIdx].end_location){
+        geocoded[wi].lat=legs[legIdx].end_location.lat();
+        geocoded[wi].lng=legs[legIdx].end_location.lng();
+      }
+    });
+    // Markers na ordem otimizada do Google — usando coords resolvidas pelo Google
     wpOrder.forEach((wi,pos)=>{const c=geocoded[wi];
       const mk=new google.maps.Marker({position:{lat:c.lat,lng:c.lng},map:gMap,label:{text:String(pos+1),color:'#fff',fontSize:'11px',fontWeight:'700'},icon:{path:google.maps.SymbolPath.CIRCLE,scale:13,fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
       mk.addListener('click',()=>new google.maps.InfoWindow({content:'<strong>'+c.nome+'</strong><br>'+c.endereco}).open(gMap,mk));gMarkers.push(mk);});
     const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds);
-    // legs[0]=base→cliente1, legs[1]=cliente1→cliente2, ..., legs[n]=ultimoCliente→retorno
-    const legs=dirResult.routes[0].legs.map(l=>({duration:l.duration.value}));
-    estimateTimesOSRM(legs);
+    // legs já foi definido acima — extrair duração para estimativa de horários
+    const legsDur=legs.map(l=>({duration:l.duration.value}));
+    estimateTimesOSRM(legsDur);
     renderC();toast('Rota otimizada gerada!','ok');
   }catch(e){toast('Erro ao calcular rota: '+e.message,'err');console.error(e);}
   finally{g('rp').classList.remove('on');g('route-btn').disabled=!clients.length;}
@@ -1573,6 +1602,6 @@ function renderMotor(){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v2.2.0</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v2.3.0</div>
 </body>
 </html>
