@@ -4,7 +4,20 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  v2.3.0 — 02/04/2026 — Melhoria na otimização de rota        ║
+║  v2.4.0 — 02/04/2026 — Otimização híbrida + Mapa fullscreen  ║
+║  ─────────────────────────────────────────                   ║
+║  • SISTEMA HÍBRIDO: clientes com janela de horário são       ║
+║    priorizados (visitados primeiro, ordenados por deadline)   ║
+║  • Clientes sem restrição são otimizados pelo Google depois  ║
+║  • Rota final desenhada com optimizeWaypoints:false (ordem   ║
+║    controlada pelo sistema, não pelo Google)                 ║
+║  • Markers de clientes urgentes com borda laranja no mapa    ║
+║  • InfoWindow mostra janela de horário dos urgentes          ║
+║  • MAPA FULLSCREEN: botão de expandir no canto do mapa       ║
+║  • Fullscreen com ESC para fechar, resize automático         ║
+║  • Logs detalhados: distância total, duração, cada trecho    ║
+║                                                              ║
+║  v2.3.0 — 02/04/2026 — Waypoints por endereço               ║
 ║  ─────────────────────────────────────────                   ║
 ║  • Waypoints enviados como ENDEREÇO (não lat/lng) ao Google  ║
 ║  • Google agora faz geocoding + otimização em uma só etapa   ║
@@ -209,6 +222,15 @@ body.dark .st:hover{box-shadow:0 4px 16px rgba(0,0,0,.2)}
 
 /* MAP */
 .mapw{height:220px;border-radius:14px;border:1px solid var(--bd);overflow:hidden;background:var(--s2);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;margin-bottom:14px;position:relative;transition:all .4s ease}
+.map-expand-btn{position:absolute;top:10px;right:10px;z-index:50;width:36px;height:36px;border-radius:10px;border:none;background:rgba(255,255,255,.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 1px 4px rgba(0,0,0,.1),0 0 0 .5px rgba(0,0,0,.04);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s ease,box-shadow .2s ease;color:#1e1b4b;padding:0}
+.map-expand-btn:hover{transform:scale(1.08);box-shadow:0 2px 8px rgba(0,0,0,.14)}
+.map-expand-btn svg{width:18px;height:18px}
+body.dark .map-expand-btn{background:rgba(30,27,50,.85);color:#e4e4e7;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.map-fullscreen{position:fixed!important;inset:0!important;z-index:9999!important;height:100vh!important;width:100vw!important;border-radius:0!important;border:none!important;margin:0!important}
+.map-fullscreen .map-expand-btn{top:16px;right:16px;width:42px;height:42px;border-radius:12px}
+.map-fullscreen .map-expand-btn svg{width:20px;height:20px}
+.map-fullscreen #map{display:block!important}
+.map-fullscreen .mph{display:none!important}
 #map{position:absolute;inset:0;display:block}
 .mph{text-align:center;color:var(--mu);font-size:13px;padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%}
 .mph span{font-size:28px;display:block;margin-bottom:6px}
@@ -460,9 +482,13 @@ body.dark .toast{background:rgba(255,255,255,.12)}
   <div class="card">
     <p class="ct">Rota no mapa</p>
     <div class="rp" id="rp"><span class="spin"></span><span>Calculando rota...</span></div>
-    <div class="mapw">
+    <div class="mapw" id="mapw">
       <div id="map" style="position:absolute;inset:0;display:none"></div>
       <div class="mph" id="mph"><span>&#x1F5FA;&#xFE0F;</span>Adicione clientes para ver a rota</div>
+      <button class="map-expand-btn" id="map-expand-btn" onclick="toggleMapFullscreen()" title="Expandir mapa" style="display:none">
+        <svg id="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        <svg id="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      </button>
     </div>
     <button class="btn bp" style="width:100%" id="route-btn" onclick="calcRoute()" disabled>&#x1F504; Gerar rota</button>
   </div>
@@ -1175,11 +1201,26 @@ function updStats(){
 }
 function updBtns(){const has=clients.length>0;g('route-btn').disabled=!has;g('pdf-btn').disabled=!has;}
 
+// ---- MAPA FULLSCREEN ----
+function toggleMapFullscreen(){
+  const wrap=g('mapw'),mapEl=g('map'),expIcon=g('expand-icon'),colIcon=g('collapse-icon'),btn=g('map-expand-btn');
+  const isFS=wrap.classList.toggle('map-fullscreen');
+  expIcon.style.display=isFS?'none':'block';
+  colIcon.style.display=isFS?'block':'none';
+  btn.title=isFS?'Reduzir mapa':'Expandir mapa';
+  document.body.style.overflow=isFS?'hidden':'';
+  // Forçar redimensionamento do mapa do Google
+  if(gMap){setTimeout(()=>{google.maps.event.trigger(gMap,'resize');if(gMarkers.length){const bnds=new google.maps.LatLngBounds();gMarkers.forEach(m=>bnds.extend(m.getPosition()));gMap.fitBounds(bnds);}},100);}
+}
+// ESC para sair do fullscreen
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&g('mapw').classList.contains('map-fullscreen'))toggleMapFullscreen();});
+
 // ---- GOOGLE MAPS ----
 const GKEY='AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM';
 function initGoogleMaps(){
   const mapEl=document.getElementById('map');
   if(mapEl){mapEl.style.display='block';document.getElementById('mph').style.display='none';
+    document.getElementById('map-expand-btn').style.display='flex';
     gMap=new google.maps.Map(mapEl,{center:{lat:-23.55,lng:-46.63},zoom:12,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});}
   const hmEl=document.getElementById('heatmap');
   if(hmEl)hmMap=new google.maps.Map(hmEl,{center:{lat:-23.55,lng:-46.63},zoom:11,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});
@@ -1218,6 +1259,15 @@ function sortByWindow(){
   order.sort((a,b)=>{const ca=clients[a],cb=clients[b];const s=sc(ca)-sc(cb);if(s)return s;return ca.tipo==='coleta'?-1:1;});
 }
 
+// Calcula deadline em minutos desde meia-noite para um cliente com janela de horário
+function clientDeadlineMin(c){
+  if(c.janela==='manha') return 12*60; // até 12:00
+  if(c.janela==='custom'&&c.hf){
+    const p=c.hf.split(':');return parseInt(p[0])*60+parseInt(p[1]||0);
+  }
+  return 24*60; // sem restrição
+}
+
 async function calcRoute(){
   if(!clients.length)return;
   if(!cfg.base||!cfg.base.trim()){
@@ -1242,7 +1292,6 @@ async function calcRoute(){
       await new Promise(res=>setTimeout(res,200));
     }
     if(notFound.length)toast('Endereço não encontrado: '+notFound.join(', '),'warn');
-    // Mapeia índices dos clientes geocodificados
     const geocodedIdx=[];
     for(let i=0;i<clients.length;i++){if(clients[i].lat&&clients[i].lng)geocodedIdx.push(i);}
     const geocoded=geocodedIdx.map(i=>clients[i]);
@@ -1253,60 +1302,104 @@ async function calcRoute(){
       order=geocodedIdx.slice();
       estimateTimesSimple();renderC();return;
     }
-    // Google Directions API — base como origem, retorno como destino, clientes como waypoints
     const baseAddr=cfg.base;
     const retAddr=cfg.retaddr||baseAddr;
-    const origin=baseAddr;
-    const destination=retAddr;
-    // Envia endereços completos como waypoints para melhor otimização do Google
-    const waypoints=geocoded.map(c=>({location:c.endereco+', São Paulo, SP, Brasil',stopover:true}));
-    console.log('[ROTA DEBUG] Enviando',waypoints.length,'waypoints como ENDEREÇOS (não lat/lng)');
-    console.log('[ROTA DEBUG] Endereços:',geocoded.map(c=>c.endereco));
-    const dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({origin,destination,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:true,region:'BR'},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
-    // Aplicar waypoint_order do Google — ordem otimizada por distância
-    const wpOrder=dirResult.routes[0].waypoint_order;
-    // Calcular distância e duração total da rota otimizada
+    const saidaMin=ts(cfg.saida||'10:00')/60; // horário de saída em minutos
+    const tempoParada=cfg.tempo||10; // minutos por parada
+    // ── SISTEMA HÍBRIDO: separar clientes com janela urgente dos livres ──
+    // Clientes "urgentes" = têm deadline que exige ser visitado cedo
+    const urgentes=[];const livres=[];
+    geocoded.forEach((c,gi)=>{
+      const dl=clientDeadlineMin(c);
+      if(dl<24*60){urgentes.push({gi,c,deadline:dl});}
+      else{livres.push({gi,c});}
+    });
+    // Ordenar urgentes por deadline (mais apertado primeiro)
+    urgentes.sort((a,b)=>a.deadline-b.deadline);
+    console.log('[ROTA HÍBRIDA] Urgentes (com janela):',urgentes.map(u=>u.c.nome+' até '+u.c.hf||u.c.janela));
+    console.log('[ROTA HÍBRIDA] Livres:',livres.map(l=>l.c.nome));
+    // ── ESTRATÉGIA: urgentes primeiro (na ordem de deadline), depois Google otimiza os livres ──
+    let finalWpOrder;
+    if(urgentes.length===0){
+      // Sem urgentes — Google otimiza tudo normalmente
+      const waypoints=geocoded.map(c=>({location:c.endereco+', São Paulo, SP, Brasil',stopover:true}));
+      const dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:true,region:'BR'},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
+      finalWpOrder=dirResult.routes[0].waypoint_order;
+      console.log('[ROTA HÍBRIDA] Sem urgentes — Google otimizou tudo:',JSON.stringify(finalWpOrder));
+    } else {
+      // Montar ordem: urgentes fixos no início, livres otimizados pelo Google depois
+      const urgIdx=urgentes.map(u=>u.gi);
+      const livIdx=livres.map(l=>l.gi);
+      if(livres.length<=1){
+        // Poucos livres — não precisa otimizar, só concatena
+        finalWpOrder=urgIdx.concat(livIdx);
+        console.log('[ROTA HÍBRIDA] Urgentes+livres simples:',JSON.stringify(finalWpOrder));
+      } else {
+        // Pedir ao Google para otimizar APENAS os livres, com ponto de partida = último urgente
+        const lastUrgent=urgentes[urgentes.length-1].c;
+        const livWaypoints=livres.map(l=>({location:l.c.endereco+', São Paulo, SP, Brasil',stopover:true}));
+        const livResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({
+          origin:lastUrgent.endereco+', São Paulo, SP, Brasil',
+          destination:retAddr,
+          waypoints:livWaypoints,
+          travelMode:google.maps.TravelMode.DRIVING,
+          optimizeWaypoints:true,
+          region:'BR'
+        },(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
+        const livOrder=livResult.routes[0].waypoint_order;
+        const livReordered=livOrder.map(wi=>livIdx[wi]);
+        finalWpOrder=urgIdx.concat(livReordered);
+        console.log('[ROTA HÍBRIDA] Urgentes fixos:',JSON.stringify(urgIdx),'| Livres otimizados:',JSON.stringify(livReordered));
+      }
+    }
+    // ── ROTA FINAL: pedir ao Google a rota completa NA ORDEM DEFINIDA (sem otimização) ──
+    const orderedWaypoints=finalWpOrder.map(gi=>({location:geocoded[gi].endereco+', São Paulo, SP, Brasil',stopover:true}));
+    const dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({
+      origin:baseAddr,destination:retAddr,
+      waypoints:orderedWaypoints,
+      travelMode:google.maps.TravelMode.DRIVING,
+      optimizeWaypoints:false, // NÃO otimizar — ordem já está definida
+      region:'BR'
+    },(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
+    // Log detalhado da rota final
     const legs=dirResult.routes[0].legs;
     const totalDistKm=legs.reduce((s,l)=>s+l.distance.value,0)/1000;
     const totalDurMin=legs.reduce((s,l)=>s+l.duration.value,0)/60;
-    console.log('[ROTA DEBUG] optimizeWaypoints=true');
-    console.log('[ROTA DEBUG] waypoint_order do Google:',JSON.stringify(wpOrder));
-    console.log('[ROTA DEBUG] Distância total:',totalDistKm.toFixed(1)+'km | Duração total:',totalDurMin.toFixed(0)+'min');
-    console.log('[ROTA DEBUG] Percurso otimizado:');
+    console.log('[ROTA FINAL] Distância total:',totalDistKm.toFixed(1)+'km | Duração total:',totalDurMin.toFixed(0)+'min');
+    console.log('[ROTA FINAL] Percurso:');
     legs.forEach((l,i)=>{
-      const from=i===0?'BASE':geocoded[wpOrder[i-1]].nome;
-      const to=i===legs.length-1?'RETORNO':geocoded[wpOrder[i]].nome;
-      console.log('  '+(i+1)+'. '+from+' → '+to+': '+l.distance.text+' ('+l.duration.text+')');
+      const from=i===0?'BASE':geocoded[finalWpOrder[i-1]].nome;
+      const to=i===legs.length-1?'RETORNO':geocoded[finalWpOrder[i]].nome;
+      const isUrg=i>0&&i<=urgentes.length?'⚠️ ':'';
+      console.log('  '+(i+1)+'. '+isUrg+from+' → '+to+': '+l.distance.text+' ('+l.duration.text+')');
     });
-    console.log('[ROTA DEBUG] geocodedIdx (antes):',JSON.stringify(geocodedIdx));
-    console.log('[ROTA DEBUG] clientes na ordem original:',geocodedIdx.map(i=>clients[i].nome));
-    // Reordena: wpOrder[i] = índice original do waypoint que deve ser visitado na posição i
-    const newOrder=wpOrder.map(wi=>geocodedIdx[wi]);
-    console.log('[ROTA DEBUG] newOrder (depois):',JSON.stringify(newOrder));
-    console.log('[ROTA DEBUG] clientes na ordem otimizada:',newOrder.map(i=>clients[i].nome));
-    // Adiciona clientes sem coordenadas no final
+    // Mapear para ordem global (índices no array clients[])
+    const newOrder=finalWpOrder.map(gi=>geocodedIdx[gi]);
     const noCoords=[];
     for(let i=0;i<clients.length;i++){if(!clients[i].lat||!clients[i].lng)noCoords.push(i);}
     order=newOrder.concat(noCoords);
+    // Renderizar mapa
     if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>m.setMap(null));gMarkers=[];
     gRoute=new google.maps.DirectionsRenderer({map:gMap,directions:dirResult,suppressMarkers:true,polylineOptions:{strokeColor:'#6C5CE7',strokeWeight:4,strokeOpacity:0.8}});
-    // Atualizar coordenadas dos clientes com as posições resolvidas pelo Google
-    wpOrder.forEach((wi,pos)=>{
-      const legIdx=pos; // leg[pos] vai de (pos==0?base:wpOrder[pos-1]) até wpOrder[pos]
-      if(legs[legIdx]&&legs[legIdx].end_location){
-        geocoded[wi].lat=legs[legIdx].end_location.lat();
-        geocoded[wi].lng=legs[legIdx].end_location.lng();
+    // Atualizar coordenadas com posições resolvidas pelo Google
+    finalWpOrder.forEach((gi,pos)=>{
+      if(legs[pos]&&legs[pos].end_location){
+        geocoded[gi].lat=legs[pos].end_location.lat();
+        geocoded[gi].lng=legs[pos].end_location.lng();
       }
     });
-    // Markers na ordem otimizada do Google — usando coords resolvidas pelo Google
-    wpOrder.forEach((wi,pos)=>{const c=geocoded[wi];
-      const mk=new google.maps.Marker({position:{lat:c.lat,lng:c.lng},map:gMap,label:{text:String(pos+1),color:'#fff',fontSize:'11px',fontWeight:'700'},icon:{path:google.maps.SymbolPath.CIRCLE,scale:13,fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
-      mk.addListener('click',()=>new google.maps.InfoWindow({content:'<strong>'+c.nome+'</strong><br>'+c.endereco}).open(gMap,mk));gMarkers.push(mk);});
+    // Markers
+    finalWpOrder.forEach((gi,pos)=>{const c=geocoded[gi];
+      const isUrg=pos<urgentes.length&&urgentes.length>0;
+      const mk=new google.maps.Marker({position:{lat:c.lat,lng:c.lng},map:gMap,label:{text:String(pos+1),color:'#fff',fontSize:'11px',fontWeight:'700'},icon:{path:google.maps.SymbolPath.CIRCLE,scale:13,fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',fillOpacity:1,strokeColor:isUrg?'#FF6B35':'#fff',strokeWeight:isUrg?3:2}});
+      mk.addListener('click',()=>new google.maps.InfoWindow({content:'<strong>'+c.nome+'</strong><br>'+c.endereco+(isUrg?'<br><em style="color:#FF6B35">⚠️ Janela: '+(c.janela==='manha'?'até 12h':c.hi+'-'+c.hf)+'</em>':'')}).open(gMap,mk));
+      gMarkers.push(mk);
+    });
     const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds);
-    // legs já foi definido acima — extrair duração para estimativa de horários
     const legsDur=legs.map(l=>({duration:l.duration.value}));
     estimateTimesOSRM(legsDur);
-    renderC();toast('Rota otimizada gerada!','ok');
+    const urgMsg=urgentes.length?' ('+urgentes.length+' com janela de horário prioritária)':'';
+    renderC();toast('Rota otimizada gerada!'+urgMsg,'ok');
   }catch(e){toast('Erro ao calcular rota: '+e.message,'err');console.error(e);}
   finally{g('rp').classList.remove('on');g('route-btn').disabled=!clients.length;}
 }
@@ -1602,6 +1695,6 @@ function renderMotor(){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v2.3.0</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v2.4.0</div>
 </body>
 </html>
