@@ -21,8 +21,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Roteiro de Coleta</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -518,10 +517,9 @@ hr{border:none;border-top:1.5px solid var(--bd);margin:16px 0}
 <div class="mbg" id="confirm-modal"><div class="modal" style="max-width:380px"><h2 id="confirm-title">Confirmar</h2><p id="confirm-msg" style="font-size:14px;color:var(--mu);margin-bottom:4px"></p><div class="ma"><button class="btn bo" onclick="closeModal('confirm-modal')">Cancelar</button><button class="btn br" id="confirm-ok" onclick="">Excluir</button></div></div></div>
 <div class="toast" id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM&libraries=geometry,visualization&callback=initGoogleMaps" async defer></script>
 <script>
-let clients=[],order=[],leafMap=null,leafRoute=null,leafHeat=null,hmLeafMap=null,hmHeatLayer=null;
+let clients=[],order=[],gMap=null,gRoute=null,gMarkers=[],hmMap=null,hmHeatLayer=null;
 let imgData=null,ambRes=[],ambSel=-1,histIdx=-1,geoT=null,cfg={},_pendingCoords=null;
 let selBoard=null,selList=null,_tboardsHtml='',_tlistsHtml='';
 
@@ -530,7 +528,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('nav-date').textContent=now.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
   document.getElementById('td').value=now.toISOString().split('T')[0];
   document.getElementById('f-data').value=now.toISOString().split('T')[0];
-  loadCfg();renderHist();loadTrelloSelection();initLeafMap();
+  loadCfg();renderHist();loadTrelloSelection();
   if(!cfg.tkey||!cfg.ttoken){const el=g('trello-nocred');if(el)el.style.display='block';const s1=g('trello-step1');if(s1)s1.style.display='none';}
   document.querySelectorAll('.mbg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('on');}));
   document.addEventListener('paste',e=>{
