@@ -7,8 +7,7 @@ function initGoogleMaps(){
   const mapEl=document.getElementById('map');
   if(mapEl){mapEl.style.display='block';document.getElementById('mph').style.display='none';
     gMap=new google.maps.Map(mapEl,{center:{lat:-23.55,lng:-46.63},zoom:12,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});}
-  const hmEl=document.getElementById('heatmap');
-  if(hmEl){hmMap=new google.maps.Map(hmEl,{center:{lat:-23.55,lng:-46.63},zoom:11,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});}
+  // heatmap usa Leaflet.heat
 }
 function initLeafMap(){}<!DOCTYPE html>let endFinal=ext.endereco||'';
       _pendingCoords=null;
@@ -528,8 +527,10 @@ hr{border:none;border-top:1.5px solid var(--bd);margin:16px 0}
 
 <div class="mbg" id="confirm-modal"><div class="modal" style="max-width:380px"><h2 id="confirm-title">Confirmar</h2><p id="confirm-msg" style="font-size:14px;color:var(--mu);margin-bottom:4px"></p><div class="ma"><button class="btn bo" onclick="closeModal('confirm-modal')">Cancelar</button><button class="btn br" id="confirm-ok" onclick="">Excluir</button></div></div></div>
 <div class="toast" id="toast"></div>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM&libraries=geometry,visualization&callback=initGoogleMaps" async defer></script>
 <script>
 let clients=[],order=[],gMap=null,gRoute=null,gMarkers=[],hmMap=null,hmHeatLayer=null;
 let imgData=null,ambRes=[],ambSel=-1,histIdx=-1,geoT=null,cfg={},_pendingCoords=null;
@@ -579,7 +580,7 @@ function saveCfg(){
   setTimeout(()=>g('cfg-msg').innerHTML='',3000);
 }
 
-function goPage(p,el){
+function goPage(p,el){window.scrollTo(0,0);
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(x=>x.classList.remove('on'));
   g('page-'+p).classList.add('on');el.classList.add('on');
@@ -1319,6 +1320,7 @@ async function renderDash(){
   if(!allC.length){g('hmph').style.display='flex';g('heatmap').style.display='none';el.innerHTML='<div class="empty"><span>\uD83D\uDCC5</span><p>Salve rotas para ver a concentra\xE7\xE3o de clientes</p></div>';return;}
   g('hmph').style.display='none';g('heatmap').style.display='block';
   el.innerHTML='<div class="card"><p class="ct">Identificando bairros... <span class="spin"></span></p></div>';
+  const _dashT=setTimeout(()=>{if(el.innerHTML.includes('Identificando'))el.innerHTML='<div class="card"><p class="ct" style="color:var(--mu)">⚠️ Não foi possível identificar bairros. Gere uma rota primeiro.</p></div>';},15000);
   const br={};const pts=[];
   // Nominatim: sequential to respect rate limit
   for(const c of allC){
@@ -1369,7 +1371,7 @@ function renderMotor(){
   if(clients.length>1){const addrs=order.map(i=>encodeURIComponent(clients[i].endereco));const orig=cfg.base?encodeURIComponent(cfg.base):addrs[0];const dest=cfg.retaddr?encodeURIComponent(cfg.retaddr):(cfg.base?encodeURIComponent(cfg.base):addrs[addrs.length-1]);const url='https://www.google.com/maps/dir/'+orig+'/'+addrs.join('/')+'/'+dest;html+='<a href="'+url+'" target="_blank" class="btn bpk" style="width:100%;justify-content:center;margin-top:6px;text-decoration:none">\uD83D\uDDFA\uFE0F Abrir rota no Google Maps</a>';}
   el.innerHTML=html;
 }
-</script>
+
 </body>
 </html    // Google Directions API
     const origin={lat:geocoded[0].lat,lng:geocoded[0].lng};
@@ -1650,5 +1652,6 @@ function renderMotor(){
   el.innerHTML=html;
 }
 </script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM&libraries=geometry&callback=initGoogleMaps&loading=async" async defer></script>
 </body>
 </html>
