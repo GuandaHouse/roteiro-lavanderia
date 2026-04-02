@@ -4,7 +4,7 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  v4.2.0 — 02/04/2026 — AdvancedMarker + Fluxo Conclusão         ║
+║  v4.2.1 — 02/04/2026 — AdvancedMarker + Fluxo Conclusão         ║
 ║  ─────────────────────────────────────────                   ║
 ║  GOOGLE MAPS MIGRATION:                                         ║
 ║  • google.maps.Marker → AdvancedMarkerElement (anti-deprecação) ║
@@ -386,7 +386,9 @@ body.dark .mc-conclude-btn{background:var(--pu);color:#fff}
 body.dark .cc:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.1);box-shadow:0 4px 16px rgba(0,0,0,.2)}
 .cc.col{border-left-color:var(--gn)}.cc.ent{border-left-color:var(--bl)}
 .cc.ent:hover{border-color:rgba(108,92,231,.12)}
+.cc.col:hover{border-color:rgba(108,92,231,.12)}
 body.dark .cc.ent:hover{border-color:rgba(255,255,255,.1)}
+body.dark .cc.col:hover{border-color:rgba(255,255,255,.1)}
 .cc.cfl{border-left-color:var(--rd);background:var(--rl)}
 .cc.cwn{border-left-color:var(--yw);background:var(--ywl)}
 .sn{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:2px}
@@ -2937,6 +2939,6 @@ function editDoneCard(idx){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v4.2.0</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v4.2.1</div>
 </body>
 </html>
