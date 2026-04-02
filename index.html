@@ -4,10 +4,24 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v3.2.0 — 02/04/2026 — Auditoria completa + SVG site inteiro ║
+║  ─────────────────────────────────────────                   ║
+║  • ZERO EMOJIS em TODO o site — SVG traço fino em tudo       ║
+║  • BUG #2: ESC fecha modais (edit, histórico, confirmar)     ║
+║  • BUG #3: Validação janela horário invertida (início < fim) ║
+║  • BUG #4: Confirmação antes de carregar rota do histórico   ║
+║  • BUG #5: Navbar fixed (não quebra mais no scroll)          ║
+║  • BUG #6: Validação configs (saída < retorno, tempo ≤ 240) ║
+║  • BUG #7: Link trello.com/app-key agora é clicável         ║
+║  • BUG #9: Campo valor aceita vírgula (formato BR)           ║
+║  • BUG #10: Typo "Inicio" → "Início" corrigido              ║
+║  • BUG #11: Endereço inválido (sem número) bloqueado         ║
+║  • UX: Modal com max-height 90vh (não corta em telas menores)║
+║  • UX: Tempo/parada limitado a 1–240 min                    ║
+║                                                              ║
 ║  v3.1.0 — 02/04/2026 — M1 Monochrome (redesign motorista)    ║
 ║  ─────────────────────────────────────────                   ║
 ║  • Redesign completo do painel do motorista: M1 Monochrome   ║
-║  • Zero emojis — todos ícones agora são SVG traço fino       ║
 ║  • Paleta monocromática: cinza/preto + roxo como accent      ║
 ║  • Botões discretos com bordas sutis, sem cores gritantes    ║
 ║  • Identidade visual inspirada em Apple/Linear/Stripe        ║
@@ -131,7 +145,7 @@ body.dark::before{background:radial-gradient(circle,rgba(108,92,231,.08) 0%,rgba
 body.dark::after{background:radial-gradient(circle,rgba(52,199,89,.04) 0%,rgba(167,139,250,.03) 40%,transparent 70%)}
 
 /* NAV */
-nav{background:rgba(255,255,255,.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:0 20px;display:flex;align-items:center;position:sticky;top:0;z-index:200;overflow-x:auto;gap:0;border-bottom:1px solid var(--bd);transition:background .4s ease,border-color .4s ease}
+nav{background:rgba(255,255,255,.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:0 20px;display:flex;align-items:center;position:fixed;top:0;left:0;right:0;z-index:200;overflow-x:auto;gap:0;border-bottom:1px solid var(--bd);transition:background .4s ease,border-color .4s ease}
 body.dark nav{background:rgba(15,14,23,.8);border-bottom-color:rgba(255,255,255,.06)}
 .logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:14px;padding:14px 18px 14px 0;border-right:1px solid var(--bd);margin-right:4px;white-space:nowrap;flex-shrink:0;color:var(--tx);transition:color .4s ease,border-color .4s ease}
 .logo-i{width:30px;height:30px;background:linear-gradient(135deg,#6C5CE7,#a78bfa);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
@@ -152,7 +166,7 @@ body.dark .theme-toggle .sun{opacity:0;transform:rotate(30deg)}
 body.dark .theme-toggle .moon{opacity:1;color:#c4b5fd;transform:rotate(0deg)}
 
 /* LAYOUT */
-.page{display:none;max-width:1160px;margin:0 auto;padding:24px 20px}
+.page{display:none;max-width:1160px;margin:0 auto;padding:72px 20px 24px}
 .page.on{display:block}
 .two-col{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start}
 @media(max-width:880px){.two-col{grid-template-columns:1fr}}
@@ -349,7 +363,7 @@ body.dark .map-expand-btn{background:rgba(30,27,50,.85);color:#e4e4e7;box-shadow
 .mbg{position:fixed;inset:0;background:rgba(28,31,59,.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:500;display:none;align-items:center;justify-content:center;padding:18px;transition:background .4s ease}
 body.dark .mbg{background:rgba(0,0,0,.5)}
 .mbg.on{display:flex}
-.modal{background:rgba(255,255,255,.9);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--bd);border-radius:18px;padding:24px;max-width:480px;width:100%;max-height:87vh;overflow-y:auto;box-shadow:0 20px 60px rgba(28,31,59,.15);transition:background .4s ease,border-color .4s ease}
+.modal{background:rgba(255,255,255,.9);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--bd);border-radius:18px;padding:24px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(28,31,59,.15);transition:background .4s ease,border-color .4s ease}
 body.dark .modal{background:rgba(20,18,30,.92);border-color:rgba(255,255,255,.08)}
 .modal h2{font-size:16px;font-weight:700;margin-bottom:14px}
 .ma{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
@@ -415,7 +429,7 @@ body.dark .toast{background:rgba(255,255,255,.12)}
 <body>
 
 <nav>
-  <div class="logo" onclick="goPage('rota',document.querySelectorAll('.ntab')[0])" style="cursor:pointer"><div class="logo-i">&#x1F9BA;</div><span>Roteiro de Coleta</span></div>
+  <div class="logo" onclick="goPage('rota',document.querySelectorAll('.ntab')[0])" style="cursor:pointer"><div class="logo-i"><span class="mot-ico" style="width:15px;height:15px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span></div><span>Roteiro de Coleta</span></div>
   <button class="ntab on" onclick="goPage('rota',this)">Rota do Dia</button>
   <button class="ntab" onclick="goPage('hist',this)">Hist&#xF3;rico</button>
   <button class="ntab" onclick="goPage('dash',this)">Mapa de Clientes</button>
@@ -439,14 +453,14 @@ body.dark .toast{background:rgba(255,255,255,.12)}
   <div class="card">
     <p class="ct">Adicionar cliente</p>
     <div class="tabs">
-      <button class="tab on" onclick="stab('trello',this)">&#x1F4CB; Importar do Trello</button>
-      <button class="tab" onclick="stab('img',this)">&#x1F5BC; Por Imagem</button>
-      <button class="tab" onclick="stab('man',this)">&#x270F; Manual</button>
+      <button class="tab on" onclick="stab('trello',this)"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span> Importar do Trello</button>
+      <button class="tab" onclick="stab('img',this)"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span> Por Imagem</button>
+      <button class="tab" onclick="stab('man',this)"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span> Manual</button>
     </div>
 
     <!-- TRELLO TAB -->
     <div class="tp on" id="tp-trello">
-      <div id="trello-nocred" style="display:none"><div class="ab w">&#x26A0;&#xFE0F; Configure sua <strong>Chave e Token do Trello</strong> em <a href="#" onclick="goPage('cfg',document.querySelectorAll('.ntab')[4]);return false;" style="color:var(--pud)">Configura&#xE7;&#xF5;es</a> para usar esta funcionalidade.</div></div>
+      <div id="trello-nocred" style="display:none"><div class="ab w"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> Configure sua <strong>Chave e Token do Trello</strong> em <a href="#" onclick="goPage('cfg',document.querySelectorAll('.ntab')[4]);return false;" style="color:var(--pud)">Configura&#xE7;&#xF5;es</a> para usar esta funcionalidade.</div></div>
       <div id="trello-step1">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;margin-bottom:13px">
           <div class="fg">
@@ -458,7 +472,7 @@ body.dark .toast{background:rgba(255,255,255,.12)}
           <div class="fg">
             <button class="btn bp" onclick="trelloMainBtn()" id="trello-btn" style="white-space:nowrap;width:100%;justify-content:center">
               <span class="spin" id="tspin" style="display:none"></span>
-              <span id="tlbl">&#x1F50D; Buscar quadros</span>
+              <span id="tlbl"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span> Buscar quadros</span>
             </button>
           </div>
         </div>
@@ -469,14 +483,14 @@ body.dark .toast{background:rgba(255,255,255,.12)}
       </div>
       <div id="trello-step3" style="display:none">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-          <button class="btn bo bsm" onclick="trelloBack()">&#x2190; Voltar</button>
+          <button class="btn bo bsm" onclick="trelloBack()">← Voltar</button>
           <p style="font-size:13px;font-weight:600;color:var(--mu)">2. Selecione a lista:</p>
         </div>
         <div id="trello-lists"></div>
       </div>
       <div id="trello-step4" style="display:none">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-          <button class="btn bo bsm" onclick="trelloBack2()">&#x2190; Voltar</button>
+          <button class="btn bo bsm" onclick="trelloBack2()">← Voltar</button>
           <p style="font-size:13px;font-weight:600;color:var(--mu)">Cart&#xF5;es encontrados:</p>
         </div>
         <div id="trello-cards"></div>
@@ -487,7 +501,7 @@ body.dark .toast{background:rgba(255,255,255,.12)}
     <div class="tp" id="tp-img">
       <div class="upl" id="upl">
         <input type="file" accept="image/*" id="file-in" onchange="onFileSelect(event)"/>
-        <div style="font-size:28px;margin-bottom:8px">&#x1F5BC;&#xFE0F;</div>
+        <div style="font-size:28px;margin-bottom:8px"><span class="mot-ico" style="width:28px;height:28px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span></div>
         <p style="font-weight:600;font-size:14px;margin-bottom:3px">Cole (Ctrl+V) ou arraste a imagem</p>
         <p style="font-size:12px;color:var(--mu)">Print de WhatsApp, Trello, etc.</p>
       </div>
@@ -496,7 +510,7 @@ body.dark .toast{background:rgba(255,255,255,.12)}
         <div style="display:flex;gap:8px;margin-top:11px">
           <button class="btn bp" id="ext-btn" onclick="extractImg()">
             <span class="spin" id="espin" style="display:none"></span>
-            <span id="elbl">&#x2728; Extrair com IA</span>
+            <span id="elbl"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span> Extrair com IA</span>
           </button>
           <button class="btn bo" onclick="clearImg()">Trocar</button>
         </div>
@@ -511,7 +525,7 @@ body.dark .toast{background:rgba(255,255,255,.12)}
       <hr/>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <p style="font-size:13px;font-weight:600">Dados do cliente</p>
-        <span class="ai-badge" id="ai-badge" style="display:none">&#x2728; Preenchido pela IA</span>
+        <span class="ai-badge" id="ai-badge" style="display:none"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span> Preenchido pela IA</span>
       </div>
       <div class="fg2">
         <div class="fg"><label>Nome *</label><input type="text" id="f-nome" placeholder="Nome completo"/></div>
@@ -520,13 +534,13 @@ body.dark .toast{background:rgba(255,255,255,.12)}
         <div class="fg"><label>Tipo *</label>
           <select id="f-tipo">
             <option value="">Selecione...</option>
-            <option value="coleta">&#x1F7E2; Coleta</option>
-            <option value="entrega">&#x1F535; Entrega</option>
+            <option value="coleta">Coleta</option>
+            <option value="entrega">Entrega</option>
           </select>
         </div>
         <div class="fg"><label>Qtd. tapetes</label><input type="number" id="f-qtd" placeholder="0" min="1"/></div>
-        <div class="fg"><label>Status valor</label><select id="f-valtipo" onchange="toggleFValTipo()"><option value="normal">Valor (R$)</option><option value="medir">&#x2696;&#xFE0F; Medir</option><option value="pago">&#x2705; Pago</option></select></div>
-        <div class="fg" id="f-val-wrap"><label>Valor (R$)</label><input type="number" id="f-val" placeholder="0,00" step="0.01" min="0"/></div>
+        <div class="fg"><label>Status valor</label><select id="f-valtipo" onchange="toggleFValTipo()"><option value="normal">Valor (R$)</option><option value="medir">Medir</option><option value="pago"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> Pago</option></select></div>
+        <div class="fg" id="f-val-wrap"><label>Valor (R$)</label><input type="text" inputmode="decimal" id="f-val" placeholder="0,00"/></div>
         <div class="fg"><label>Data</label><input type="date" id="f-data"/></div>
         <div class="fg"><label>Janela de hor&#xE1;rio</label>
           <select id="f-janela" onchange="toggleJanela()">
@@ -554,7 +568,7 @@ body.dark .toast{background:rgba(255,255,255,.12)}
       <span id="cc-count" style="font-size:12px;color:var(--mu);font-weight:600"></span>
     </div>
     <div id="cfl-banner"></div>
-    <div id="clist"><div class="empty"><span>&#x1F4CB;</span><p>Nenhum cliente ainda</p></div></div>
+    <div id="clist"><div class="empty"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span><p>Nenhum cliente ainda</p></div></div>
   </div>
 </div>
 
@@ -586,19 +600,19 @@ body.dark .toast{background:rgba(255,255,255,.12)}
     <div class="rp" id="rp"><span class="spin"></span><span>Calculando rota...</span></div>
     <div class="mapw" id="mapw">
       <div id="map" style="position:absolute;inset:0;display:none"></div>
-      <div class="mph" id="mph"><span>&#x1F5FA;&#xFE0F;</span>Adicione clientes para ver a rota</div>
+      <div class="mph" id="mph"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></span>Adicione clientes para ver a rota</div>
       <button class="map-expand-btn" id="map-expand-btn" onclick="toggleMapFullscreen()" title="Expandir mapa" style="display:none">
         <svg id="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
         <svg id="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
       </button>
     </div>
-    <button class="btn bp" style="width:100%" id="route-btn" onclick="calcRoute()" disabled>&#x1F504; Gerar rota</button>
+    <button class="btn bp" style="width:100%" id="route-btn" onclick="calcRoute()" disabled><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg></span> Gerar rota</button>
   </div>
 
   <div class="card">
     <p class="ct">Gerar roteiro</p>
     <p style="font-size:13px;color:var(--mu);margin-bottom:14px;font-weight:500">Imagem com todas as paradas — f&#xe1;cil de enviar no WhatsApp.</p>
-    <button class="btn bg" style="width:100%" id="pdf-btn" onclick="genImage()" disabled>&#x1F4F8; Gerar imagem do roteiro</button>
+    <button class="btn bg" style="width:100%" id="pdf-btn" onclick="genImage()" disabled><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span> Gerar imagem do roteiro</button>
   </div>
 </div>
 </div>
@@ -614,7 +628,7 @@ body.dark .toast{background:rgba(255,255,255,.12)}
 <div class="page" id="page-dash">
   <div class="ph"><h2>Concentra&#xE7;&#xE3;o de Clientes</h2><p>Identifique regi&#xF5;es com potencial para campanhas de marketing.</p></div>
   <div class="two-col">
-    <div class="hmw"><div id="heatmap"></div><div class="hmph" id="hmph"><span>&#x1F4CD;</span>Salve rotas para ver a concentra&#xE7;&#xE3;o de clientes</div></div>
+    <div class="hmw"><div id="heatmap"></div><div class="hmph" id="hmph"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>Salve rotas para ver a concentra&#xE7;&#xE3;o de clientes</div></div>
     <div id="dash-stats"></div>
   </div>
 </div>
@@ -626,7 +640,7 @@ body.dark .toast{background:rgba(255,255,255,.12)}
       <div class="ph" style="margin:0"><h2>Roteiro do Motorista</h2></div>
       <span id="motor-date" style="font-size:13px;color:var(--mu);font-family:'DM Mono',monospace;font-weight:500"></span>
     </div>
-    <div id="motor-body"><div class="empty"><span>&#x1F697;</span><p>Monte uma rota primeiro</p></div></div>
+    <div id="motor-body"><div class="empty"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg></span><p>Monte uma rota primeiro</p></div></div>
   </div>
 </div>
 
@@ -638,11 +652,11 @@ body.dark .toast{background:rgba(255,255,255,.12)}
     <div class="card">
       <p class="ct">Rota padr&#xE3;o</p>
       <div class="fg2">
-        <div class="fg full"><label>&#x1F3E2; Endere&#xE7;o de partida</label><input type="text" id="cfg-base" placeholder="Ex: Rua Central, 100, S&#xE3;o Paulo"/></div>
-        <div class="fg full"><label>&#x1F3E0; Endere&#xE7;o de retorno</label><input type="text" id="cfg-retaddr" placeholder="Ex: Av. Brasil, 50, S&#xE3;o Paulo"/></div>
+        <div class="fg full"><label><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M8 10h.01M16 10h.01M12 10h.01M8 14h.01M16 14h.01M12 14h.01"/></svg></span> Endere&#xE7;o de partida</label><input type="text" id="cfg-base" placeholder="Ex: Rua Central, 100, S&#xE3;o Paulo"/></div>
+        <div class="fg full"><label><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> Endere&#xE7;o de retorno</label><input type="text" id="cfg-retaddr" placeholder="Ex: Av. Brasil, 50, S&#xE3;o Paulo"/></div>
         <div class="fg"><label>Hor&#xE1;rio de sa&#xED;da</label><input type="time" id="cfg-saida" value="10:00"/></div>
         <div class="fg"><label>Limite de retorno</label><input type="time" id="cfg-ret" value="17:00"/></div>
-        <div class="fg"><label>Tempo/parada (min)</label><input type="number" id="cfg-tempo" value="10" min="1"/></div>
+        <div class="fg"><label>Tempo/parada (min)</label><input type="number" id="cfg-tempo" value="10" min="1" max="240"/></div>
         <div class="fg"><label>Pausa almo&#xE7;o &#x2014; in&#xED;cio</label><input type="time" id="cfg-al1"/></div>
         <div class="fg full"><label>Pausa almo&#xE7;o &#x2014; fim</label><input type="time" id="cfg-al2"/></div>
       </div>
@@ -651,13 +665,13 @@ body.dark .toast{background:rgba(255,255,255,.12)}
       <p class="ct">Trello</p>
       <div class="fg2">
         <div class="fg full"><label>Chave API Trello</label>
-          <div class="inp-wrap"><input type="password" id="cfg-tkey" placeholder="Chave"/><button class="eye-btn" onclick="toggleEye('cfg-tkey',this)">&#x1F441;</button></div>
+          <div class="inp-wrap"><input type="password" id="cfg-tkey" placeholder="Chave"/><button class="eye-btn" onclick="toggleEye('cfg-tkey',this)"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span></button></div>
         </div>
         <div class="fg full"><label>Token Trello</label>
-          <div class="inp-wrap"><input type="password" id="cfg-ttoken" placeholder="Token"/><button class="eye-btn" onclick="toggleEye('cfg-ttoken',this)">&#x1F441;</button></div>
+          <div class="inp-wrap"><input type="password" id="cfg-ttoken" placeholder="Token"/><button class="eye-btn" onclick="toggleEye('cfg-ttoken',this)"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span></button></div>
         </div>
       </div>
-      <p style="font-size:12px;color:var(--mu);margin-top:8px;font-weight:500">Obtenha em <strong>trello.com/app-key</strong> — gere o token na mesma p&#xE1;gina.</p>
+      <p style="font-size:12px;color:var(--mu);margin-top:8px;font-weight:500">Obtenha em <a href="https://trello.com/app-key" target="_blank" rel="noopener" style="color:var(--pud);font-weight:700;text-decoration:none">trello.com/app-key</a> — gere o token na mesma p&#xE1;gina.</p>
     </div>
   </div>
   <div>
@@ -665,16 +679,16 @@ body.dark .toast{background:rgba(255,255,255,.12)}
       <p class="ct">API de IA</p>
       <div class="fg2">
         <div class="fg full"><label>Chave Anthropic (extra&#xE7;&#xE3;o por IA)</label>
-          <div class="inp-wrap"><input type="password" id="cfg-akey" placeholder="sk-ant-..."/><button class="eye-btn" onclick="toggleEye('cfg-akey',this)">&#x1F441;</button></div>
+          <div class="inp-wrap"><input type="password" id="cfg-akey" placeholder="sk-ant-..."/><button class="eye-btn" onclick="toggleEye('cfg-akey',this)"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span></button></div>
         </div>
       </div>
       <div class="fg full"><label>Chave Google Maps</label>
-          <div class="inp-wrap"><input type="password" id="cfg-gkey" placeholder="Chave Google Maps"/><button class="eye-btn" onclick="toggleEye('cfg-gkey')">&#128065;</button></div></div>
+          <div class="inp-wrap"><input type="password" id="cfg-gkey" placeholder="Chave Google Maps"/><button class="eye-btn" onclick="toggleEye('cfg-gkey')"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span></button></div></div>
       </div>
       <p style="color:#888;font-size:.85em;font-weight:500">Mapa e rota via Google Maps.</p>
     </div>
     <div class="card">
-      <button class="btn bp" style="width:100%;justify-content:center" onclick="saveCfg()">&#x1F4BE; Salvar configura&#xE7;&#xF5;es</button>
+      <button class="btn bp" style="width:100%;justify-content:center" onclick="saveCfg()"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span> Salvar configura&#xE7;&#xF5;es</button>
       <div id="cfg-msg" style="margin-top:10px"></div>
     </div>
   </div>
@@ -684,7 +698,7 @@ body.dark .toast{background:rgba(255,255,255,.12)}
 <!-- MODAL AMBIGUIDADE -->
 <div class="mbg" id="amb-modal">
   <div class="modal">
-    <h2>&#x26A0;&#xFE0F; Endere&#xE7;o amb&#xED;guo</h2>
+    <h2><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> Endere&#xE7;o amb&#xED;guo</h2>
     <p style="font-size:13px;color:var(--mu);margin-bottom:14px;font-weight:500">Mais de um local encontrado. Confirme com o cliente e selecione:</p>
     <div id="amb-opts"></div>
     <div class="ma">
@@ -697,7 +711,7 @@ body.dark .toast{background:rgba(255,255,255,.12)}
 <!-- MODAL HISTORICO -->
 <div class="mbg" id="edit-modal">
   <div class="modal" style="max-width:500px">
-    <h2>&#x270F;&#xFE0F; Editar cliente</h2>
+    <h2><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span> Editar cliente</h2>
     <input type="hidden" id="em-id"/>
     <div class="edit-row">
       <div class="edit-field" style="grid-column:1/-1"><label>Nome</label><input type="text" id="em-nome"/></div>
@@ -705,22 +719,22 @@ body.dark .toast{background:rgba(255,255,255,.12)}
     <div class="edit-field"><label>Endere&#xe7;o</label><input type="text" id="em-end"/></div>
     <div class="edit-row">
       <div class="edit-field"><label>Telefone</label><input type="text" id="em-tel"/></div>
-      <div class="edit-field"><label>Tipo</label><select id="em-tipo"><option value="coleta">&#x1F7E2; Coleta</option><option value="entrega">&#x1F535; Entrega</option></select></div>
+      <div class="edit-field"><label>Tipo</label><select id="em-tipo"><option value="coleta">Coleta</option><option value="entrega">Entrega</option></select></div>
     </div>
     <div class="edit-row">
       <div class="edit-field"><label>Qtd. tapetes</label><input type="number" id="em-qtd" min="0"/></div>
       <div class="edit-field"><label>Valor</label><select id="em-valtipo" onchange="toggleEmValTipo()"><option value="normal">Valor (R$)</option><option value="medir">Medir</option><option value="pago">Pago</option></select></div>
     </div>
-    <div class="edit-field" id="em-val-wrap"><label>Valor (R$)</label><input type="number" id="em-val" min="0" step="0.01"/></div>
+    <div class="edit-field" id="em-val-wrap"><label>Valor (R$)</label><input type="text" inputmode="decimal" id="em-val" placeholder="0,00"/></div>
     <div class="edit-row">
       <div class="edit-field"><label>Janela de hor&#xe1;rio</label><select id="em-janela" onchange="toggleEmJanela()"><option value="livre">Qualquer hor&#xe1;rio</option><option value="manha">Manh&#xe3; (at&#xe9; 12h)</option><option value="tarde">Tarde (ap&#xf3;s 12h)</option><option value="custom">Hor&#xe1;rio espec&#xed;fico</option></select></div>
-      <div class="edit-field" id="em-hi-wrap" style="display:none"><label>Inicio</label><input type="time" id="em-hi"/></div>
+      <div class="edit-field" id="em-hi-wrap" style="display:none"><label>Início</label><input type="time" id="em-hi"/></div>
     </div>
     <div class="edit-field" id="em-hf-wrap" style="display:none"><label>Fim</label><input type="time" id="em-hf"/></div>
     <div class="edit-field"><label>Observa&#xe7;&#xf5;es</label><textarea id="em-obs"></textarea></div>
     <div class="ma">
       <button class="btn bo" onclick="closeModal('edit-modal')">Cancelar</button>
-      <button class="btn bp" onclick="saveEditC()">&#x2705; Salvar</button>
+      <button class="btn bp" onclick="saveEditC()"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> Salvar</button>
     </div>
   </div>
 </div>
@@ -730,9 +744,9 @@ body.dark .toast{background:rgba(255,255,255,.12)}
     <h2 id="hm-title"></h2>
     <div id="hm-body"></div>
     <div class="ma">
-      <button class="btn br bsm" onclick="delHist()">&#x1F5D1; Excluir</button>
+      <button class="btn br bsm" onclick="delHist()"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span> Excluir</button>
       <button class="btn bo" onclick="closeModal('hist-modal')">Fechar</button>
-      <button class="btn bp" onclick="loadHist()">&#x1F4C2; Carregar rota</button>
+      <button class="btn bp" onclick="loadHist()"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span> Carregar rota</button>
     </div>
   </div>
 </div>
@@ -787,8 +801,8 @@ function closeModal(id){g(id).classList.remove('on');}
 
 function toggleEye(fid,btn){
   const inp=g(fid);
-  if(inp.type==='password'){inp.type='text';btn.textContent='\uD83D\uDEAB';}
-  else{inp.type='password';btn.textContent='\uD83D\uDC41';}
+  if(inp.type==='password'){inp.type='text';btn.innerHTML='<span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></span>';}
+  else{inp.type='password';btn.innerHTML='<span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>';}
 }
 
 function loadCfg(){
@@ -801,11 +815,16 @@ function saveCfg(){
     al1:v('cfg-al1'),al2:v('cfg-al2'),
     tkey:v('cfg-tkey'),ttoken:v('cfg-ttoken'),
     akey:v('cfg-akey'),gkey:v('cfg-gkey')};
+  // Validações
+  if(cfg.saida&&cfg.ret&&cfg.saida>=cfg.ret){toast('Horário de saída deve ser anterior ao retorno','err');return;}
+  if(cfg.tempo>240){toast('Tempo por parada máximo: 240 min','err');return;}
+  if(cfg.tempo<1){cfg.tempo=1;}
+  if(cfg.al1&&cfg.al2&&cfg.al1>=cfg.al2){toast('Pausa almoço: início deve ser anterior ao fim','err');return;}
   localStorage.setItem('rota_cfg',JSON.stringify(cfg));
   toastCenter();
   let warn='';
-  if(!cfg.base)warn+='<div class="ab w" style="margin-top:8px">&#x26A0;&#xFE0F; <strong>Endere\xE7o de partida</strong> n\xE3o preenchido. O sistema precisa dele para calcular os hor\xE1rios de chegada nos clientes.</div>';
-  if(!cfg.saida)warn+='<div class="ab w" style="margin-top:8px">&#x26A0;&#xFE0F; <strong>Hor\xE1rio de sa\xEDda</strong> n\xE3o preenchido.</div>';
+  if(!cfg.base)warn+='<div class="ab w" style="margin-top:8px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <strong>Endere\xE7o de partida</strong> n\xE3o preenchido. O sistema precisa dele para calcular os hor\xE1rios de chegada nos clientes.</div>';
+  if(!cfg.saida)warn+='<div class="ab w" style="margin-top:8px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <strong>Hor\xE1rio de sa\xEDda</strong> n\xE3o preenchido.</div>';
   g('cfg-msg').innerHTML=warn;
   if(warn)setTimeout(()=>g('cfg-msg').innerHTML='',6000);
 }
@@ -916,7 +935,7 @@ async function trelloBuscarCartoes(){
   catch(e){toast('Erro: '+e.message,'err');console.error(e);}
   finally{
     g('trello-btn').disabled=false;g('tspin').style.display='none';
-    g('tlbl').textContent='\uD83D\uDD0D Buscar cart\xF5es';
+    g('tlbl').innerHTML='<span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span> Buscar cart\xF5es';
   }
 }
 async function trelloStep1(){
@@ -935,8 +954,8 @@ async function trelloStep1(){
     boards.forEach(b=>{
       const wasSel=selBoard&&selBoard.id===b.id;
       html+='<div class="sel-opt'+(wasSel?' on':'')+'" onclick="trelloSelectBoard(\''+b.id+'\',\''+b.name.replace(/'/g,"\\\'")+'\')">'
-        +'<div class="sel-opt-icon" style="background:'+(wasSel?'var(--pu)':'var(--pul)')+'">&#x1F4CB;</div>'
-        +'<div><div style="font-weight:600;font-size:14px">'+b.name+(wasSel?' &#x2714;':'')+' </div>'+(b.desc?'<div style="font-size:12px;color:var(--mu);margin-top:2px">'+b.desc.slice(0,60)+'</div>':'')+'</div>'
+        +'<div class="sel-opt-icon" style="background:'+(wasSel?'var(--pu)':'var(--pul)')+'"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span></div>'
+        +'<div><div style="font-weight:600;font-size:14px">'+b.name+(wasSel?' ✔':'')+' </div>'+(b.desc?'<div style="font-size:12px;color:var(--mu);margin-top:2px">'+b.desc.slice(0,60)+'</div>':'')+'</div>'
         +'</div>';
     });
     _tboardsHtml=html;
@@ -944,7 +963,7 @@ async function trelloStep1(){
     g('trello-step1').style.display='none';
     g('trello-step2').style.display='block';
   }catch(e){toast('Erro ao buscar quadros: '+e.message,'err');console.error(e);}
-  finally{g('trello-btn').disabled=false;g('tspin').style.display='none';g('tlbl').textContent='\uD83D\uDD0D Buscar quadros';}
+  finally{g('trello-btn').disabled=false;g('tspin').style.display='none';g('tlbl').innerHTML='<span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span> Buscar quadros';}
 }
 
 async function trelloSelectBoard(id,name){
@@ -954,10 +973,10 @@ async function trelloSelectBoard(id,name){
   try{
     const lists=await trelloAPICall('/boards/'+id+'/lists?fields=name,id&filter=open');
     if(!Array.isArray(lists)||!lists.length){toast('Nenhuma lista neste quadro','warn');return;}
-    let html='<div class="ab info" style="margin-bottom:12px">&#x1F4CB; Quadro: <strong>'+name+'</strong></div>';
+    let html='<div class="ab info" style="margin-bottom:12px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span> Quadro: <strong>'+name+'</strong></div>';
     lists.forEach(l=>{
       html+='<div class="sel-opt" onclick="trelloSelectList(\''+l.id+'\',\''+l.name.replace(/'/g,"\\'")+'\')">'
-        +'<div class="sel-opt-icon" style="background:var(--bll)">&#x1F4DD;</div>'
+        +'<div class="sel-opt-icon" style="background:var(--bll)"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span></div>'
         +'<div style="font-weight:600;font-size:14px">'+l.name+'</div>'
         +'</div>';
     });
@@ -967,7 +986,7 @@ async function trelloSelectBoard(id,name){
     g('trello-boards').style.display='none';
     g('trello-step2').style.display='none';
     g('trello-step3').style.display='block';
-    g('tlbl').textContent='\uD83D\uDD0D Buscar cart\xF5es';
+    g('tlbl').innerHTML='<span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span> Buscar cart\xF5es';
   }catch(e){
     toast('Erro ao buscar listas','err');console.error(e);
     // Restaura lista de quadros se falhar
@@ -985,7 +1004,7 @@ async function trelloSelectList(id,name){
     const cards=await trelloAPICall('/lists/'+id+'/cards?fields=name,desc,due,id');
     const filtered=Array.isArray(cards)?cards.filter(c=>c.due&&new Date(c.due).toLocaleDateString('en-CA')===dateVal):[];
     window._tcards=filtered;
-    let html='<div class="ab info" style="margin-bottom:12px">&#x1F4DD; Lista: <strong>'+name+'</strong></div>';
+    let html='<div class="ab info" style="margin-bottom:12px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span> Lista: <strong>'+name+'</strong></div>';
     if(!filtered.length){
       html+='<div class="ab w">Nenhum cart\xE3o com data '+new Date(dateVal+'T12:00').toLocaleDateString('pt-BR')+' nesta lista.</div>';
     }else{
@@ -996,7 +1015,7 @@ async function trelloSelectList(id,name){
           +'<div><div style="font-weight:600">'+c.name+'</div>'+(c.desc?'<div style="font-size:12px;color:var(--mu);margin-top:3px">'+c.desc.slice(0,100)+(c.desc.length>100?'...':'')+'</div>':'')+'</div>'
           +'</div>';
       });
-      html+='<div style="margin-top:14px;display:flex;gap:8px"><button class="btn bp" onclick="importTC()">&#x2705; Importar selecionados</button></div>';
+      html+='<div style="margin-top:14px;display:flex;gap:8px"><button class="btn bp" onclick="importTC()"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> Importar selecionados</button></div>';
     }
     g('trello-cards').innerHTML=html;
     g('trello-boards').style.display='none';
@@ -1101,12 +1120,12 @@ async function importTC(){
   }
   order=clients.map((_,i)=>i);renderC();updStats();updBtns();
   toast(count+' cliente(s) importado(s)!','ok');
-  g('trello-cards').innerHTML='<div class="ab ok">&#x2705; '+count+' cliente(s) importado(s)!</div>'
+  g('trello-cards').innerHTML='<div class="ab ok"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> '+count+' cliente(s) importado(s)!</div>'
     +'<div style="margin-top:12px;padding:12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px">'
-    +'<div style="font-weight:600;margin-bottom:8px">&#x1F4CB; '+selBoard.name+' &rsaquo; '+selList.name+'</div>'
+    +'<div style="font-weight:600;margin-bottom:8px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span> '+selBoard.name+' &rsaquo; '+selList.name+'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:center">'
     +'<div style="cursor:pointer" onclick="this.querySelector(\'input\').showPicker()"><input type="date" id="td2" value="'+v('td')+'" style="padding:7px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:inherit;background:var(--sf);color:var(--tx);cursor:pointer;width:100%"/></div>'
-    +'<button class="btn bp bsm" onclick="trelloBuscarCartoes()" style="white-space:nowrap;width:100%;justify-content:center">&#x1F504; Buscar cart\xF5es</button>'
+    +'<button class="btn bp bsm" onclick="trelloBuscarCartoes()" style="white-space:nowrap;width:100%;justify-content:center"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg></span> Buscar cart\xF5es</button>'
     +'<button class="btn bo bsm" onclick="resetTrello()" style="white-space:nowrap;width:100%;justify-content:center">Trocar lista</button>'
     +'</div></div>';
 }
@@ -1121,17 +1140,17 @@ function loadTrelloSelection(){
 function showTrelloQuickPanel(){
   if(!selBoard||!selList)return;
   const dv=document.getElementById('td')?.value||new Date().toISOString().split('T')[0];
-  g('trello-cards').innerHTML='<div class="ab info" style="margin-bottom:10px">&#x1F4CB; Retomando sele&#xe7;&#xe3o anterior</div>'
+  g('trello-cards').innerHTML='<div class="ab info" style="margin-bottom:10px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span> Retomando sele&#xe7;&#xe3o anterior</div>'
     +'<div style="padding:12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px">'
-    +'<div style="font-weight:600;margin-bottom:8px">&#x1F4CB; '+selBoard.name+' &rsaquo; '+selList.name+'</div>'
+    +'<div style="font-weight:600;margin-bottom:8px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span> '+selBoard.name+' &rsaquo; '+selList.name+'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:center">'
     +'<div style="cursor:pointer" onclick="this.querySelector(\'input\').showPicker()"><input type="date" id="td2" value="'+dv+'" style="padding:7px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:inherit;background:var(--sf);color:var(--tx);cursor:pointer;width:100%"/></div>'
-    +'<button class="btn bp bsm" onclick="trelloBuscarCartoes()" style="white-space:nowrap;width:100%;justify-content:center">&#x1F504; Buscar cart\xF5es</button>'
+    +'<button class="btn bp bsm" onclick="trelloBuscarCartoes()" style="white-space:nowrap;width:100%;justify-content:center"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg></span> Buscar cart\xF5es</button>'
     +'<button class="btn bo bsm" onclick="resetTrello()" style="white-space:nowrap;width:100%;justify-content:center">Trocar lista</button>'
     +'</div></div>';
   ['trello-step1','trello-step2','trello-step3'].forEach(id=>g(id).style.display='none');
   g('trello-step4').style.display='block';
-  g('tlbl').textContent='\uD83D\uDD0D Buscar cart\xF5es';
+  g('tlbl').innerHTML='<span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span> Buscar cart\xF5es';
 }
 
 async function reloadTrelloList(){
@@ -1171,7 +1190,7 @@ async function checkAmb(){
     const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+', São Paulo, SP, Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
     if(d.status==='OK'&&d.results.length>1){
       ambRes=d.results.map(r=>({lat:r.geometry.location.lat,lon:r.geometry.location.lng,display_name:r.formatted_address}));
-      let html='<div class="ab w">&#x26A0;&#xFE0F; <strong>Endere\xE7o amb\xEDguo</strong> \u2014 selecione o correto:</div>';
+      let html='<div class="ab w"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <strong>Endere\xE7o amb\xEDguo</strong> \u2014 selecione o correto:</div>';
       ambRes.forEach((r,i)=>{html+='<div class="ao" id="ao-'+i+'" onclick="selAmb('+i+')">'+r.display_name+'</div>';});
       box.innerHTML=html;box.style.display='block';
     } else {box.style.display='none';}
@@ -1195,12 +1214,18 @@ function addClient(){
   const nome=v('f-nome'),end=v('f-end'),tipo=v('f-tipo');
   if(!nome){toast('Informe o nome','err');return;}
   if(!end){toast('Informe o endere\xE7o','err');return;}
+  if(end.length<10||!/\d/.test(end)){toast('Endere\xE7o parece inv\xE1lido (inclua rua e n\xFAmero)','err');return;}
   if(!tipo){toast('Selecione Coleta ou Entrega','err');return;}
   const qtd=parseInt(v('f-qtd'))||0;
   if(qtd<0){toast('Qtd. tapetes n\xE3o pode ser negativa','err');return;}
   const valTipo=g('f-valtipo')?.value||'normal';
-  const val=valTipo==='normal'?(parseFloat(v('f-val'))||0):0;
+  const val=valTipo==='normal'?(parseFloat(v('f-val').replace(',','.'))||0):0;
   if(val<0){toast('Valor n\xE3o pode ser negativo','err');return;}
+  const janela=g('f-janela').value;
+  if(janela==='custom'){
+    const hi=v('f-hi'),hf=v('f-hf');
+    if(hi&&hf&&hi>=hf){toast('Horário início deve ser anterior ao fim','err');return;}
+  }
   clients.push({id:Date.now()+Math.random(),nome,endereco:end,tel:v('f-tel'),tipo,qtd,val,valTipo,data:v('f-data')||new Date().toISOString().split('T')[0],janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null});
   order=clients.map((_,i)=>i);
   resetForm();clearImg();renderC();updStats();updBtns();
@@ -1249,13 +1274,14 @@ function saveEditC(){
   c.tipo=g('em-tipo').value;
   c.qtd=parseInt(g('em-qtd').value)||0;
   c.valTipo=g('em-valtipo').value;
-  c.val=c.valTipo==='normal'?parseFloat(g('em-val').value)||0:0;
+  c.val=c.valTipo==='normal'?parseFloat((g('em-val').value||'').replace(',','.'))||0:0;
   // Atualiza título do cartão com valor formatado
   c.nome=fmtNomeValor(c.nome,c.val,c.valTipo);
   c.janela=g('em-janela').value;
   c.hi=c.janela==='custom'?g('em-hi').value:'';
   c.hf=c.janela==='custom'?g('em-hf').value:'';
   c.obs=g('em-obs').value.trim();
+  if(c.janela==='custom'&&c.hi&&c.hf&&c.hi>=c.hf){toast('Horário início deve ser anterior ao fim','err');return;}
   closeModal('edit-modal');
   renderC();updStats();
   toast('Cliente atualizado!','ok');
@@ -1263,13 +1289,13 @@ function saveEditC(){
 
 function renderC(){
   const el=g('clist');
-  if(!clients.length){el.innerHTML='<div class="empty"><span>&#x1F4CB;</span><p>Nenhum cliente ainda</p></div>';g('cc-count').textContent='';g('cfl-banner').innerHTML='';return;}
+  if(!clients.length){el.innerHTML='<div class="empty"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span><p>Nenhum cliente ainda</p></div>';g('cc-count').textContent='';g('cfl-banner').innerHTML='';return;}
   const cfls=clients.filter(c=>c.conflict);
-  g('cfl-banner').innerHTML=cfls.length?'<div class="ab w" style="margin-bottom:12px">&#x26A0;&#xFE0F; <div><strong>'+cfls.length+' conflito(s) de hor\xE1rio.</strong> '+cfls.filter(c=>c.tipo==='coleta').length+' coleta(s) em risco.</div></div>':'';
+  g('cfl-banner').innerHTML=cfls.length?'<div class="ab w" style="margin-bottom:12px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <div><strong>'+cfls.length+' conflito(s) de hor\xE1rio.</strong> '+cfls.filter(c=>c.tipo==='coleta').length+' coleta(s) em risco.</div></div>':'';
   el.innerHTML=order.map((idx,stop)=>{
     const c=clients[idx];
-    const jl={livre:'',manha:'\uD83C\uDF05 At\xe9 12h',tarde:'\uD83C\uDF07 Ap\xf3s 12h',custom:'\u23F0 '+c.hi+'\u2013'+c.hf}[c.janela]||'';
-    const vd=c.valTipo==='medir'?'\u2696\uFE0F Medir':c.valTipo==='pago'?'\u2705 Pago':c.val?'R$ '+fmtBRL(c.val):'';
+    const jl={livre:'',manha:'Até 12h',tarde:'Após 12h',custom:c.hi+'–'+c.hf}[c.janela]||'';
+    const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';
     return '<div class="cc '+(c.tipo==='coleta'?'col':'ent')+(c.conflict?(c.tipo==='coleta'?' cfl':' cwn'):'')+'" data-stop="'+stop+'" onclick="editC('+c.id+')">'
       +'<div class="sn '+(c.tipo==='coleta'?'c':'e')+'">'+(stop+1)+'</div>'
       +'<div class="ci">'
@@ -1279,16 +1305,16 @@ function renderC(){
         +'</div>'
         +(c.endereco?'<div class="ca">'+c.endereco+'</div>':'')
         +'<div class="cm">'
-          +(c.tel?'<span>\uD83D\uDCDE '+c.tel+'</span>':'')
+          +(c.tel?'<span>☎ '+c.tel+'</span>':'')
           +(c.qtd?'<span>'+c.qtd+' tapete'+(c.qtd>1?'s':'')+'</span>':'')
           +(vd?'<span>'+vd+'</span>':'')
           +(jl?'<span>'+jl+'</span>':'')
           +(c.estT?'<span class="et '+(c.conflict?'late':'')+'">'+c.estT+'</span>':'')
         +'</div>'
         +(c.obs?'<div style="font-size:12px;color:var(--mu);margin-top:3px;font-style:italic">'+c.obs+'</div>':'')
-        +(c.conflict?'<div class="cmsg">\u26A0\uFE0F '+c.cmsg+'</div>':'')
+        +(c.conflict?'<div class="cmsg">⚠ '+c.cmsg+'</div>':'')
       +'</div>'
-      +'<button class="bic del" style="width:24px;height:24px;font-size:11px;flex-shrink:0;margin-top:1px" onclick="event.stopPropagation();removeC('+c.id+')">\u2715</button>'
+      +'<button class="bic del" style="width:24px;height:24px;font-size:11px;flex-shrink:0;margin-top:1px" onclick="event.stopPropagation();removeC('+c.id+')">✕</button>'
       +'</div>';
   }).join('');
   g('cc-count').textContent=clients.length+' cliente'+(clients.length!==1?'s':'');
@@ -1520,7 +1546,12 @@ function toggleMapFullscreen(){
   document.body.style.overflow=mapIsFullscreen?'hidden':'';
   if(gMap){setTimeout(()=>{google.maps.event.trigger(gMap,'resize');if(gMarkers.length){const bnds=new google.maps.LatLngBounds();gMarkers.forEach(m=>bnds.extend(m.getPosition()));gMap.fitBounds(bnds);}},150);}
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&mapIsFullscreen)toggleMapFullscreen();});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(mapIsFullscreen){toggleMapFullscreen();return;}
+    document.querySelectorAll('.mbg.on').forEach(m=>m.classList.remove('on'));
+  }
+});
 
 // ---- GOOGLE MAPS ----
 const GKEY='AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM';
@@ -1763,8 +1794,8 @@ async function genImage(){
   const cards=order.map((idx,stop)=>{
     const c=clients[idx];
     const isCol=c.tipo==='coleta';
-    const vd=c.valTipo==='medir'?'\u2696\uFE0F Medir':c.valTipo==='pago'?'\u2705 Pago':c.val?'R$ '+fmtBRL(c.val):'';
-    const det=[c.tel?'\uD83D\uDCDE '+c.tel:'',c.qtd?c.qtd+' tapete'+(c.qtd>1?'s':''):'',vd].filter(Boolean).join(' \u00B7 ');
+    const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';
+    const det=[c.tel?'☎ '+c.tel:'',c.qtd?c.qtd+' tapete'+(c.qtd>1?'s':''):'',vd].filter(Boolean).join(' · ');
     return `<div style="background:#fff;border:1px solid #E2E4F0;border-left:3.5px solid ${isCol?'#00C875':'#0098F7'};border-radius:8px;padding:11px 12px;margin-bottom:7px;display:flex;gap:10px;align-items:flex-start">
       <div style="width:20px;height:20px;min-width:20px;border-radius:50%;background:${isCol?'#E6FBF3':'#E6F5FF'};color:${isCol?'#00A65E':'#0098F7'};font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:2px">${stop+1}</div>
       <div style="flex:1;min-width:0">
@@ -1775,7 +1806,7 @@ async function genImage(){
         ${c.endereco?`<div style="font-size:12px;color:#6B6F8E;margin-top:3px">${c.endereco}</div>`:''}
         ${det?`<div style="font-size:12px;color:#6B6F8E;margin-top:5px">${det}</div>`:''}
         ${c.obs?`<div style="font-size:11px;color:#6B6F8E;margin-top:3px;font-style:italic">${c.obs}</div>`:''}
-        ${c.conflict?`<div style="font-size:11px;color:#E2445C;margin-top:3px;font-weight:600">\u26A0\uFE0F ${c.cmsg}</div>`:''}
+        ${c.conflict?`<div style="font-size:11px;color:#E2445C;margin-top:3px;font-weight:600">⚠ ${c.cmsg}</div>`:''}
       </div>
     </div>`;
   }).join('');
@@ -1784,8 +1815,8 @@ async function genImage(){
       <div style="color:#fff;font-weight:700;font-size:16px">Roteiro</div>
       <div style="color:#A0A5C8;font-size:12px;margin-top:4px">${d.charAt(0).toUpperCase()+d.slice(1)}</div>
       <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;justify-content:center">
-        <span style="background:rgba(0,200,117,.15);color:#00C875;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">${col.length} coleta${col.length!==1?'s':''} \u00B7 ${tapR} tapete${tapR!==1?'s':''} a retirar</span>
-        <span style="background:rgba(0,152,247,.15);color:#4DB8FF;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">${ent.length} entrega${ent.length!==1?'s':''} \u00B7 ${tapE} tapete${tapE!==1?'s':''} a entregar</span>
+        <span style="background:rgba(0,200,117,.15);color:#00C875;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">${col.length} coleta${col.length!==1?'s':''} · ${tapR} tapete${tapR!==1?'s':''} a retirar</span>
+        <span style="background:rgba(0,152,247,.15);color:#4DB8FF;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">${ent.length} entrega${ent.length!==1?'s':''} · ${tapE} tapete${tapE!==1?'s':''} a entregar</span>
       </div>
     </div>
     ${cards}
@@ -1802,7 +1833,7 @@ async function genImage(){
   }catch(e){toast('Erro ao gerar imagem: '+e.message,'err');console.error(e);}
   finally{
     try{document.body.removeChild(wrap);}catch(e){}
-    const btn=g('pdf-btn');if(btn){btn.disabled=false;btn.innerHTML='&#x1F4F8; Gerar imagem do roteiro';}
+    const btn=g('pdf-btn');if(btn){btn.disabled=false;btn.innerHTML='<span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span> Gerar imagem do roteiro';}
   }
 }
 
@@ -1899,11 +1930,11 @@ function saveHist(){
 }
 function renderHist(){
   const hist=getHist();const el=g('hlist');
-  if(!hist.length){el.innerHTML='<div class="empty"><span>\uD83D\uDDC2\uFE0F</span><p>Nenhuma rota salva ainda</p></div>';return;}
+  if(!hist.length){el.innerHTML='<div class="empty"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span><p>Nenhuma rota salva ainda</p></div>';return;}
   el.innerHTML=hist.map((h,i)=>{
     const d=new Date(h.date+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
     const col=h.clients.filter(c=>c.tipo==='coleta').length,ent=h.clients.filter(c=>c.tipo==='entrega').length;
-    return '<div class="hi" onclick="openHist('+i+')"><div style="width:42px;height:42px;background:var(--pul);border-radius:var(--rl2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">\uD83D\uDCC5</div><div><div style="font-weight:700;font-size:14px">'+d.charAt(0).toUpperCase()+d.slice(1)+'</div><div class="hm">'+h.clients.length+' clientes \xB7 '+col+' coleta'+(col!==1?'s':'')+' / '+ent+' entrega'+(ent!==1?'s':'')+'</div></div></div>';
+    return '<div class="hi" onclick="openHist('+i+')"><div style="width:42px;height:42px;background:var(--pul);border-radius:var(--rl2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0"><span class="mot-ico" style="width:20px;height:20px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span></div><div><div style="font-weight:700;font-size:14px">'+d.charAt(0).toUpperCase()+d.slice(1)+'</div><div class="hm">'+h.clients.length+' clientes · '+col+' coleta'+(col!==1?'s':'')+' / '+ent+' entrega'+(ent!==1?'s':'')+'</div></div></div>';
   }).join('');
 }
 function openHist(i){
@@ -1911,11 +1942,18 @@ function openHist(i){
   const d=new Date(h.date+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   g('hm-title').textContent=d.charAt(0).toUpperCase()+d.slice(1);
   const col=h.clients.filter(c=>c.tipo==='coleta'),ent=h.clients.filter(c=>c.tipo==='entrega');
-  let html='<div class="ab ok">'+h.clients.length+' clientes \u2014 '+col.length+' coleta'+(col.length!==1?'s':'')+' / '+ent.length+' entrega'+(ent.length!==1?'s':'')+'</div>';
-  h.order.forEach((idx,stop)=>{const c=h.clients[idx]||h.clients[stop];if(!c)return;html+='<div style="border:1.5px solid var(--bd);border-radius:var(--r);padding:10px 13px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start"><div style="width:26px;height:26px;background:'+(c.tipo==='coleta'?'var(--gn)':'var(--bl)')+';color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+(stop+1)+'</div><div><div style="font-weight:600;font-size:13px">'+c.nome+'</div><div style="font-size:12px;color:var(--mu)">'+c.endereco+'</div><div style="margin-top:5px"><span class="tag '+(c.tipo==='coleta'?'tc':'te')+'">'+(c.tipo==='coleta'?'\u{1F7E2} Coleta':'\uD83D\uDD35 Entrega')+'</span></div></div></div>';});
+  let html='<div class="ab ok">'+h.clients.length+' clientes — '+col.length+' coleta'+(col.length!==1?'s':'')+' / '+ent.length+' entrega'+(ent.length!==1?'s':'')+'</div>';
+  h.order.forEach((idx,stop)=>{const c=h.clients[idx]||h.clients[stop];if(!c)return;html+='<div style="border:1.5px solid var(--bd);border-radius:var(--r);padding:10px 13px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start"><div style="width:26px;height:26px;background:'+(c.tipo==='coleta'?'var(--gn)':'var(--bl)')+';color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+(stop+1)+'</div><div><div style="font-weight:600;font-size:13px">'+c.nome+'</div><div style="font-size:12px;color:var(--mu)">'+c.endereco+'</div><div style="margin-top:5px"><span class="tag '+(c.tipo==='coleta'?'tc':'te')+'">'+(c.tipo==='coleta'?'Coleta':'Entrega')+'</span></div></div></div>';});
   g('hm-body').innerHTML=html;g('hist-modal').classList.add('on');
 }
-function loadHist(){window.scrollTo(0,0);
+function loadHist(){
+  if(clients.length>0){
+    showConfirm('Substituir rota atual?','Isso irá substituir os '+clients.length+' clientes atuais pela rota do histórico.',()=>{doLoadHist();});
+    return;
+  }
+  doLoadHist();
+}
+function doLoadHist(){window.scrollTo(0,0);
   const h=getHist()[histIdx];clients=JSON.parse(JSON.stringify(h.clients));order=[...h.order];
   closeModal('hist-modal');
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
@@ -1932,7 +1970,7 @@ function delHist(){
 
 async function renderDash(){
   const hist=getHist();const allC=hist.flatMap(h=>h.clients);const el=g('dash-stats');
-  if(!allC.length){g('hmph').style.display='flex';g('heatmap').style.display='none';el.innerHTML='<div class="empty"><span>\uD83D\uDCC5</span><p>Salve rotas para ver a concentra\xE7\xE3o de clientes</p></div>';return;}
+  if(!allC.length){g('hmph').style.display='flex';g('heatmap').style.display='none';el.innerHTML='<div class="empty"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><p>Salve rotas para ver a concentra&#xE7;&#xE3;o de clientes</p></div>';return;}
   g('hmph').style.display='none';g('heatmap').style.display='block';
   el.innerHTML='<div class="card"><p class="ct">Identificando bairros... <span class="spin"></span></p></div>';
   const _dashT=setTimeout(()=>{if(el.innerHTML.includes('Identificando'))el.innerHTML='<div class="card"><p class="ct" style="color:var(--mu)">⚠ï¸ Não foi possível identificar bairros. Gere uma rota primeiro.</p></div>';},15000);
@@ -2127,6 +2165,6 @@ function setMotObs(idx,obs){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v3.1.0</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v3.2.0</div>
 </body>
 </html>
