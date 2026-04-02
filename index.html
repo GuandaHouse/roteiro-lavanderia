@@ -4,6 +4,16 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v3.1.0 — 02/04/2026 — M1 Monochrome (redesign motorista)    ║
+║  ─────────────────────────────────────────                   ║
+║  • Redesign completo do painel do motorista: M1 Monochrome   ║
+║  • Zero emojis — todos ícones agora são SVG traço fino       ║
+║  • Paleta monocromática: cinza/preto + roxo como accent      ║
+║  • Botões discretos com bordas sutis, sem cores gritantes    ║
+║  • Identidade visual inspirada em Apple/Linear/Stripe        ║
+║  • Dark mode totalmente compatível                           ║
+║  • Borda superior sutil indica tipo (azul=entrega/verde=col) ║
+║                                                              ║
 ║  v3.0.0 — 02/04/2026 — Painel do Motorista (FASE 2)          ║
 ║  ─────────────────────────────────────────                   ║
 ║  • VISÃO DO MOTORISTA completamente redesenhada              ║
@@ -195,54 +205,72 @@ textarea{resize:vertical;min-height:56px}
 
 /* TAGS */
 .tag{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
-/* ── MOTORISTA: Interface touch-friendly para motoristas 50-60+ anos ── */
-.mot-summary{background:var(--sf);backdrop-filter:blur(12px);border:1.5px solid var(--bd);border-radius:18px;padding:20px;margin-bottom:16px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-around}
+/* ── MOTORISTA: M1 Monochrome — Design premium minimal ── */
+.mot-ico{width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.mot-ico svg{width:100%;height:100%}
+.mot-ico-sm{width:14px;height:14px}
+.mot-summary{background:var(--sf);backdrop-filter:blur(12px);border:1px solid var(--bd);border-radius:16px;padding:20px;margin-bottom:16px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-around}
 .mot-summary .ms-item{text-align:center}
-.mot-summary .ms-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:4px}
-.mot-summary .ms-val{font-size:32px;font-weight:800;line-height:1}
-.mot-start-btn{width:100%;padding:20px;border-radius:16px;border:none;font-size:20px;font-weight:800;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:18px;transition:transform .15s,box-shadow .15s;letter-spacing:-.02em}
+.mot-summary .ms-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);margin-bottom:4px}
+.mot-summary .ms-val{font-size:28px;font-weight:800;line-height:1;color:var(--tx)}
+.mot-start-btn{width:100%;padding:18px;border-radius:14px;border:none;font-size:18px;font-weight:800;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:16px;transition:transform .15s,box-shadow .15s;letter-spacing:-.02em}
 .mot-start-btn:active{transform:scale(.97)}
-.mot-start-btn.go{background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 4px 20px rgba(34,197,94,.3)}
-.mot-start-btn.pause{background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 20px rgba(245,158,11,.3)}
-.mot-card{background:var(--sf);backdrop-filter:blur(12px);border:2px solid var(--bd);border-radius:18px;padding:0;margin-bottom:14px;overflow:hidden;transition:all .3s ease}
-.mot-card.active{border-color:var(--pu);box-shadow:0 4px 24px rgba(108,92,231,.12)}
-.mot-card.done{opacity:.5;border-color:var(--gn)}
-.mot-card .mc-header{padding:18px 18px 14px;display:flex;align-items:flex-start;gap:14px}
-.mot-card .mc-num{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;flex-shrink:0;color:#fff}
-.mot-card .mc-num.col{background:linear-gradient(135deg,#22c55e,#16a34a)}
-.mot-card .mc-num.ent{background:linear-gradient(135deg,#3b82f6,#2563eb)}
-.mot-card .mc-info{flex:1;min-width:0}
-.mot-card .mc-name{font-size:18px;font-weight:800;line-height:1.3;letter-spacing:-.02em}
-.mot-card .mc-addr{font-size:14px;color:var(--mu);font-weight:500;margin-top:3px}
-.mot-card .mc-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.mot-card .mc-meta .tag{font-size:12px;padding:4px 10px}
-.mot-card .mc-type-badge{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:4px 10px;border-radius:8px;flex-shrink:0}
-.mot-card .mc-type-badge.col{background:rgba(34,197,94,.12);color:#16a34a}
-.mot-card .mc-type-badge.ent{background:rgba(59,130,246,.12);color:#2563eb}
-.mot-card .mc-actions{padding:0 18px 18px;display:flex;flex-direction:column;gap:10px}
-.mot-card .mc-nav{width:100%;padding:14px;border-radius:12px;border:none;font-size:16px;font-weight:700;color:#fff;background:linear-gradient(135deg,#6C5CE7,#5649C0);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .15s}
-.mot-card .mc-nav:active{transform:scale(.97)}
+.mot-start-btn.go{background:var(--tx);box-shadow:0 2px 12px rgba(30,27,75,.15)}
+body.dark .mot-start-btn.go{background:var(--pu)}
+.mot-start-btn.pause{background:var(--mu);box-shadow:0 2px 12px rgba(30,27,75,.1)}
+.mot-card{background:var(--sf);backdrop-filter:blur(12px);border:1px solid var(--bd);border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;transition:all .3s ease}
+.mot-card.ent{border-top:2px solid rgba(59,130,246,.2)}
+.mot-card.col{border-top:2px solid rgba(34,197,94,.2)}
+.mot-card.active{border-color:var(--pu);border-top-color:var(--pu);box-shadow:0 2px 16px rgba(108,92,231,.08)}
+.mot-card.done{opacity:.45}
+.mot-card .mc-top{padding:16px 18px 0;display:flex;align-items:center;justify-content:space-between}
+.mot-card .mc-top-left{display:flex;align-items:center;gap:10px}
+.mot-card .mc-num{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;flex-shrink:0;background:rgba(30,27,75,.06);color:var(--tx)}
+body.dark .mot-card .mc-num{background:rgba(255,255,255,.08)}
+.mot-card .mc-tipo{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu)}
+.mot-card .mc-time{font-size:14px;font-weight:600;font-family:'DM Mono',monospace;color:var(--pu)}
+.mot-card .mc-name{font-size:20px;font-weight:800;color:var(--tx);line-height:1.2;padding:10px 18px 0;letter-spacing:-.03em}
+.mot-card .mc-addr{font-size:12px;color:var(--mu);font-weight:500;padding:3px 18px 0}
+.mot-card .mc-details{display:flex;gap:14px;padding:12px 18px 14px;align-items:center;flex-wrap:wrap}
+.mot-card .mc-detail{font-size:12px;font-weight:600;color:var(--mu);display:flex;align-items:center;gap:4px}
+.mot-card .mc-detail .mot-ico{opacity:.4}
+.mot-card .mc-detail.alert{color:#92400e}
+body.dark .mot-card .mc-detail.alert{color:#fbbf24}
+.mot-card .mc-tel{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 18px 14px;padding:11px;border-radius:10px;background:rgba(30,27,75,.03);color:var(--tx);font-weight:700;font-size:14px;text-decoration:none;border:1px solid var(--bd);transition:background .15s}
+body.dark .mot-card .mc-tel{background:rgba(255,255,255,.03)}
+.mot-card .mc-tel .mot-ico{opacity:.4}
+.mot-card .mc-tel:active{background:var(--pul)}
+.mot-card .mc-sep{height:1px;background:var(--bd);margin:0;opacity:.4}
+.mot-card .mc-actions{padding:14px 18px 16px;display:flex;flex-direction:column;gap:8px}
+.mot-card .mc-nav-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mot-card .mc-nav-btn{padding:12px;border-radius:10px;border:1.5px solid var(--bd);background:var(--sf);backdrop-filter:blur(8px);font-size:14px;font-weight:700;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;font-family:'Plus Jakarta Sans',sans-serif;color:var(--tx);transition:all .15s}
+.mot-card .mc-nav-btn:active{transform:scale(.97);background:var(--pul)}
+.mot-card .mc-nav-btn.primary{background:var(--tx);color:var(--bg);border-color:var(--tx)}
+body.dark .mot-card .mc-nav-btn.primary{background:var(--pu);border-color:var(--pu);color:#fff}
+.mot-card .mc-nav-btn .mot-ico{opacity:.4}
+.mot-card .mc-nav-btn.primary .mot-ico{opacity:.7}
 .mot-card .mc-status-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.mot-card .mc-status-btn{padding:14px 8px;border-radius:12px;border:2px solid var(--bd);background:var(--sf);font-size:14px;font-weight:700;cursor:pointer;text-align:center;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--tx)}
-.mot-card .mc-status-btn .sb-icon{font-size:22px}
-.mot-card .mc-status-btn:active{transform:scale(.95)}
-.mot-card .mc-status-btn.selected{border-color:transparent;color:#fff;transform:scale(.98)}
-.mot-card .mc-status-btn.s-coletado.selected{background:#22c55e;box-shadow:0 2px 12px rgba(34,197,94,.3)}
-.mot-card .mc-status-btn.s-entregue.selected{background:#3b82f6;box-shadow:0 2px 12px rgba(59,130,246,.3)}
-.mot-card .mc-status-btn.s-ausente.selected{background:#ef4444;box-shadow:0 2px 12px rgba(239,68,68,.3)}
-.mot-card .mc-status-btn.s-reagendar.selected{background:#f59e0b;box-shadow:0 2px 12px rgba(245,158,11,.3)}
-.mot-card .mc-pay-section{padding:0 18px 14px}
-.mot-card .mc-pay-label{font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.mot-card .mc-status-btn{padding:12px 8px;border-radius:10px;border:1.5px solid var(--bd);background:var(--sf);backdrop-filter:blur(8px);font-size:13px;font-weight:700;cursor:pointer;text-align:center;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;color:var(--tx);font-family:'Plus Jakarta Sans',sans-serif}
+.mot-card .mc-status-btn .mot-ico{opacity:.35}
+.mot-card .mc-status-btn:active{transform:scale(.96);background:var(--pul)}
+.mot-card .mc-status-btn.selected{border-color:var(--pu);background:var(--pu);color:#fff}
+.mot-card .mc-status-btn.selected .mot-ico{opacity:.8}
+.mot-card .mc-status-btn.s-ausente.selected{background:#ef4444;border-color:#ef4444}
+.mot-card .mc-status-btn.s-reagendar.selected{background:#f59e0b;border-color:#f59e0b}
+.mot-card .mc-pay-section{padding:0 18px 12px}
+.mot-card .mc-pay-label{font-size:10px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
 .mot-card .mc-pay-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.mot-card .mc-pay-btn{padding:10px 4px;border-radius:10px;border:2px solid var(--bd);background:var(--sf);font-size:11px;font-weight:700;cursor:pointer;text-align:center;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--tx)}
-.mot-card .mc-pay-btn .pb-icon{font-size:18px}
-.mot-card .mc-pay-btn:active{transform:scale(.95)}
-.mot-card .mc-pay-btn.selected{background:var(--pu);color:#fff;border-color:var(--pu);box-shadow:0 2px 12px rgba(108,92,231,.2)}
+.mot-card .mc-pay-btn{padding:10px 4px;border-radius:8px;border:1.5px solid var(--bd);background:var(--sf);font-size:10px;font-weight:700;cursor:pointer;text-align:center;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--mu);font-family:'Plus Jakarta Sans',sans-serif}
+.mot-card .mc-pay-btn .mot-ico{opacity:.3}
+.mot-card .mc-pay-btn:active{transform:scale(.95);border-color:rgba(108,92,231,.2)}
+.mot-card .mc-pay-btn.selected{background:var(--pu);color:#fff;border-color:var(--pu);box-shadow:0 2px 8px rgba(108,92,231,.15)}
+.mot-card .mc-pay-btn.selected .mot-ico{opacity:.8}
 .mot-card .mc-obs-section{padding:0 18px 16px}
-.mot-card .mc-obs-input{width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid var(--bd);background:var(--s2);font-size:14px;font-weight:500;font-family:inherit;color:var(--tx);resize:none;transition:border-color .2s;box-sizing:border-box}
-.mot-card .mc-obs-input:focus{outline:none;border-color:var(--pu)}
-.mot-card .mc-obs-input::placeholder{color:var(--mu);opacity:.6}
-.mot-card .mc-done-banner{background:rgba(34,197,94,.08);padding:12px 18px;display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;color:#16a34a}
+.mot-card .mc-obs-input{width:100%;padding:10px 12px;border-radius:8px;border:1.5px solid var(--bd);background:var(--s2);font-size:13px;font-weight:500;font-family:inherit;color:var(--tx);resize:none;transition:border-color .2s;box-sizing:border-box}
+.mot-card .mc-obs-input:focus{outline:none;border-color:var(--pu);box-shadow:0 0 0 3px rgba(108,92,231,.08)}
+.mot-card .mc-obs-input::placeholder{color:var(--mu);opacity:.5}
+.mot-card .mc-done-banner{background:rgba(30,27,75,.03);padding:12px 18px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--mu)}
+body.dark .mot-card .mc-done-banner{background:rgba(255,255,255,.03)}
 .tc{background:var(--gnl);color:var(--gnd)}
 .te{background:var(--bll);color:var(--bl)}
 .tw{background:var(--ywl);color:#8B6F00}
@@ -258,10 +286,6 @@ textarea{resize:vertical;min-height:56px}
 
 /* CLIENT CARD */
 .cc{background:var(--sf);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--bd);border-left:3px solid var(--bd);border-radius:12px;padding:12px 14px 12px 13px;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;cursor:pointer;transition:transform .2s cubic-bezier(.4,0,.2,1),box-shadow .2s ease,background .2s ease,border-color .2s ease;font-size:13px;position:relative;user-select:none;-webkit-user-select:none}
-.drag-handle{display:flex;flex-direction:column;align-items:center;justify-content:center;width:18px;flex-shrink:0;cursor:grab;opacity:.3;transition:opacity .2s;padding:4px 0;touch-action:none;-webkit-touch-callout:none}
-.drag-handle:hover{opacity:.7}
-.drag-handle:active{cursor:grabbing;opacity:.9}
-.drag-handle .dh-dot{width:4px;height:4px;border-radius:50%;background:var(--tx);margin:1.5px 0}
 .cc.dragging{opacity:.4;transform:scale(.97);box-shadow:none!important}
 .cc.drag-over-top{border-top:2px solid var(--pu);margin-top:-2px}
 .cc.drag-over-bottom{border-bottom:2px solid var(--pu);margin-bottom:-2px}
@@ -1247,7 +1271,6 @@ function renderC(){
     const jl={livre:'',manha:'\uD83C\uDF05 At\xe9 12h',tarde:'\uD83C\uDF07 Ap\xf3s 12h',custom:'\u23F0 '+c.hi+'\u2013'+c.hf}[c.janela]||'';
     const vd=c.valTipo==='medir'?'\u2696\uFE0F Medir':c.valTipo==='pago'?'\u2705 Pago':c.val?'R$ '+fmtBRL(c.val):'';
     return '<div class="cc '+(c.tipo==='coleta'?'col':'ent')+(c.conflict?(c.tipo==='coleta'?' cfl':' cwn'):'')+'" data-stop="'+stop+'" onclick="editC('+c.id+')">'
-      +'<div class="drag-handle" data-drag="'+stop+'"><div class="dh-dot"></div><div class="dh-dot"></div><div class="dh-dot"></div><div class="dh-dot"></div><div class="dh-dot"></div><div class="dh-dot"></div></div>'
       +'<div class="sn '+(c.tipo==='coleta'?'c':'e')+'">'+(stop+1)+'</div>'
       +'<div class="ci">'
         +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
@@ -1272,28 +1295,94 @@ function renderC(){
   initDragAndDrop();
 }
 
-// ---- DRAG AND DROP (toque longo no mobile + arrastar no desktop) ----
+// ---- DRAG AND DROP (card inteiro arrastável, detecção click vs drag) ----
 let dragState=null;
+const DRAG_THRESHOLD=8; // pixels mínimos pra considerar drag em vez de click
 function initDragAndDrop(){
-  const handles=document.querySelectorAll('.drag-handle[data-drag]');
-  handles.forEach(h=>{
-    // Desktop: mousedown
-    h.addEventListener('mousedown',e=>{e.preventDefault();e.stopPropagation();startDrag(parseInt(h.dataset.drag),e.clientX,e.clientY);});
-    // Mobile: touchstart (toque longo de 200ms pra não conflitar com scroll)
-    let touchTimer=null;
-    h.addEventListener('touchstart',e=>{
+  const cards=document.querySelectorAll('.cc[data-stop]');
+  cards.forEach(card=>{
+    const stop=parseInt(card.dataset.stop);
+    // Remover onclick original (vamos controlar manualmente)
+    card.removeAttribute('onclick');
+    // Desktop
+    card.addEventListener('mousedown',e=>{
+      if(e.target.closest('button')||e.target.closest('a'))return; // não interceptar botões
+      e.preventDefault();
+      initDragTracking(stop,e.clientX,e.clientY,false,card);
+    });
+    // Mobile: toque longo (300ms) pra arrastar, toque curto = click
+    let touchTimer=null,touchActive=false;
+    card.addEventListener('touchstart',e=>{
+      if(e.target.closest('button')||e.target.closest('a'))return;
       const t=e.touches[0];
-      touchTimer=setTimeout(()=>{e.preventDefault();startDrag(parseInt(h.dataset.drag),t.clientX,t.clientY,true);},200);
-    },{passive:false});
-    h.addEventListener('touchmove',e=>{if(!dragState)clearTimeout(touchTimer);},{passive:true});
-    h.addEventListener('touchend',()=>{clearTimeout(touchTimer);});
+      touchActive=false;
+      touchTimer=setTimeout(()=>{
+        touchActive=true;
+        initDragTracking(stop,t.clientX,t.clientY,true,card);
+        // Vibrar levemente se suportado (feedback tátil)
+        if(navigator.vibrate)navigator.vibrate(30);
+      },300);
+    },{passive:true});
+    card.addEventListener('touchmove',e=>{
+      if(!touchActive)clearTimeout(touchTimer);
+    },{passive:true});
+    card.addEventListener('touchend',e=>{
+      clearTimeout(touchTimer);
+      if(!touchActive&&!dragState){
+        // Foi um toque curto = click → editar cliente
+        const idx=order[stop];
+        if(idx!==undefined)editC(clients[idx].id);
+      }
+    });
   });
+}
+function initDragTracking(stopIdx,x,y,isTouch,card){
+  // Rastrear movimento antes de iniciar o drag real
+  dragState={stopIdx,startX:x,startY:y,isTouch,card,started:false};
+  if(isTouch){
+    document.addEventListener('touchmove',onDragTrack,{passive:false});
+    document.addEventListener('touchend',onDragTrackEnd);
+  } else {
+    document.addEventListener('mousemove',onDragTrack);
+    document.addEventListener('mouseup',onDragTrackEnd);
+  }
+}
+function onDragTrack(e){
+  if(!dragState)return;
+  const touch=e.touches?e.touches[0]:e;
+  const dx=touch.clientX-dragState.startX,dy=touch.clientY-dragState.startY;
+  if(!dragState.started){
+    if(Math.abs(dy)>DRAG_THRESHOLD){
+      // Ultrapassou threshold → iniciar drag real
+      dragState.started=true;
+      e.preventDefault();
+      startDrag(dragState.stopIdx,touch.clientX,touch.clientY,dragState.isTouch);
+    }
+    return;
+  }
+  onDragMove(e);
+}
+function onDragTrackEnd(e){
+  if(!dragState)return;
+  if(!dragState.started){
+    // Não arrastou o suficiente → é um click
+    document.removeEventListener('mousemove',onDragTrack);
+    document.removeEventListener('mouseup',onDragTrackEnd);
+    document.removeEventListener('touchmove',onDragTrack);
+    document.removeEventListener('touchend',onDragTrackEnd);
+    if(!dragState.isTouch){
+      const idx=order[dragState.stopIdx];
+      if(idx!==undefined)editC(clients[idx].id);
+    }
+    dragState=null;
+    return;
+  }
+  onDragEnd(e);
 }
 function startDrag(stopIdx,x,y,isTouch){
   const cards=[...document.querySelectorAll('.cc[data-stop]')];
   const card=cards[stopIdx];if(!card)return;
   const rect=card.getBoundingClientRect();
-  // Criar ghost (cópia visual flutuante)
   const ghost=card.cloneNode(true);
   ghost.classList.add('drag-ghost');
   ghost.style.width=rect.width+'px';
@@ -1301,7 +1390,14 @@ function startDrag(stopIdx,x,y,isTouch){
   ghost.style.top=(y-rect.height/2)+'px';
   document.body.appendChild(ghost);
   card.classList.add('dragging');
-  dragState={stopIdx,ghost,offsetY:y-rect.top,isTouch,startY:y};
+  // Atualizar dragState mantendo referências
+  dragState.ghost=ghost;
+  dragState.offsetY=y-rect.top;
+  // Substituir listeners de tracking por listeners de drag
+  document.removeEventListener('mousemove',onDragTrack);
+  document.removeEventListener('mouseup',onDragTrackEnd);
+  document.removeEventListener('touchmove',onDragTrack);
+  document.removeEventListener('touchend',onDragTrackEnd);
   if(isTouch){
     document.addEventListener('touchmove',onDragMove,{passive:false});
     document.addEventListener('touchend',onDragEnd);
@@ -1876,9 +1972,28 @@ function renderDashStats(br,pts){
   const hmBnds=new google.maps.LatLngBounds();pts.forEach(pt=>hmBnds.extend({lat:pt[0],lng:pt[1]}));hmMap.fitBounds(hmBnds);
 }
 
+// ── SVG Icons (monocromáticos, traço fino) ──
+const MI={
+  phone:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+  nav:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>',
+  pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+  refresh:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>',
+  clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  bag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a4 4 0 0 0-8 0v2"/></svg>',
+  card:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
+  dollar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+  building:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M8 10h.01M16 10h.01M12 10h.01M8 14h.01M16 14h.01M12 14h.01"/></svg>',
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+  map:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>',
+  scale:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'
+};
+function mi(name,cls){return '<span class="mot-ico'+(cls?' '+cls:'')+'">'+MI[name]+'</span>';}
+
 function renderMotor(){
   const el=g('motor-body');const dateEl=g('motor-date');
-  if(!clients.length){el.innerHTML='<div class="empty"><span>\uD83D\uDE97</span><p>Monte uma rota primeiro</p></div>';dateEl.textContent='';return;}
+  if(!clients.length){el.innerHTML='<div class="empty"><span style="font-size:28px;opacity:.3">'+mi('map')+'</span><p>Monte uma rota primeiro</p></div>';dateEl.textContent='';return;}
   const d=clients[0]?.data?new Date(clients[0].data+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
   dateEl.textContent=d;
   const tapR=clients.filter(c=>c.tipo==='coleta').reduce((s,c)=>s+(c.qtd||0),0);
@@ -1886,14 +2001,14 @@ function renderMotor(){
   const doneCount=order.filter(i=>clients[i]._motStatus).length;
   // Resumo
   let html='<div class="mot-summary">'
-    +'<div class="ms-item"><div class="ms-label">Paradas</div><div class="ms-val" style="color:var(--pud)">'+clients.length+'</div></div>'
-    +'<div class="ms-item"><div class="ms-label">Retirar</div><div class="ms-val" style="color:var(--gnd)">'+tapR+'</div></div>'
-    +'<div class="ms-item"><div class="ms-label">Entregar</div><div class="ms-val" style="color:var(--bl)">'+tapE+'</div></div>'
-    +'<div class="ms-item"><div class="ms-label">Conclu\xEDdos</div><div class="ms-val" style="color:var(--gn)">'+doneCount+'/'+clients.length+'</div></div>'
-    +(cfg.saida?'<div class="ms-item"><div class="ms-label">Sa\xEDda</div><div class="ms-val" style="color:var(--pud)">'+cfg.saida+'</div></div>':'')
+    +'<div class="ms-item"><div class="ms-label">Paradas</div><div class="ms-val">'+clients.length+'</div></div>'
+    +'<div class="ms-item"><div class="ms-label">Retirar</div><div class="ms-val">'+tapR+'</div></div>'
+    +'<div class="ms-item"><div class="ms-label">Entregar</div><div class="ms-val">'+tapE+'</div></div>'
+    +'<div class="ms-item"><div class="ms-label">Conclu\xEDdos</div><div class="ms-val">'+doneCount+'/'+clients.length+'</div></div>'
+    +(cfg.saida?'<div class="ms-item"><div class="ms-label">Sa\xEDda</div><div class="ms-val">'+cfg.saida+'</div></div>':'')
     +'</div>';
-  // Partida / Retorno
-  if(cfg.base)html+='<div style="border:1.5px solid var(--bd);border-radius:16px;padding:14px 16px;margin-bottom:12px;font-size:14px;display:flex;gap:12px;align-items:center;background:var(--sf)"><span style="font-size:24px">\uD83C\uDFE2</span><div><div style="font-weight:700;font-size:14px">Partida</div><div style="color:var(--mu);font-size:13px">'+cfg.base+'</div></div></div>';
+  // Partida
+  if(cfg.base)html+='<div style="border:1px solid var(--bd);border-radius:14px;padding:14px 16px;margin-bottom:12px;font-size:14px;display:flex;gap:12px;align-items:center;background:var(--sf)"><span style="opacity:.35">'+mi('building')+'</span><div><div style="font-weight:700;font-size:13px;color:var(--tx)">Partida</div><div style="color:var(--mu);font-size:12px">'+cfg.base+'</div></div></div>';
   // Cards dos clientes
   html+=order.map((idx,stop)=>{
     const c=clients[idx];
@@ -1902,81 +2017,77 @@ function renderMotor(){
     const isCol=c.tipo==='coleta';
     const statusLabel=isCol?'Coletado':'Entregue';
     const statusClass=isCol?'s-coletado':'s-entregue';
-    // URL de navegação individual
     const navAddr=encodeURIComponent(c.endereco+', S\xe3o Paulo, SP');
     const wazeUrl='https://waze.com/ul?q='+navAddr+'&navigate=yes';
     const gmapsUrl='https://www.google.com/maps/dir/?api=1&destination='+navAddr+'&travelmode=driving';
-    return '<div class="mot-card'+(isActive?' active':'')+(isDone?' done':'')+'" id="mot-card-'+idx+'">'
+    return '<div class="mot-card '+(isCol?'col':'ent')+(isActive?' active':'')+(isDone?' done':'')+'" id="mot-card-'+idx+'">'
       // Banner de concluído
       +(isDone?'<div class="mc-done-banner">'
-        +(c._motStatus==='coletado'||c._motStatus==='entregue'?'\u2705':'')
-        +(c._motStatus==='ausente'?'\u274C':'')
-        +(c._motStatus==='reagendar'?'\uD83D\uDD04':'')
-        +' '+(c._motStatus==='coletado'?'Coletado':c._motStatus==='entregue'?'Entregue':c._motStatus==='ausente'?'Ausente':c._motStatus==='reagendar'?'Reagendado':c._motStatus)
+        +'<span class="mot-ico" style="opacity:.4">'+MI[c._motStatus==='ausente'?'x':c._motStatus==='reagendar'?'refresh':'check']+'</span> '
+        +(c._motStatus==='coletado'?'Coletado':c._motStatus==='entregue'?'Entregue':c._motStatus==='ausente'?'Ausente':c._motStatus==='reagendar'?'Reagendado':c._motStatus)
         +(c._motPay?' \u2014 '+c._motPay:'')
         +'</div>':'')
-      // Header: número + nome + tipo
-      +'<div class="mc-header">'
-        +'<div class="mc-num '+(isCol?'col':'ent')+'">'+(stop+1)+'</div>'
-        +'<div class="mc-info">'
-          +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
-            +'<span class="mc-name">'+c.nome+'</span>'
-            +'<span class="mc-type-badge '+(isCol?'col':'ent')+'">'+(isCol?'Coleta':'Entrega')+'</span>'
-          +'</div>'
-          +'<div class="mc-addr">'+c.endereco+'</div>'
-          +'<div class="mc-meta">'
-            +(c.qtd?'<span class="tag tg" style="font-size:13px;padding:5px 11px">\uD83E\uDDBA '+c.qtd+' tapete'+(c.qtd>1?'s':'')+'</span>':'')
-            +(c.estT?'<span class="tag" style="background:var(--pul);color:var(--pud);font-size:13px;padding:5px 11px">\uD83D\uDD52 '+c.estT+'</span>':'')
-            +(c.val&&c.valTipo!=='medir'&&c.valTipo!=='pago'?'<span class="tag tg" style="font-size:13px;padding:5px 11px">\uD83D\uDCB0 R$ '+fmtBRL(c.val)+'</span>':'')
-            +(c.valTipo==='medir'?'<span class="tag" style="background:rgba(245,158,11,.1);color:#d97706;font-size:13px;padding:5px 11px">\u2696\uFE0F Medir</span>':'')
-            +(c.valTipo==='pago'?'<span class="tag" style="background:rgba(34,197,94,.1);color:#16a34a;font-size:13px;padding:5px 11px">\u2705 Pago</span>':'')
-          +'</div>'
-          +(c.tel?'<a href="tel:'+c.tel+'" style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:8px 14px;border-radius:10px;background:rgba(34,197,94,.08);color:#16a34a;font-weight:700;font-size:14px;text-decoration:none">\uD83D\uDCDE '+c.tel+'</a>':'')
+      // Top: número + tipo + horário
+      +'<div class="mc-top">'
+        +'<div class="mc-top-left">'
+          +'<div class="mc-num">'+(stop+1)+'</div>'
+          +'<span class="mc-tipo">'+(isCol?'Coleta':'Entrega')+'</span>'
         +'</div>'
+        +(c.estT?'<div class="mc-time">'+c.estT+'</div>':'')
       +'</div>'
+      // Nome + endereço
+      +'<div class="mc-name">'+c.nome+'</div>'
+      +'<div class="mc-addr">'+c.endereco+'</div>'
+      // Detalhes
+      +'<div class="mc-details">'
+        +(c.qtd?'<span class="mc-detail">'+mi('bag','mot-ico-sm')+' '+c.qtd+' tapete'+(c.qtd>1?'s':'')+'</span>':'')
+        +(c.val&&c.valTipo!=='medir'&&c.valTipo!=='pago'?'<span class="mc-detail">R$ '+fmtBRL(c.val)+'</span>':'')
+        +(c.valTipo==='medir'?'<span class="mc-detail alert">'+mi('scale','mot-ico-sm')+' Medir</span>':'')
+        +(c.valTipo==='pago'?'<span class="mc-detail">'+mi('check','mot-ico-sm')+' Pago</span>':'')
+        +(c.janela&&c.janela!=='livre'?'<span class="mc-detail alert">'+mi('clock','mot-ico-sm')+' At\xe9 '+(c.hf||'12h')+'</span>':'')
+      +'</div>'
+      // Telefone
+      +(c.tel?'<a href="tel:'+c.tel+'" class="mc-tel">'+mi('phone')+' '+c.tel+'</a>':'')
       // Observação do gestor
-      +(c.obs?'<div style="padding:0 18px 12px;font-size:13px;color:var(--mu);font-style:italic;font-weight:500">\uD83D\uDCAC '+c.obs+'</div>':'')
-      // ── AÇÕES (só se não concluído) ──
+      +(c.obs?'<div style="padding:0 18px 12px;font-size:12px;color:var(--mu);font-style:italic;font-weight:500">'+c.obs+'</div>':'')
+      // Separador + ações
       +(!isDone?
-        '<div class="mc-actions">'
-          // Botão navegar (abre Waze ou Google Maps)
-          +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-            +'<a href="'+wazeUrl+'" target="_blank" class="mc-nav" style="text-decoration:none;background:linear-gradient(135deg,#33ccff,#0099ff);font-size:15px;padding:12px">\uD83D\uDDFA\uFE0F Waze</a>'
-            +'<a href="'+gmapsUrl+'" target="_blank" class="mc-nav" style="text-decoration:none;font-size:15px;padding:12px">\uD83D\uDCCD Google Maps</a>'
+        '<div class="mc-sep"></div>'
+        +'<div class="mc-actions">'
+          +'<div class="mc-nav-row">'
+            +'<a href="'+wazeUrl+'" target="_blank" class="mc-nav-btn">'+mi('nav')+' Waze</a>'
+            +'<a href="'+gmapsUrl+'" target="_blank" class="mc-nav-btn primary">'+mi('pin')+' Google Maps</a>'
           +'</div>'
-          // Botões de status
           +'<div class="mc-status-row">'
-            +'<button class="mc-status-btn '+statusClass+'" onclick="event.stopPropagation();setMotStatus('+idx+',&#39;'+(isCol?'coletado':'entregue')+'&#39;)"><span class="sb-icon">'+(isCol?'\u2705':'\uD83D\uDCE6')+'</span>'+statusLabel+'</button>'
-            +'<button class="mc-status-btn s-ausente" onclick="event.stopPropagation();setMotStatus('+idx+',&#39;ausente&#39;)"><span class="sb-icon">\u274C</span>Ausente</button>'
+            +'<button class="mc-status-btn '+statusClass+(c._motStatus===(isCol?'coletado':'entregue')?' selected':'')+'" onclick="event.stopPropagation();setMotStatus('+idx+',&#39;'+(isCol?'coletado':'entregue')+'&#39;)">'+mi('check')+' '+statusLabel+'</button>'
+            +'<button class="mc-status-btn s-ausente'+(c._motStatus==='ausente'?' selected':'')+'" onclick="event.stopPropagation();setMotStatus('+idx+',&#39;ausente&#39;)">'+mi('x')+' Ausente</button>'
           +'</div>'
-          +'<button class="mc-status-btn s-reagendar" style="width:100%" onclick="event.stopPropagation();setMotStatus('+idx+',&#39;reagendar&#39;)"><span class="sb-icon">\uD83D\uDD04</span>Reagendar</button>'
-          // Pagamento
+          +'<button class="mc-status-btn s-reagendar'+(c._motStatus==='reagendar'?' selected':'')+'" style="width:100%" onclick="event.stopPropagation();setMotStatus('+idx+',&#39;reagendar&#39;)">'+mi('refresh')+' Reagendar</button>'
           +'<div class="mc-pay-section" style="padding:0">'
-            +'<div class="mc-pay-label">\uD83D\uDCB3 Pagamento</div>'
+            +'<div class="mc-pay-label">Pagamento</div>'
             +'<div class="mc-pay-row">'
-              +'<button class="mc-pay-btn'+(c._motPay==='Pix (pago)'?' selected':'')+'" onclick="event.stopPropagation();setMotPay('+idx+',&#39;Pix (pago)&#39;)"><span class="pb-icon">\u2705</span>Pix pago</button>'
-              +'<button class="mc-pay-btn'+(c._motPay==='Pix (cobrar)'?' selected':'')+'" onclick="event.stopPropagation();setMotPay('+idx+',&#39;Pix (cobrar)&#39;)"><span class="pb-icon">\u23F3</span>Pix cobrar</button>'
-              +'<button class="mc-pay-btn'+(c._motPay==='Cart\xe3o'?' selected':'')+'" onclick="event.stopPropagation();setMotPay('+idx+',&#39;Cart\xe3o&#39;)"><span class="pb-icon">\uD83D\uDCB3</span>Cart\xe3o</button>'
-              +'<button class="mc-pay-btn'+(c._motPay==='Dinheiro'?' selected':'')+'" onclick="event.stopPropagation();setMotPay('+idx+',&#39;Dinheiro&#39;)"><span class="pb-icon">\uD83D\uDCB5</span>Dinheiro</button>'
+              +'<button class="mc-pay-btn'+(c._motPay==='Pix (pago)'?' selected':'')+'" onclick="event.stopPropagation();setMotPay('+idx+',&#39;Pix (pago)&#39;)">'+mi('check','mot-ico-sm')+' Pix pago</button>'
+              +'<button class="mc-pay-btn'+(c._motPay==='Pix (cobrar)'?' selected':'')+'" onclick="event.stopPropagation();setMotPay('+idx+',&#39;Pix (cobrar)&#39;)">'+mi('clock','mot-ico-sm')+' Pix cobrar</button>'
+              +'<button class="mc-pay-btn'+(c._motPay==='Cart\xe3o'?' selected':'')+'" onclick="event.stopPropagation();setMotPay('+idx+',&#39;Cart\xe3o&#39;)">'+mi('card','mot-ico-sm')+' Cart\xe3o</button>'
+              +'<button class="mc-pay-btn'+(c._motPay==='Dinheiro'?' selected':'')+'" onclick="event.stopPropagation();setMotPay('+idx+',&#39;Dinheiro&#39;)">'+mi('dollar','mot-ico-sm')+' Dinheiro</button>'
             +'</div>'
           +'</div>'
-          // Observação do motorista
           +'<div class="mc-obs-section" style="padding:0">'
-            +'<textarea class="mc-obs-input" rows="2" placeholder="Observa\xe7\xe3o do motorista..." onchange="setMotObs('+idx+',this.value)">'+(c._motObs||'')+'</textarea>'
+            +'<textarea class="mc-obs-input" rows="2" placeholder="Observa\xe7\xe3o..." onchange="setMotObs('+idx+',this.value)">'+(c._motObs||'')+'</textarea>'
           +'</div>'
         +'</div>'
       :'')
     +'</div>';
   }).join('');
   // Retorno
-  if(cfg.retaddr)html+='<div style="border:1.5px solid var(--bd);border-radius:16px;padding:14px 16px;margin-top:4px;font-size:14px;display:flex;gap:12px;align-items:center;background:var(--sf)"><span style="font-size:24px">\uD83C\uDFE0</span><div><div style="font-weight:700;font-size:14px">Retorno</div><div style="color:var(--mu);font-size:13px">'+cfg.retaddr+'</div></div></div>';
-  // Rota completa no Maps
+  if(cfg.retaddr)html+='<div style="border:1px solid var(--bd);border-radius:14px;padding:14px 16px;margin-top:4px;font-size:14px;display:flex;gap:12px;align-items:center;background:var(--sf)"><span style="opacity:.35">'+mi('home')+'</span><div><div style="font-weight:700;font-size:13px;color:var(--tx)">Retorno</div><div style="color:var(--mu);font-size:12px">'+cfg.retaddr+'</div></div></div>';
+  // Rota completa
   if(clients.length>1){
     const addrs=order.map(i=>encodeURIComponent(clients[i].endereco));
     const orig=cfg.base?encodeURIComponent(cfg.base):addrs[0];
     const dest=cfg.retaddr?encodeURIComponent(cfg.retaddr):(cfg.base?encodeURIComponent(cfg.base):addrs[addrs.length-1]);
     const url='https://www.google.com/maps/dir/'+orig+'/'+addrs.join('/')+'/'+dest;
-    html+='<a href="'+url+'" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;border-radius:14px;background:var(--sf);border:1.5px solid var(--bd);font-size:16px;font-weight:700;color:var(--tx);text-decoration:none;margin-top:16px;transition:all .2s">\uD83D\uDDFA\uFE0F Abrir rota completa no Maps</a>';
+    html+='<a href="'+url+'" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border-radius:12px;background:var(--sf);border:1px solid var(--bd);font-size:14px;font-weight:700;color:var(--tx);text-decoration:none;margin-top:16px;transition:all .15s">'+mi('map')+' Abrir rota completa</a>';
   }
   el.innerHTML=html;
 }
@@ -2016,6 +2127,6 @@ function setMotObs(idx,obs){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v3.0.0</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v3.1.0</div>
 </body>
 </html>
