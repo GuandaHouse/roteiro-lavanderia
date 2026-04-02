@@ -1202,16 +1202,28 @@ function buildTrelloNavBar(){
     +'</div>'
   +'</div>';
 }
-function resetTrelloFull(){
+async function resetTrelloFull(){
   selBoard=null;selList=null;window._tcards=[];
   _tboardsHtml='';_tlistsHtml='';
   localStorage.removeItem('rota_trello');
-  ['trello-step2','trello-step3','trello-step4'].forEach(id=>g(id).style.display='none');
-  g('trello-cards').innerHTML='';
+  // Esconder tudo e usar step4 como container temporário
+  ['trello-step1','trello-step2','trello-step3'].forEach(id=>g(id).style.display='none');
+  g('trello-step4').style.display='block';
   g('trello-nav-bar').innerHTML='';
-  // Mostrar step1 (necessário pro spinner/botão) e buscar quadros direto
-  g('trello-step1').style.display='block';
-  trelloStep1();
+  g('trello-cards').innerHTML='<div class="ab info"><span class="spin"></span> Buscando quadros...</div>';
+  try{
+    const boards=await trelloAPICall('/members/me/boards?fields=name,id,desc');
+    if(!Array.isArray(boards)||!boards.length){g('trello-cards').innerHTML='<div class="ab w">Nenhum quadro encontrado.</div>';return;}
+    let html='<p style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--mu)">Selecione o quadro:</p>';
+    boards.forEach(b=>{
+      html+='<div class="sel-opt" onclick="trelloSelectBoard(\''+b.id+'\',\''+b.name.replace(/'/g,"\\\'")+'\')">'
+        +'<div class="sel-opt-icon" style="background:var(--pul)"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span></div>'
+        +'<div><div style="font-weight:600;font-size:14px">'+b.name+'</div>'+(b.desc?'<div style="font-size:12px;color:var(--mu);margin-top:2px">'+b.desc.slice(0,60)+'</div>':'')+'</div>'
+        +'</div>';
+    });
+    _tboardsHtml=html;
+    g('trello-cards').innerHTML=html;
+  }catch(e){g('trello-cards').innerHTML='<div class="ab e">Erro: '+e.message+'</div>';console.error(e);}
 }
 function resetTrello(){
   selList=null;window._tcards=[];
@@ -2298,6 +2310,6 @@ function setMotObs(idx,obs){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v3.5.0</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v3.5.1</div>
 </body>
 </html>
