@@ -220,10 +220,15 @@ hr{border:none;border-top:1.5px solid var(--bd);margin:16px 0}
     <div class="tp on" id="tp-trello">
       <div id="trello-nocred" style="display:none"><div class="ab w">&#x26A0;&#xFE0F; Configure sua <strong>Chave e Token do Trello</strong> em <a href="#" onclick="goPage('cfg',document.querySelectorAll('.ntab')[4]);return false;" style="color:var(--pud)">Configura&#xE7;&#xF5;es</a> para usar esta funcionalidade.</div></div>
       <div id="trello-step1">
-        <div class="fg2" style="margin-bottom:13px">
-          <div class="fg"><label>Data dos cart&#xF5;es</label><input type="date" id="td"/></div>
-          <div class="fg" style="justify-content:flex-end;padding-top:22px">
-            <button class="btn bp" onclick="trelloMainBtn()" id="trello-btn">
+        <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:13px;flex-wrap:wrap">
+          <div class="fg" style="flex:0 0 auto">
+            <label>Data dos cart&#xF5;es</label>
+            <div style="cursor:pointer" onclick="this.querySelector('input').showPicker()">
+              <input type="date" id="td" style="cursor:pointer;width:155px"/>
+            </div>
+          </div>
+          <div class="fg" style="flex:1 1 auto">
+            <button class="btn bp" onclick="trelloMainBtn()" id="trello-btn" style="white-space:nowrap;width:100%">
               <span class="spin" id="tspin" style="display:none"></span>
               <span id="tlbl">&#x1F50D; Buscar quadros</span>
             </button>
@@ -847,10 +852,10 @@ async function importTC(){
   g('trello-cards').innerHTML='<div class="ab ok">&#x2705; '+count+' cliente(s) importado(s)!</div>'
     +'<div style="margin-top:12px;padding:12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px">'
     +'<div style="font-weight:600;margin-bottom:8px">&#x1F4CB; '+selBoard.name+' &rsaquo; '+selList.name+'</div>'
-    +'<div style="display:flex;align-items:center;gap:8px">'
-    +'<input type="date" id="td2" value="'+v('td')+'" style="padding:6px 10px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:inherit;background:var(--sf);color:var(--tx)"/>'
-    +'<button class="btn bp bsm" onclick="trelloBuscarCartoes()">&#x1F504; Buscar cart\xF5es</button>'
-    +'<button class="btn bo bsm" onclick="resetTrello()">Trocar lista</button>'
+    +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+    +'<div style="position:relative;cursor:pointer;flex:0 0 auto" onclick="this.querySelector(\'input\').showPicker()"><input type="date" id="td2" value="'+v('td')+'" style="padding:7px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:inherit;background:var(--sf);color:var(--tx);cursor:pointer;width:155px"/></div>'
+    +'<button class="btn bp bsm" onclick="trelloBuscarCartoes()" style="white-space:nowrap">&#x1F504; Buscar cart\xF5es</button>'
+    +'<button class="btn bo bsm" onclick="resetTrello()" style="white-space:nowrap">Trocar lista</button>'
     +'</div></div>';
 }
 
@@ -867,10 +872,10 @@ function showTrelloQuickPanel(){
   g('trello-cards').innerHTML='<div class="ab info" style="margin-bottom:10px">&#x1F4CB; Retomando sele&#xe7;&#xe3o anterior</div>'
     +'<div style="padding:12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px">'
     +'<div style="font-weight:600;margin-bottom:8px">&#x1F4CB; '+selBoard.name+' &rsaquo; '+selList.name+'</div>'
-    +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
-    +'<input type="date" id="td2" value="'+dv+'" style="padding:6px 10px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:inherit;background:var(--sf);color:var(--tx)"/>'
-    +'<button class="btn bp bsm" onclick="trelloBuscarCartoes()">&#x1F504; Buscar cart\xF5es</button>'
-    +'<button class="btn bo bsm" onclick="resetTrello()">Trocar lista</button>'
+    +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+    +'<div style="position:relative;cursor:pointer;flex:0 0 auto" onclick="this.querySelector(\'input\').showPicker()"><input type="date" id="td2" value="'+dv+'" style="padding:7px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:inherit;background:var(--sf);color:var(--tx);cursor:pointer;width:155px"/></div>'
+    +'<button class="btn bp bsm" onclick="trelloBuscarCartoes()" style="white-space:nowrap">&#x1F504; Buscar cart\xF5es</button>'
+    +'<button class="btn bo bsm" onclick="resetTrello()" style="white-space:nowrap">Trocar lista</button>'
     +'</div></div>';
   ['trello-step1','trello-step2','trello-step3'].forEach(id=>g(id).style.display='none');
   g('trello-step4').style.display='block';
