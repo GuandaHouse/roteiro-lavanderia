@@ -244,7 +244,7 @@ hr{border:none;border-top:1.5px solid var(--bd);margin:16px 0}
       <div id="trello-step4" style="display:none">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
           <button class="btn bo bsm" onclick="trelloBack2()">&#x2190; Voltar</button>
-          <p style="font-size:13px;font-weight:600;color:var(--mu)">3. Cart&#xF5;es encontrados:</p>
+          <p style="font-size:13px;font-weight:600;color:var(--mu)">Cart&#xF5;es encontrados:</p>
         </div>
         <div id="trello-cards"></div>
       </div>
@@ -786,32 +786,58 @@ async function importTC(){
     const sub=confirm('JÃ¡ existem '+clients.length+' cliente(s) na rota.\n\nOK = Substituir tudo\nCancelar = Adicionar aos existentes');
     if(sub){clients=[];order=[];}
   }
-  toast('Processando '+cards.length+' cart\xE3o(s)...','');
+  // Barra de progresso visual
+  const total=cards.length;
+  const progEl=document.createElement('div');
+  progEl.id='import-progress';
+  progEl.innerHTML='<div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:12px">'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+    +'<div class="spinner" style="width:18px;height:18px;border:2.5px solid var(--bd);border-top-color:var(--pu);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0"></div>'
+    +'<span id="prog-text" style="font-size:13px;font-weight:600;color:var(--tx)">Processando 0 de '+total+'...</span>'
+    +'</div>'
+    +'<div style="background:var(--s2);border-radius:20px;height:8px;overflow:hidden">'
+    +'<div id="prog-bar" style="height:100%;width:0%;background:var(--pu);border-radius:20px;transition:width .3s ease"></div>'
+    +'</div>'
+    +'<div id="prog-name" style="font-size:12px;color:var(--mu);margin-top:6px;font-style:italic"></div>'
+    +'</div>';
+  if(!document.getElementById('spin-style')){const st=document.createElement('style');st.id='spin-style';st.textContent='@keyframes spin{to{transform:rotate(360deg)}}';document.head.appendChild(st);}
+  g('trello-cards').innerHTML='';g('trello-cards').appendChild(progEl);
   let count=0;
-  for(const card of cards){
-    try{
-      const text=card.name+'\n'+(card.desc||'');
-      const res=await fetch('https://roteiro-lavanderia.nigel-guandalini.workers.dev/api/anthropic',{method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({apiKey:cfg.akey,body:{model:'claude-sonnet-4-20250514',max_tokens:600,
-          messages:[{role:'user',content:'Analise este card do Trello de uma lavanderia em Sao Paulo, SP. O titulo segue o formato "Cliente NOME (Tipo) Valor X". A descricao contem endereco, quantidade de tapetes e telefone.\n\nREGRAS DO ENDERECO:\n- Preserve o tipo de logradouro EXATAMENTE como esta na descricao (ex: se estiver "Avenida" mantenha "Avenida", NUNCA troque por "Rua")\n- CORRIJA apenas abreviacoes: "Av." ou "Av " -> "Avenida", "R." -> "Rua", "Al." -> "Alameda", "Dr." -> "Doutor"\n- COMPLETE nomes abreviados (ex: "Dr Altino" -> "Doutor Altino Arantes")\n- Formato obrigatorio: "Logradouro, Numero - Bairro" (ex: "Avenida Doutor Altino Arantes, 77 - Vila Clementino")\n- Se bairro nao estiver na desc, deduza pelo CEP ou pelo nome da rua conhecida de SP\n\nRetorne APENAS JSON puro sem markdown:\n- "tipo": coleta/entrega/vazio\n- "endereco": "Logradouro, Numero - Bairro" em Title Case\n- "complemento": apto/bloco/andar\n- "telefone": DDD+numero com hifen\n- "qtd": tapetes (inteiro)\n- "valor": numerico (0 se Medir/Pago)\n- "valorTipo": medir/pago/normal\n- "janela":"livre","hi":"","hf":"","obs":""\nJSON: {"endereco":"","telefone":"","tipo":"vazio","qtd":0,"valor":0,"valorTipo":"normal","janela":"livre","hi":"","hf":"","obs":""}\nTexto do card:\n'+text}]}})});
-      const data=await res.json();
-      let ext={};try{ext=JSON.parse((data.content?.[0]?.text||'{}').replace(/```json?|```/g,'').trim());}catch(e){}
-      const dv=v('td')||new Date().toISOString().split('T')[0];
-      const valTipo=ext.valorTipo==='medir'?'medir':ext.valorTipo==='pago'?'pago':'normal';
-      let endFinal=ext.endereco||'';
-      if(endFinal){try{
-        const gd=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address=__ADDR__&region=br&key=AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM'+encodeURIComponent(endFinal+', SÃ£o Paulo, SP'),{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
-        const spR=gd.find(x=>{const la=parseFloat(x.lat),ln=parseFloat(x.lon);return la>-24.0&&la<-23.3&&ln>-47.0&&ln<-46.0;});
-        if(spR){const rd=await fetch('https://maps.googleapis.com/maps/api/geocode/json?latlng=__LAT__,__LNG__&key=AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM&language=pt-BR'+spR.lat+'&lon='+spR.lon,{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
-          const bairro=rd.address?.quarter||rd.address?.neighbourhood||rd.address?.suburb||rd.address?.city_district||'';
-          if(bairro)endFinal=endFinal.replace(/\s*-\s*[^,]+$/,'').trim()+' - '+bairro;}
-      }catch(e){}}
-      const pc=_pendingCoords;_pendingCoords=null;
-      const nomeFmt=fmtNomeValor(card.name,ext.valor||0,valTipo);
-      clients.push({id:Date.now()+Math.random(),nome:nomeFmt,endereco:endFinal,complemento:ext.complemento||'',tel:ext.telefone||'',tipo:ext.tipo||'entrega',qtd:ext.qtd||0,val:ext.valor||0,valTipo,data:dv,janela:ext.janela||'livre',hi:ext.hi||'',hf:ext.hf||'',obs:ext.obs||'',estT:null,conflict:false,cmsg:'',lat:pc?.lat||null,lng:pc?.lng||null});
-      count++;
-    }catch(e){}
+  async function processCard(card){
+    const text=card.name+'\n'+(card.desc||'');
+    const res=await fetch('https://roteiro-lavanderia.nigel-guandalini.workers.dev/api/anthropic',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({apiKey:cfg.akey,body:{model:'claude-sonnet-4-20250514',max_tokens:600,
+        messages:[{role:'user',content:'Analise este card do Trello de uma lavanderia em Sao Paulo, SP. O titulo segue o formato "Cliente NOME (Tipo) Valor X". A descricao contem endereco, quantidade de tapetes e telefone.\n\nREGRAS DO ENDERECO:\n- Preserve o tipo de logradouro EXATAMENTE como esta na descricao (ex: se estiver "Avenida" mantenha "Avenida", NUNCA troque por "Rua")\n- CORRIJA apenas abreviacoes: "Av." ou "Av " -> "Avenida", "R." -> "Rua", "Al." -> "Alameda", "Dr." -> "Doutor"\n- COMPLETE nomes abreviados (ex: "Dr Altino" -> "Doutor Altino Arantes")\n- Formato obrigatorio: "Logradouro, Numero - Bairro" (ex: "Avenida Doutor Altino Arantes, 77 - Vila Clementino")\n- Se bairro nao estiver na desc, deduza pelo CEP ou pelo nome da rua conhecida de SP\n\nRetorne APENAS JSON puro sem markdown:\n- "tipo": coleta/entrega/vazio\n- "endereco": "Logradouro, Numero - Bairro" em Title Case\n- "complemento": apto/bloco/andar\n- "telefone": DDD+numero com hifen\n- "qtd": tapetes (inteiro)\n- "valor": numerico (0 se Medir/Pago)\n- "valorTipo": medir/pago/normal\n- "janela":"livre","hi":"","hf":"","obs":""\nJSON: {"endereco":"","telefone":"","tipo":"vazio","qtd":0,"valor":0,"valorTipo":"normal","janela":"livre","hi":"","hf":"","obs":""}\nTexto do card:\n'+text}]}})});
+    const data=await res.json();
+    let ext={};try{ext=JSON.parse((data.content?.[0]?.text||'{}').replace(/```json?|```/g,'').trim());}catch(e){}
+    const dv=v('td')||new Date().toISOString().split('T')[0];
+    const valTipo=ext.valorTipo==='medir'?'medir':ext.valorTipo==='pago'?'pago':'normal';
+    let endFinal=ext.endereco||'';
+    if(endFinal){try{
+      const gd=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address=__ADDR__&region=br&key=AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM'+encodeURIComponent(endFinal+', SÃ£o Paulo, SP'),{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
+      const spR=gd.find(x=>{const la=parseFloat(x.lat),ln=parseFloat(x.lon);return la>-24.0&&la<-23.3&&ln>-47.0&&ln<-46.0;});
+      if(spR){const rd=await fetch('https://maps.googleapis.com/maps/api/geocode/json?latlng=__LAT__,__LNG__&key=AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM&language=pt-BR'+spR.lat+'&lon='+spR.lon,{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
+        const bairro=rd.address?.quarter||rd.address?.neighbourhood||rd.address?.suburb||rd.address?.city_district||'';
+        if(bairro)endFinal=endFinal.replace(/\s*-\s*[^,]+$/,'').trim()+' - '+bairro;}
+    }catch(e){}}
+    const pc=_pendingCoords;_pendingCoords=null;
+    const nomeFmt=fmtNomeValor(card.name,ext.valor||0,valTipo);
+    return {id:Date.now()+Math.random(),nome:nomeFmt,endereco:endFinal,complemento:ext.complemento||'',tel:ext.telefone||'',tipo:ext.tipo||'entrega',qtd:ext.qtd||0,val:ext.valor||0,valTipo,data:dv,janela:ext.janela||'livre',hi:ext.hi||'',hf:ext.hf||'',obs:ext.obs||'',estT:null,conflict:false,cmsg:'',lat:pc?.lat||null,lng:pc?.lng||null};
+  }
+  // Processa em lotes de 3 para maior velocidade
+  const BATCH=3;
+  for(let i=0;i<cards.length;i+=BATCH){
+    const batch=cards.slice(i,i+BATCH);
+    const names=batch.map(c=>c.name.split(/\s*[\(\)]\s*/)[0].replace(/^cliente\s*/i,'').trim()).join(', ');
+    g('prog-name').textContent=names;
+    const results=await Promise.allSettled(batch.map(c=>processCard(c)));
+    for(const r of results){
+      if(r.status==='fulfilled'&&r.value){clients.push(r.value);count++;}
+    }
+    g('prog-text').textContent='Processando '+(Math.min(i+BATCH,total))+' de '+total+'...';
+    g('prog-bar').style.width=Math.round(Math.min(i+BATCH,total)/total*100)+'%';
+    renderC();updStats();
   }
   order=clients.map((_,i)=>i);renderC();updStats();updBtns();
   toast(count+' cliente(s) importado(s)!','ok');
