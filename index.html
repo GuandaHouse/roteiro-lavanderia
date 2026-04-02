@@ -1095,7 +1095,7 @@ async function calcRoute(){
     toast('Configure o endere\xE7o de partida!','err');
     showConfirm('Endere\xE7o de partida necess\xE1rio',
       'Para calcular os hor\xE1rios de chegada corretamente, o sistema precisa saber de onde o motorista sai.<br><br>V\xE1 em <strong>Configura\xE7\xF5es</strong> e preencha o campo <strong>Endere\xE7o de partida</strong>.',
-      ()=>{closeModal('confirm-modal');goPage(4);});
+      ()=>{closeModal('confirm-modal');goPage('cfg',document.querySelectorAll('.ntab')[4]);});
     g('confirm-ok').textContent='Ir para Configura\xE7\xF5es';
     return;
   }
