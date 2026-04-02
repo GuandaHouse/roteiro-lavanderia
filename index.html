@@ -559,8 +559,11 @@ function saveCfg(){
     tkey:v('cfg-tkey'),ttoken:v('cfg-ttoken'),
     akey:v('cfg-akey'),gkey:v('cfg-gkey')};
   localStorage.setItem('rota_cfg',JSON.stringify(cfg));
-  g('cfg-msg').innerHTML='<div class="ab ok">&#x2705; Configura&#xE7;&#xF5;es salvas!</div>';
-  setTimeout(()=>g('cfg-msg').innerHTML='',3000);
+  let msg='<div class="ab ok">&#x2705; Configura\xE7\xF5es salvas!</div>';
+  if(!cfg.base)msg+='<div class="ab w" style="margin-top:8px">&#x26A0;&#xFE0F; <strong>Endere\xE7o de partida</strong> n\xE3o preenchido. O sistema precisa dele para calcular os hor\xE1rios de chegada nos clientes.</div>';
+  if(!cfg.saida)msg+='<div class="ab w" style="margin-top:8px">&#x26A0;&#xFE0F; <strong>Hor\xE1rio de sa\xEDda</strong> n\xE3o preenchido.</div>';
+  g('cfg-msg').innerHTML=msg;
+  setTimeout(()=>g('cfg-msg').innerHTML='',6000);
 }
 
 function goPage(p,el){window.scrollTo(0,0);window.scrollTo(0,0);
@@ -1088,6 +1091,14 @@ function sortByWindow(){
 
 async function calcRoute(){
   if(!clients.length)return;
+  if(!cfg.base||!cfg.base.trim()){
+    toast('Configure o endere\xE7o de partida!','err');
+    showConfirm('Endere\xE7o de partida necess\xE1rio',
+      'Para calcular os hor\xE1rios de chegada corretamente, o sistema precisa saber de onde o motorista sai.<br><br>V\xE1 em <strong>Configura\xE7\xF5es</strong> e preencha o campo <strong>Endere\xE7o de partida</strong>.',
+      ()=>{closeModal('confirm-modal');goPage(4);});
+    g('confirm-ok').textContent='Ir para Configura\xE7\xF5es';
+    return;
+  }
   sortByWindow();
   g('rp').classList.add('on');
   g('route-btn').disabled=true;
@@ -1110,11 +1121,11 @@ async function calcRoute(){
       new google.maps.Marker({position:{lat:geocoded[0].lat,lng:geocoded[0].lng},map:gMap});
       estimateTimesSimple();renderC();return;
     }
-    // Google Directions API — inclui base como origem e retorno como destino
-    const baseAddr=cfg.base||'';
+    // Google Directions API — base como origem, retorno como destino, clientes como waypoints
+    const baseAddr=cfg.base;
     const retAddr=cfg.retaddr||baseAddr;
-    const origin=baseAddr||{lat:geocoded[0].lat,lng:geocoded[0].lng};
-    const destination=retAddr||{lat:geocoded[geocoded.length-1].lat,lng:geocoded[geocoded.length-1].lng};
+    const origin=baseAddr;
+    const destination=retAddr;
     const waypoints=geocoded.map(c=>({location:{lat:c.lat,lng:c.lng},stopover:true}));
     const dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({origin,destination,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR'},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
     if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>m.setMap(null));gMarkers=[];
