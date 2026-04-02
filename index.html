@@ -534,13 +534,10 @@ function v(id){return g(id)?.value?.trim()||'';}
 function toast(msg,t){const el=g('toast');el.textContent=msg;el.className='toast show '+(t||'');clearTimeout(window._tt);window._tt=setTimeout(()=>el.className='toast',3200);}
 function fmtBRL(n){return Number(n).toFixed(2).replace('.',',');}
 function fmtNomeValor(nome,val,valTipo){
-  // Padroniza valor no título: "Valor 396" → "Valor R$ 396,00", "Valor medir" mantém, "Valor pago" mantém
-  if(valTipo==='medir'||valTipo==='pago')return nome.replace(/\bvalor\s+[\d.,]+/gi,'Valor '+valTipo.charAt(0).toUpperCase()+valTipo.slice(1));
-  if(val){
-    const fmt='R$ '+fmtBRL(val);
-    // Substitui "Valor 396", "Valor R$ 396", "Valor R$396,00", "Valor medir", "Valor pago" etc
-    return nome.replace(/\bvalor\s+(R\$\s*)?[\d.,]+/gi,'Valor '+fmt).replace(/\bvalor\s+(medir|pago)/gi,'Valor '+fmt);
-  }
+  // Regex universal: captura "Valor 396", "Valor R$ 396,00", "Valor medir", "Valor pago"
+  const rVal=/\bvalor\s+(R\$\s*)?[\d.,]+|\bvalor\s+(medir|pago)/gi;
+  if(valTipo==='medir'||valTipo==='pago')return nome.replace(rVal,'Valor '+valTipo.charAt(0).toUpperCase()+valTipo.slice(1));
+  if(val)return nome.replace(rVal,'Valor R$ '+fmtBRL(val));
   return nome;
 }
 function closeModal(id){g(id).classList.remove('on');}
