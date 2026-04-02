@@ -1348,13 +1348,17 @@ function renderMotor(){
 }
 
 </script>
-<script id="gmaps-script" src="https://maps.googleapis.com/maps/api/js?key=PLACEHOLDER&libraries=visualization&callback=initGoogleMaps" async defer></script>
 <script>
 (function(){
   try{
     var c=JSON.parse(localStorage.getItem('rota_cfg')||'{}');
     var k=c.gkey||'';
-    if(k){var s=document.getElementById('gmaps-script');if(s)s.src=s.src.replace('PLACEHOLDER',k);}
+    if(k){
+      var s=document.createElement('script');
+      s.src='https://maps.googleapis.com/maps/api/js?key='+k+'&libraries=visualization&callback=initGoogleMaps';
+      s.async=true;s.defer=true;
+      document.head.appendChild(s);
+    }
   }catch(e){}
 })();
 </script>
