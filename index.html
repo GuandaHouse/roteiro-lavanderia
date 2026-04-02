@@ -7,11 +7,11 @@
           const cepM=(card.desc||'').match(/\b(\d{5})-?(\d{3})\b/);
           if(cepM){try{const vc=await fetch('https://viacep.com.br/ws/'+cepM[1]+cepM[2]+'/json/').then(r=>r.json());if(vc&&!vc.erro&&vc.bairro)bairroFinal=vc.bairro;}catch(e){}}
           // CAMADA 2: Nominatim para coords
-          const gd=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=3&countrycodes=br&viewbox=-47.0,-24.0,-46.0,-23.3&bounded=0&q='+encodeURIComponent(endFinal+', São Paulo, SP'),{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
+          const gd=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address=__ADDR__&region=br&key=AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM'+encodeURIComponent(endFinal+', São Paulo, SP'),{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
           const spR=gd.find(x=>{const la=parseFloat(x.lat),ln=parseFloat(x.lon);return la>-24.0&&la<-23.3&&ln>-47.0&&ln<-46.0;})||gd[0];
           if(spR){latFinal=parseFloat(spR.lat);lngFinal=parseFloat(spR.lon);}
           // CAMADA 3: Reverse geocoding se ainda sem bairro
-          if(!bairroFinal&&spR){const rd=await fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat='+spR.lat+'&lon='+spR.lon,{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());bairroFinal=rd.address?.quarter||rd.address?.neighbourhood||rd.address?.suburb||rd.address?.city_district||'';}
+          if(!bairroFinal&&spR){const rd=await fetch('https://maps.googleapis.com/maps/api/geocode/json?latlng=__LAT__,__LNG__&key=AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM&language=pt-BR'+spR.lat+'&lon='+spR.lon,{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());bairroFinal=rd.address?.quarter||rd.address?.neighbourhood||rd.address?.suburb||rd.address?.city_district||'';}
           if(bairroFinal)endFinal=endFinal.replace(/\s*-\s*.+$/,'').trim()+' - '+bairroFinal;
           if(latFinal&&lngFinal){_pendingCoords={lat:latFinal,lng:lngFinal};try{localStorage.setItem('geo_'+endFinal,JSON.stringify({lat:latFinal,lng:lngFinal,display:endFinal}));}catch(e){}}
         }catch(e){console.error('geo:',e);}
@@ -805,9 +805,9 @@ async function importTC(){
       const valTipo=ext.valorTipo==='medir'?'medir':ext.valorTipo==='pago'?'pago':'normal';
       let endFinal=ext.endereco||'';
       if(endFinal){try{
-        const gd=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=3&countrycodes=br&viewbox=-47.0,-24.0,-46.0,-23.3&bounded=0&q='+encodeURIComponent(endFinal+', São Paulo, SP'),{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
+        const gd=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address=__ADDR__&region=br&key=AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM'+encodeURIComponent(endFinal+', São Paulo, SP'),{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
         const spR=gd.find(x=>{const la=parseFloat(x.lat),ln=parseFloat(x.lon);return la>-24.0&&la<-23.3&&ln>-47.0&&ln<-46.0;});
-        if(spR){const rd=await fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat='+spR.lat+'&lon='+spR.lon,{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
+        if(spR){const rd=await fetch('https://maps.googleapis.com/maps/api/geocode/json?latlng=__LAT__,__LNG__&key=AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM&language=pt-BR'+spR.lat+'&lon='+spR.lon,{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
           const bairro=rd.address?.quarter||rd.address?.neighbourhood||rd.address?.suburb||rd.address?.city_district||'';
           if(bairro)endFinal=endFinal.replace(/\s*-\s*[^,]+$/,'').trim()+' - '+bairro;}
       }catch(e){}}
@@ -882,18 +882,12 @@ function resetTrello(){
 // GEO AMBIGUITY
 function schedGeo(){clearTimeout(geoT);geoT=setTimeout(checkAmb,1400);}
 async function checkAmb(){
-  const addr=v('f-end');if(addr.length<8)return;
-  const box=g('amb-box');
-  try{
-    const url='https://nominatim.openstreetmap.org/search?format=json&limit=4&countrycodes=br&q='+encodeURIComponent(addr);
-    const r=await fetch(url,{headers:{'Accept-Language':'pt-BR'}});
-    const res=await r.json();
-    if(res.length>1){
-      ambRes=res;
-      let html='<div class="ab w">&#x26A0;&#xFE0F; <strong>Endere\xE7o amb\xEDguo</strong> &#x2014; selecione o correto:</div>';
-      res.forEach((r,i)=>{html+='<div class="ao" id="ao-'+i+'" onclick="selAmb('+i+')">'+r.display_name+'</div>';});
-      box.innerHTML=html;box.style.display='block';
-    } else {box.style.display='none';}
+  const addr=v('f-end');if(addr.length<8)return;const box=g('amb-box');
+  try{const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+', São Paulo, SP, Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
+    if(d.status==='OK'&&d.results.length>1){ambRes=d.results.map(r=>({lat:r.geometry.location.lat,lon:r.geometry.location.lng,display_name:r.formatted_address}));
+      let h2='<div class="ab w">&#x26A0;&#xFE0F; <strong>Endere\xE7o amb\xEDguo</strong> &#x2014; selecione o correto:</div>';
+      ambRes.forEach((r,i)=>{h2+='<div class="ao" id="ao-'+i+'" onclick="selAmb('+i+')">'+r.display_name+'</div>';});
+      box.innerHTML=h2;box.style.display='block';}else box.style.display='none';
   }catch(e){box.style.display='none';}
 }
 function selAmb(i){
@@ -1015,42 +1009,34 @@ function updStats(){
 }
 function updBtns(){const has=clients.length>0;g('route-btn').disabled=!has;g('pdf-btn').disabled=!has;}
 
-// ── LEAFLET + OSRM + NOMINATIM (gratuito, sem chave) ──────────────────────
-function initLeafMap(){
-  if(leafMap)return;
-  g('map').style.display='block';g('mph').style.display='none';
-  leafMap=L.map('map',{zoomControl:true}).setView([-23.2,-45.9],12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(leafMap);
+// ── GOOGLE MAPS ─────────────────────────────────────────────────────────────
+const GKEY='AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM';
+function initGoogleMaps(){
+  const mapEl=document.getElementById('map');
+  if(mapEl){mapEl.style.display='block';document.getElementById('mph').style.display='none';
+    gMap=new google.maps.Map(mapEl,{center:{lat:-23.55,lng:-46.63},zoom:12,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});}
+  const hmEl=document.getElementById('heatmap');
+  if(hmEl)hmMap=new google.maps.Map(hmEl,{center:{lat:-23.55,lng:-46.63},zoom:11,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});
 }
-
+function initLeafMap(){}
 const _geoCache={};
 async function nominatim(addr){
   if(_geoCache[addr])return _geoCache[addr];
   const cached=localStorage.getItem('geo_'+addr);
-  if(cached){const p=JSON.parse(cached);_geoCache[addr]=p;return p;}
-  const viewbox='&viewbox=-47.0,-24.0,-46.0,-23.3&bounded=0';
-  for(let t=0;t<2;t++){
-    try{
-      const q=encodeURIComponent(addr+', São Paulo, SP');
-      const url='https://nominatim.openstreetmap.org/search?format=json&limit=3&countrycodes=br'+viewbox+'&q='+q;
-      const r=await fetch(url,{headers:{'Accept-Language':'pt-BR'}});
-      const d=await r.json();
-      const spResult=d.find(x=>{const la=parseFloat(x.lat),ln=parseFloat(x.lon);return la>-24.0&&la<-23.3&&ln>-47.0&&ln<-46.0;});
-      const best=spResult||d[0];
-      const result=best?{lat:parseFloat(best.lat),lng:parseFloat(best.lon),display:best.display_name}:null;
-      if(result){_geoCache[addr]=result;try{localStorage.setItem('geo_'+addr,JSON.stringify(result));}catch(e){}}
-      return result;
-    }catch(e){if(t===1)console.warn('Nominatim falhou para: '+addr,e);}
-    await new Promise(r=>setTimeout(r,800));
-  }
-  return null;
+  if(cached){const cc=JSON.parse(cached);_geoCache[addr]=cc;return cc;}
+  try{const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+', São Paulo, SP, Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
+    if(d.status==='OK'&&d.results[0]){const loc=d.results[0].geometry.location;
+      const comps=d.results[0].address_components;
+      const bairro=(comps.find(c=>c.types.includes('sublocality_level_1'))||comps.find(c=>c.types.includes('sublocality'))||comps.find(c=>c.types.includes('neighborhood'))||{}).long_name||'';
+      const result={lat:loc.lat,lng:loc.lng,display:d.results[0].formatted_address,bairro};
+      _geoCache[addr]=result;try{localStorage.setItem('geo_'+addr,JSON.stringify(result));}catch(e){}return result;}
+  }catch(e){console.warn('Geocoding:',e);}return null;
 }
-
 async function nominatimReverse(lat,lng){
-  const url='https://nominatim.openstreetmap.org/reverse?format=json&lat='+lat+'&lon='+lng;
-  const r=await fetch(url,{headers:{'Accept-Language':'pt-BR'}});
-  return await r.json();
-}
+  try{const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?latlng='+lat+','+lng+'&key='+GKEY+'&language=pt-BR').then(r=>r.json());
+    if(d.status==='OK'&&d.results[0]){const comps=d.results[0].address_components;
+      return{address:{suburb:(comps.find(c=>c.types.includes('sublocality_level_1'))||comps.find(c=>c.types.includes('sublocality'))||{}).long_name||'',neighbourhood:(comps.find(c=>c.types.includes('neighborhood'))||{}).long_name||''}};}
+  }catch(e){}return{address:{}};}
 
 function sortByWindow(){
   const sc=c=>{if(c.janela==='manha')return 0;if(c.janela==='custom'&&c.hi<'12:00')return 0.5;if(c.janela==='livre')return 1;if(c.janela==='custom')return 1.5;return 2;};
@@ -1077,32 +1063,22 @@ async function calcRoute(){
     const geocoded=order.map(i=>clients[i]).filter(c=>c.lat&&c.lng);
     if(!geocoded.length){toast('Nenhum endere\xE7o encontrado','err');return;}
     if(geocoded.length===1){
-      leafMap.setView([geocoded[0].lat,geocoded[0].lng],15);
-      L.marker([geocoded[0].lat,geocoded[0].lng]).addTo(leafMap).bindPopup(geocoded[0].nome).openPopup();
+      gMap.setCenter({lat:geocoded[0].lat,lng:geocoded[0].lng});gMap.setZoom(15);
+      new google.maps.Marker({position:{lat:geocoded[0].lat,lng:geocoded[0].lng},map:gMap});
       estimateTimesSimple();renderC();return;
     }
-    // Build OSRM route
-    const coords=geocoded.map(c=>c.lng+','+c.lat).join(';');
-    const osrm='https://router.project-osrm.org/route/v1/driving/'+coords+'?overview=full&geometries=geojson&steps=false';
-    const res=await fetch(osrm);
-    const data=await res.json();
-    if(data.code!=='Ok'){toast('N\xE3o foi poss\xedvel calcular rota','err');return;}
-    // Draw route
-    if(leafRoute)leafMap.removeLayer(leafRoute);
-    leafRoute=L.geoJSON(data.routes[0].geometry,{style:{color:'#6C5CE7',weight:4,opacity:.8}}).addTo(leafMap);
-    // Add markers
-    leafMap.eachLayer(l=>{if(l instanceof L.Marker)leafMap.removeLayer(l);});
-    let markerNum=0;
-    order.forEach(idx=>{
-      const c=clients[idx];
-      if(!c.lat||!c.lng)return;
-      markerNum++;
-      const icon=L.divIcon({className:'',html:'<div style="background:'+(c.tipo==='coleta'?'#00C875':'#0098F7')+';color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)">'+markerNum+'</div>',iconSize:[26,26],iconAnchor:[13,13]});
-      L.marker([c.lat,c.lng],{icon}).addTo(leafMap).bindPopup('<strong>'+c.nome+'</strong><br>'+c.endereco);
-    });
-    leafMap.fitBounds(leafRoute.getBounds(),{padding:[20,20]});
-    // Estimate times from OSRM legs duration
-    const legs=data.routes[0].legs||[];
+    // Google Directions API
+    const origin={lat:geocoded[0].lat,lng:geocoded[0].lng};
+    const destination={lat:geocoded[geocoded.length-1].lat,lng:geocoded[geocoded.length-1].lng};
+    const waypoints=geocoded.slice(1,-1).map(c=>({location:{lat:c.lat,lng:c.lng},stopover:true}));
+    const dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({origin,destination,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR'},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
+    if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>m.setMap(null));gMarkers=[];
+    gRoute=new google.maps.DirectionsRenderer({map:gMap,directions:dirResult,suppressMarkers:true,polylineOptions:{strokeColor:'#6C5CE7',strokeWeight:4,strokeOpacity:0.8}});
+    let markerNum=0;order.forEach(idx=>{const c=clients[idx];if(!c.lat||!c.lng)return;markerNum++;
+      const mk=new google.maps.Marker({position:{lat:c.lat,lng:c.lng},map:gMap,label:{text:String(markerNum),color:'#fff',fontSize:'11px',fontWeight:'700'},icon:{path:google.maps.SymbolPath.CIRCLE,scale:13,fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
+      mk.addListener('click',()=>new google.maps.InfoWindow({content:'<strong>'+c.nome+'</strong><br>'+c.endereco}).open(gMap,mk));gMarkers.push(mk);});
+    const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds);
+    const legs=dirResult.routes[0].legs.map(l=>({duration:l.duration.value}));
     estimateTimesOSRM(legs);
     renderC();toast('Rota gerada!','ok');
   }catch(e){toast('Erro ao calcular rota: '+e.message,'err');console.error(e);}
@@ -1348,13 +1324,10 @@ function renderDashStats(br,pts){
     +'</div></div>'
   ).join(''):'<p style="font-size:13px;color:var(--mu)">Nenhum bairro identificado ainda.</p>')+'</div>';
   if(!pts.length)return;
-  if(!hmLeafMap){
-    hmLeafMap=L.map('heatmap').setView([-23.5,-46.6],11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(hmLeafMap);
-  }
-  if(hmHeatLayer){hmLeafMap.removeLayer(hmHeatLayer);}
-  hmHeatLayer=L.heatLayer(pts,{radius:35,blur:20,maxZoom:14}).addTo(hmLeafMap);
-  const bounds=L.latLngBounds(pts.map(p=>L.latLng(p[0],p[1])));hmLeafMap.fitBounds(bounds,{padding:[20,20]});
+  if(!hmMap){hmMap=new google.maps.Map(document.getElementById('heatmap'),{center:{lat:-23.55,lng:-46.63},zoom:11,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});}
+  if(hmHeatLayer)hmHeatLayer.setMap(null);
+  hmHeatLayer=new google.maps.visualization.HeatmapLayer({data:pts.map(pt=>new google.maps.LatLng(pt[0],pt[1])),radius:35,map:hmMap});
+  const hmBnds=new google.maps.LatLngBounds();pts.forEach(pt=>hmBnds.extend({lat:pt[0],lng:pt[1]}));hmMap.fitBounds(hmBnds);
 }
 
 function renderMotor(){
