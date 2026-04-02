@@ -42,7 +42,7 @@ nav{background:var(--pu);padding:0 20px;display:flex;align-items:center;position
 .ct{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--mu);margin-bottom:14px}
 
 /* BUTTONS */
-.btn{padding:9px 16px;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:all .15s;display:inline-flex;align-items:center;gap:7px;font-family:'Figtree',sans-serif;text-decoration:none}
+.btn{padding:9px 16px;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:all .15s;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:'Figtree',sans-serif;text-decoration:none}
 .btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
 .bp{background:var(--pu);color:#fff;border-color:var(--pud)}.bp:hover{background:var(--pud)}
 .bo{background:var(--sf);color:var(--tx);border-color:var(--bd)}.bo:hover{background:var(--bg)}
@@ -190,6 +190,9 @@ hr{border:none;border-top:1.5px solid var(--bd);margin:16px 0}
 .toast{position:fixed;bottom:22px;right:22px;background:var(--tx);color:#fff;padding:11px 16px;border-radius:var(--rl2);font-size:13px;font-weight:500;opacity:0;transform:translateY(8px);transition:all .25s;z-index:9999;pointer-events:none;max-width:320px;box-shadow:0 8px 24px rgba(28,31,59,.2)}
 .toast.show{opacity:1;transform:none}
 .toast.ok{background:var(--gnd)}.toast.err{background:var(--rd)}.toast.warn{background:var(--or)}
+.toast-center{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.85);background:rgba(0,168,94,.95);color:#fff;padding:22px 40px;border-radius:16px;font-size:18px;font-weight:700;opacity:0;z-index:10000;pointer-events:none;box-shadow:0 12px 40px rgba(0,0,0,.2);display:flex;align-items:center;gap:10px;transition:none}
+.toast-center.show{opacity:1;transform:translate(-50%,-50%) scale(1);transition:opacity .15s,transform .15s}
+.toast-center.fade{opacity:0;transform:translate(-50%,-50%) scale(.95);transition:opacity .8s ease-out,transform .8s ease-out}
 </style>
 </head>
 <body>
@@ -220,15 +223,15 @@ hr{border:none;border-top:1.5px solid var(--bd);margin:16px 0}
     <div class="tp on" id="tp-trello">
       <div id="trello-nocred" style="display:none"><div class="ab w">&#x26A0;&#xFE0F; Configure sua <strong>Chave e Token do Trello</strong> em <a href="#" onclick="goPage('cfg',document.querySelectorAll('.ntab')[4]);return false;" style="color:var(--pud)">Configura&#xE7;&#xF5;es</a> para usar esta funcionalidade.</div></div>
       <div id="trello-step1">
-        <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:13px;flex-wrap:wrap">
-          <div class="fg" style="flex:0 0 auto">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;margin-bottom:13px">
+          <div class="fg">
             <label>Data dos cart&#xF5;es</label>
             <div style="cursor:pointer" onclick="this.querySelector('input').showPicker()">
-              <input type="date" id="td" style="cursor:pointer;width:155px"/>
+              <input type="date" id="td" style="cursor:pointer;width:100%"/>
             </div>
           </div>
-          <div class="fg" style="flex:1 1 auto">
-            <button class="btn bp" onclick="trelloMainBtn()" id="trello-btn" style="white-space:nowrap;width:100%">
+          <div class="fg">
+            <button class="btn bp" onclick="trelloMainBtn()" id="trello-btn" style="white-space:nowrap;width:100%;justify-content:center">
               <span class="spin" id="tspin" style="display:none"></span>
               <span id="tlbl">&#x1F50D; Buscar quadros</span>
             </button>
@@ -365,7 +368,7 @@ hr{border:none;border-top:1.5px solid var(--bd);margin:16px 0}
 
   <div class="card">
     <p class="ct">Gerar roteiro</p>
-    <p style="font-size:13px;color:var(--mu);margin-bottom:14px;font-weight:500">Imagem com todas as paradas â f&#xe1;cil de enviar no WhatsApp.</p>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:14px;font-weight:500">Imagem com todas as paradas — f&#xe1;cil de enviar no WhatsApp.</p>
     <button class="btn bg" style="width:100%" id="pdf-btn" onclick="genImage()" disabled>&#x1F4F8; Gerar imagem do roteiro</button>
   </div>
 </div>
@@ -425,7 +428,7 @@ hr{border:none;border-top:1.5px solid var(--bd);margin:16px 0}
           <div class="inp-wrap"><input type="password" id="cfg-ttoken" placeholder="Token"/><button class="eye-btn" onclick="toggleEye('cfg-ttoken',this)">&#x1F441;</button></div>
         </div>
       </div>
-      <p style="font-size:12px;color:var(--mu);margin-top:8px;font-weight:500">Obtenha em <strong>trello.com/app-key</strong> â gere o token na mesma p&#xE1;gina.</p>
+      <p style="font-size:12px;color:var(--mu);margin-top:8px;font-weight:500">Obtenha em <strong>trello.com/app-key</strong> — gere o token na mesma p&#xE1;gina.</p>
     </div>
   </div>
   <div>
@@ -507,6 +510,7 @@ hr{border:none;border-top:1.5px solid var(--bd);margin:16px 0}
 
 <div class="mbg" id="confirm-modal"><div class="modal" style="max-width:380px"><h2 id="confirm-title">Confirmar</h2><p id="confirm-msg" style="font-size:14px;color:var(--mu);margin-bottom:4px"></p><div class="ma"><button class="btn bo" onclick="closeModal('confirm-modal')">Cancelar</button><button class="btn br" id="confirm-ok" onclick="">Excluir</button></div></div></div>
 <div class="toast" id="toast"></div>
+<div class="toast-center" id="toast-center"></div>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
@@ -537,6 +541,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 function g(id){return document.getElementById(id);}
 function v(id){return g(id)?.value?.trim()||'';}
 function toast(msg,t){const el=g('toast');el.textContent=msg;el.className='toast show '+(t||'');clearTimeout(window._tt);window._tt=setTimeout(()=>el.className='toast',3200);}
+function toastCenter(msg){const el=g('toast-center');el.innerHTML=msg;el.className='toast-center';requestAnimationFrame(()=>{el.className='toast-center show';setTimeout(()=>{el.className='toast-center show fade';},800);setTimeout(()=>{el.className='toast-center';},1800);});}
 function fmtBRL(n){return Number(n).toFixed(2).replace('.',',');}
 function fmtNomeValor(nome,val,valTipo){
   // Regex universal: captura "Valor 396", "Valor R$ 396,00", "Valor medir", "Valor pago"
@@ -564,11 +569,12 @@ function saveCfg(){
     tkey:v('cfg-tkey'),ttoken:v('cfg-ttoken'),
     akey:v('cfg-akey'),gkey:v('cfg-gkey')};
   localStorage.setItem('rota_cfg',JSON.stringify(cfg));
-  let msg='<div class="ab ok">&#x2705; Configura\xE7\xF5es salvas!</div>';
-  if(!cfg.base)msg+='<div class="ab w" style="margin-top:8px">&#x26A0;&#xFE0F; <strong>Endere\xE7o de partida</strong> n\xE3o preenchido. O sistema precisa dele para calcular os hor\xE1rios de chegada nos clientes.</div>';
-  if(!cfg.saida)msg+='<div class="ab w" style="margin-top:8px">&#x26A0;&#xFE0F; <strong>Hor\xE1rio de sa\xEDda</strong> n\xE3o preenchido.</div>';
-  g('cfg-msg').innerHTML=msg;
-  setTimeout(()=>g('cfg-msg').innerHTML='',6000);
+  toastCenter('&#x2705; Salvo!');
+  let warn='';
+  if(!cfg.base)warn+='<div class="ab w" style="margin-top:8px">&#x26A0;&#xFE0F; <strong>Endere\xE7o de partida</strong> n\xE3o preenchido. O sistema precisa dele para calcular os hor\xE1rios de chegada nos clientes.</div>';
+  if(!cfg.saida)warn+='<div class="ab w" style="margin-top:8px">&#x26A0;&#xFE0F; <strong>Hor\xE1rio de sa\xEDda</strong> n\xE3o preenchido.</div>';
+  g('cfg-msg').innerHTML=warn;
+  if(warn)setTimeout(()=>g('cfg-msg').innerHTML='',6000);
 }
 
 function goPage(p,el){window.scrollTo(0,0);window.scrollTo(0,0);
@@ -665,7 +671,7 @@ function trelloMainBtn(){
   trelloStep1();
 }
 async function trelloBuscarCartoes(){
-  // LÃª data do td2 (painel rÃ¡pido) ou td (campo principal)
+  // Lê data do td2 (painel rápido) ou td (campo principal)
   const td2el=document.getElementById('td2');
   const dateVal=(td2el&&td2el.value)||v('td');
   if(!dateVal){toast('Selecione uma data','warn');return;}
@@ -729,7 +735,12 @@ async function trelloSelectBoard(id,name){
     g('trello-step2').style.display='none';
     g('trello-step3').style.display='block';
     g('tlbl').textContent='\uD83D\uDD0D Buscar cart\xF5es';
-  }catch(e){toast('Erro ao buscar listas','err');console.error(e);}
+  }catch(e){
+    toast('Erro ao buscar listas','err');console.error(e);
+    // Restaura lista de quadros se falhar
+    if(_tboardsHtml)g('trello-boards').innerHTML=_tboardsHtml;
+    else g('trello-boards').innerHTML='<div class="ab w">Erro ao buscar listas. Tente novamente.</div>';
+  }
 }
 
 async function trelloSelectList(id,name){
@@ -776,8 +787,16 @@ function trelloBack2(){
     g('trello-lists').innerHTML=_tlistsHtml;
     g('trello-lists').style.display='block';
     g('trello-step3').style.display='block';
-  } else if(selBoard){
-    trelloSelectBoard(selBoard.id,selBoard.name);
+  } else {
+    // Sem cache de listas, volta para seleção de quadros
+    if(_tboardsHtml){
+      g('trello-boards').innerHTML=_tboardsHtml;
+      g('trello-boards').style.display='';
+      g('trello-step2').style.display='block';
+    } else {
+      // Sem cache de quadros, volta para step1
+      g('trello-step1').style.display='block';
+    }
   }
 }
 
@@ -791,7 +810,7 @@ async function importTC(){
   const cards=(window._tcards||[]).filter((_,i)=>{const cb=g('tch-'+i);return cb&&cb.checked;});
   if(!cards.length){toast('Selecione ao menos um cart\xE3o','warn');return;}
   if(clients.length>0){
-    const sub=confirm('JÃ¡ existem '+clients.length+' cliente(s) na rota.\n\nOK = Substituir tudo\nCancelar = Adicionar aos existentes');
+    const sub=confirm('Já existem '+clients.length+' cliente(s) na rota.\n\nOK = Substituir tudo\nCancelar = Adicionar aos existentes');
     if(sub){clients=[];order=[];}
   }
   // Barra de progresso visual
@@ -823,7 +842,7 @@ async function importTC(){
     const valTipo=ext.valorTipo==='medir'?'medir':ext.valorTipo==='pago'?'pago':'normal';
     let endFinal=ext.endereco||'';
     if(endFinal){try{
-      const gd=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address=__ADDR__&region=br&key=AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM'+encodeURIComponent(endFinal+', SÃ£o Paulo, SP'),{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
+      const gd=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address=__ADDR__&region=br&key=AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM'+encodeURIComponent(endFinal+', São Paulo, SP'),{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
       const spR=gd.find(x=>{const la=parseFloat(x.lat),ln=parseFloat(x.lon);return la>-24.0&&la<-23.3&&ln>-47.0&&ln<-46.0;});
       if(spR){const rd=await fetch('https://maps.googleapis.com/maps/api/geocode/json?latlng=__LAT__,__LNG__&key=AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM&language=pt-BR'+spR.lat+'&lon='+spR.lon,{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
         const bairro=rd.address?.quarter||rd.address?.neighbourhood||rd.address?.suburb||rd.address?.city_district||'';
@@ -852,10 +871,10 @@ async function importTC(){
   g('trello-cards').innerHTML='<div class="ab ok">&#x2705; '+count+' cliente(s) importado(s)!</div>'
     +'<div style="margin-top:12px;padding:12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px">'
     +'<div style="font-weight:600;margin-bottom:8px">&#x1F4CB; '+selBoard.name+' &rsaquo; '+selList.name+'</div>'
-    +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
-    +'<div style="position:relative;cursor:pointer;flex:0 0 auto" onclick="this.querySelector(\'input\').showPicker()"><input type="date" id="td2" value="'+v('td')+'" style="padding:7px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:inherit;background:var(--sf);color:var(--tx);cursor:pointer;width:155px"/></div>'
-    +'<button class="btn bp bsm" onclick="trelloBuscarCartoes()" style="white-space:nowrap">&#x1F504; Buscar cart\xF5es</button>'
-    +'<button class="btn bo bsm" onclick="resetTrello()" style="white-space:nowrap">Trocar lista</button>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:center">'
+    +'<div style="cursor:pointer" onclick="this.querySelector(\'input\').showPicker()"><input type="date" id="td2" value="'+v('td')+'" style="padding:7px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:inherit;background:var(--sf);color:var(--tx);cursor:pointer;width:100%"/></div>'
+    +'<button class="btn bp bsm" onclick="trelloBuscarCartoes()" style="white-space:nowrap;width:100%;justify-content:center">&#x1F504; Buscar cart\xF5es</button>'
+    +'<button class="btn bo bsm" onclick="resetTrello()" style="white-space:nowrap;width:100%;justify-content:center">Trocar lista</button>'
     +'</div></div>';
 }
 
@@ -872,10 +891,10 @@ function showTrelloQuickPanel(){
   g('trello-cards').innerHTML='<div class="ab info" style="margin-bottom:10px">&#x1F4CB; Retomando sele&#xe7;&#xe3o anterior</div>'
     +'<div style="padding:12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px">'
     +'<div style="font-weight:600;margin-bottom:8px">&#x1F4CB; '+selBoard.name+' &rsaquo; '+selList.name+'</div>'
-    +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
-    +'<div style="position:relative;cursor:pointer;flex:0 0 auto" onclick="this.querySelector(\'input\').showPicker()"><input type="date" id="td2" value="'+dv+'" style="padding:7px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:inherit;background:var(--sf);color:var(--tx);cursor:pointer;width:155px"/></div>'
-    +'<button class="btn bp bsm" onclick="trelloBuscarCartoes()" style="white-space:nowrap">&#x1F504; Buscar cart\xF5es</button>'
-    +'<button class="btn bo bsm" onclick="resetTrello()" style="white-space:nowrap">Trocar lista</button>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:center">'
+    +'<div style="cursor:pointer" onclick="this.querySelector(\'input\').showPicker()"><input type="date" id="td2" value="'+dv+'" style="padding:7px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:inherit;background:var(--sf);color:var(--tx);cursor:pointer;width:100%"/></div>'
+    +'<button class="btn bp bsm" onclick="trelloBuscarCartoes()" style="white-space:nowrap;width:100%;justify-content:center">&#x1F504; Buscar cart\xF5es</button>'
+    +'<button class="btn bo bsm" onclick="resetTrello()" style="white-space:nowrap;width:100%;justify-content:center">Trocar lista</button>'
     +'</div></div>';
   ['trello-step1','trello-step2','trello-step3'].forEach(id=>g(id).style.display='none');
   g('trello-step4').style.display='block';
@@ -900,7 +919,7 @@ function resetTrello(){
       g('trello-boards').style.display='none';
       g('trello-step3').style.display='block';
     } else {
-      // _tlistsHtml nÃ£o populado (sessÃ£o restaurada) â re-busca listas
+      // _tlistsHtml não populado (sessão restaurada) — re-busca listas
       trelloSelectBoard(selBoard.id,selBoard.name);
     }
   } else {
@@ -916,7 +935,7 @@ async function checkAmb(){
   const addr=v('f-end');if(addr.length<8)return;
   const box=g('amb-box');
   try{
-    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+', SÃ£o Paulo, SP, Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
+    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+', São Paulo, SP, Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
     if(d.status==='OK'&&d.results.length>1){
       ambRes=d.results.map(r=>({lat:r.geometry.location.lat,lon:r.geometry.location.lng,display_name:r.formatted_address}));
       let html='<div class="ab w">&#x26A0;&#xFE0F; <strong>Endere\xE7o amb\xEDguo</strong> \u2014 selecione o correto:</div>';
@@ -1051,7 +1070,7 @@ function updStats(){
 }
 function updBtns(){const has=clients.length>0;g('route-btn').disabled=!has;g('pdf-btn').disabled=!has;}
 
-// ââ GOOGLE MAPS âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ---- GOOGLE MAPS ----
 const GKEY='AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM';
 function initGoogleMaps(){
   const mapEl=document.getElementById('map');
@@ -1067,7 +1086,7 @@ async function nominatim(addr){
   const cached=localStorage.getItem('geo_'+addr);
   if(cached){const c=JSON.parse(cached);_geoCache[addr]=c;return c;}
   try{
-    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+', SÃ£o Paulo, SP, Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
+    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+', São Paulo, SP, Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
     if(d.status==='OK'&&d.results[0]){
       const loc=d.results[0].geometry.location;
       const comps=d.results[0].address_components;
@@ -1118,7 +1137,7 @@ async function calcRoute(){
       }
       await new Promise(res=>setTimeout(res,200));
     }
-    if(notFound.length)toast('EndereÃ§o nÃ£o encontrado: '+notFound.join(', '),'warn');
+    if(notFound.length)toast('Endereço não encontrado: '+notFound.join(', '),'warn');
     const geocoded=order.map(i=>clients[i]).filter(c=>c.lat&&c.lng);
     if(!geocoded.length){toast('Nenhum endere\xE7o encontrado','err');return;}
     if(geocoded.length===1){
@@ -1371,7 +1390,7 @@ async function renderDash(){
   if(!allC.length){g('hmph').style.display='flex';g('heatmap').style.display='none';el.innerHTML='<div class="empty"><span>\uD83D\uDCC5</span><p>Salve rotas para ver a concentra\xE7\xE3o de clientes</p></div>';return;}
   g('hmph').style.display='none';g('heatmap').style.display='block';
   el.innerHTML='<div class="card"><p class="ct">Identificando bairros... <span class="spin"></span></p></div>';
-  const _dashT=setTimeout(()=>{if(el.innerHTML.includes('Identificando'))el.innerHTML='<div class="card"><p class="ct" style="color:var(--mu)">â ï¸ NÃ£o foi possÃ­vel identificar bairros. Gere uma rota primeiro.</p></div>';},15000);
+  const _dashT=setTimeout(()=>{if(el.innerHTML.includes('Identificando'))el.innerHTML='<div class="card"><p class="ct" style="color:var(--mu)">⚠ï¸ Não foi possível identificar bairros. Gere uma rota primeiro.</p></div>';},15000);
   const br={};const pts=[];
   // Nominatim: sequential to respect rate limit
   for(const c of allC){
