@@ -1206,10 +1206,11 @@ function resetTrelloFull(){
   selBoard=null;selList=null;window._tcards=[];
   _tboardsHtml='';_tlistsHtml='';
   localStorage.removeItem('rota_trello');
-  ['trello-step2','trello-step3','trello-step4'].forEach(id=>g(id).style.display='none');
-  g('trello-step1').style.display='block';
+  ['trello-step1','trello-step2','trello-step3','trello-step4'].forEach(id=>g(id).style.display='none');
   g('trello-cards').innerHTML='';
   g('trello-nav-bar').innerHTML='';
+  // Buscar quadros direto
+  trelloStep1();
 }
 function resetTrello(){
   selList=null;window._tcards=[];
