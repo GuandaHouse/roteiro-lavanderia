@@ -1110,10 +1110,12 @@ async function calcRoute(){
       new google.maps.Marker({position:{lat:geocoded[0].lat,lng:geocoded[0].lng},map:gMap});
       estimateTimesSimple();renderC();return;
     }
-    // Google Directions API
-    const origin={lat:geocoded[0].lat,lng:geocoded[0].lng};
-    const destination={lat:geocoded[geocoded.length-1].lat,lng:geocoded[geocoded.length-1].lng};
-    const waypoints=geocoded.slice(1,-1).map(c=>({location:{lat:c.lat,lng:c.lng},stopover:true}));
+    // Google Directions API — inclui base como origem e retorno como destino
+    const baseAddr=cfg.base||'';
+    const retAddr=cfg.retaddr||baseAddr;
+    const origin=baseAddr||{lat:geocoded[0].lat,lng:geocoded[0].lng};
+    const destination=retAddr||{lat:geocoded[geocoded.length-1].lat,lng:geocoded[geocoded.length-1].lng};
+    const waypoints=geocoded.map(c=>({location:{lat:c.lat,lng:c.lng},stopover:true}));
     const dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({origin,destination,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR'},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
     if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>m.setMap(null));gMarkers=[];
     gRoute=new google.maps.DirectionsRenderer({map:gMap,directions:dirResult,suppressMarkers:true,polylineOptions:{strokeColor:'#6C5CE7',strokeWeight:4,strokeOpacity:0.8}});
@@ -1121,6 +1123,7 @@ async function calcRoute(){
       const mk=new google.maps.Marker({position:{lat:c.lat,lng:c.lng},map:gMap,label:{text:String(markerNum),color:'#fff',fontSize:'11px',fontWeight:'700'},icon:{path:google.maps.SymbolPath.CIRCLE,scale:13,fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
       mk.addListener('click',()=>new google.maps.InfoWindow({content:'<strong>'+c.nome+'</strong><br>'+c.endereco}).open(gMap,mk));gMarkers.push(mk);});
     const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds);
+    // legs[0]=base→cliente1, legs[1]=cliente1→cliente2, ..., legs[n]=ultimoCliente→retorno
     const legs=dirResult.routes[0].legs.map(l=>({duration:l.duration.value}));
     estimateTimesOSRM(legs);
     renderC();toast('Rota gerada!','ok');
@@ -1132,10 +1135,16 @@ function estimateTimesOSRM(legs){
   let cur=ts(cfg.saida||'10:00');
   const retS=ts(cfg.ret||'17:00'),tempo=(cfg.tempo||10)*60;
   const al1=cfg.al1,al2=cfg.al2;
+  // legs[0]=base→cliente1, legs[1]=cliente1→cliente2, ..., legs[n]=ultimoCliente→retorno
+  // Para N clientes geocodificados, temos N+1 legs (base + N clientes + retorno)
+  const geocodedCount=order.filter(i=>clients[i].lat&&clients[i].lng).length;
+  let legIdx=0;
   order.forEach((idx,stop)=>{
     const c=clients[idx];
-    // Soma deslocamento: leg[stop] = trecho de (stop-1 ou partida) até stop
-    if(stop<legs.length)cur+=legs[stop].duration;
+    if(!c.lat||!c.lng){c.estT=null;return;} // Pula clientes sem coordenadas
+    // Soma deslocamento: leg[legIdx] = trecho anterior até este cliente
+    if(legIdx<legs.length)cur+=legs[legIdx].duration;
+    legIdx++;
     // Verifica pausa de almoço
     if(al1&&al2){const s=ts(al1),e=ts(al2);if(cur>=s&&cur<e)cur=e;}
     c.estT=st2(cur);c.conflict=false;c.cmsg='';
@@ -1143,7 +1152,7 @@ function estimateTimesOSRM(legs){
     else if(c.janela==='tarde'&&cur<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
     else if(c.janela==='custom'&&c.hi&&c.hf&&(cur<ts(c.hi)||cur>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
     if(cur>retS){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
-    cur+=tempo;
+    cur+=tempo; // Tempo de parada neste cliente
   });
 }
 function estimateTimesSimple(){
