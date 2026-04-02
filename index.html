@@ -1255,8 +1255,14 @@ async function calcRoute(){
     const dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({origin,destination,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:true,region:'BR'},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
     // Aplicar waypoint_order do Google — ordem otimizada por distância
     const wpOrder=dirResult.routes[0].waypoint_order;
+    console.log('[ROTA DEBUG] optimizeWaypoints=true');
+    console.log('[ROTA DEBUG] waypoint_order do Google:',JSON.stringify(wpOrder));
+    console.log('[ROTA DEBUG] geocodedIdx (antes):',JSON.stringify(geocodedIdx));
+    console.log('[ROTA DEBUG] clientes na ordem original:',geocodedIdx.map(i=>clients[i].nome));
     // Reordena: wpOrder[i] = índice original do waypoint que deve ser visitado na posição i
     const newOrder=wpOrder.map(wi=>geocodedIdx[wi]);
+    console.log('[ROTA DEBUG] newOrder (depois):',JSON.stringify(newOrder));
+    console.log('[ROTA DEBUG] clientes na ordem otimizada:',newOrder.map(i=>clients[i].nome));
     // Adiciona clientes sem coordenadas no final
     const noCoords=[];
     for(let i=0;i<clients.length;i++){if(!clients[i].lat||!clients[i].lng)noCoords.push(i);}
