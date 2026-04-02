@@ -4,3 +4,7 @@ compatibility_date = "2024-01-01"
 
 [assets]
 directory = "."
+
+[[kv_namespaces]]
+binding = "ROTEIRO_KV"
+id = "fdd2a08017994c8681a99e034a7a6ecf"
