@@ -4,7 +4,30 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  v4.1.0 — 02/04/2026 — AdvancedMarker Migration + Cloud Sync    ║
+║  v4.2.0 — 02/04/2026 — AdvancedMarker + Fluxo Conclusão         ║
+║  ─────────────────────────────────────────                   ║
+║  GOOGLE MAPS MIGRATION:                                         ║
+║  • google.maps.Marker → AdvancedMarkerElement (anti-deprecação) ║
+║  • Markers circulares customizados via HTML (identidade M1)     ║
+║  • mapId adicionado nos construtores Map (principal + heatmap)  ║
+║  • Script loading: biblioteca 'marker' adicionada               ║
+║  • getPosition() → .position (API nova)                         ║
+║  • setMap(null) → .map = null (cleanup novo padrão)             ║
+║                                                                  ║
+║  FLUXO DE CONCLUSÃO DO MOTORISTA:                               ║
+║  • Botão "Concluir" (navy) no final de cada card                ║
+║  • Card só esvanece ao clicar Concluir (não mais ao marcar status)║
+║  • Auto-concluir: interagir com próximo card conclui o anterior ║
+║  • Botão "Editar" discreto no card esvanecido (reabrir p/ correção)║
+║  • Campo _motDone separa "marcou status" de "concluiu de fato"  ║
+║  • Worker atualizado: salva/restaura campo done via cloud sync  ║
+║  • Proteção anti-scroll: ignora cliques acidentais ao rolar     ║
+║                                                                  ║
+║  CLOUDFLARE WORKER (Trello fix):                                ║
+║  • Fix: proxy Trello constrói URL a partir de endpoint+key+token║
+║  • Fix: prefixo /1/ adicionado automaticamente na API do Trello ║
+║                                                                  ║
+║  v4.0.0 — 02/04/2026 — Cloud Sync + Smart Insert + Dashboard   ║
 ║  ─────────────────────────────────────────                   ║
 ║  • CLOUD SYNC: rota sincroniza entre gestor e motorista         ║
 ║  • Cloudflare Worker + KV como backend (48h TTL)                ║
@@ -1057,6 +1080,29 @@ function stopMotoristaPolling(){
   if(_pollTimer){clearInterval(_pollTimer);_pollTimer=null;}
 }
 
+// Gestor: polling para acompanhar motorista em tempo real
+let _gestorPollTimer=null;
+function startGestorPolling(){
+  if(_gestorPollTimer)clearInterval(_gestorPollTimer);
+  _gestorPollTimer=setInterval(async()=>{
+    if(!_currentRouteId)return;
+    try{
+      const res=await fetch(WORKER_URL+'/api/route/'+_currentRouteId+'/poll');
+      if(!res.ok)return;
+      const data=await res.json();
+      if(data.hash!==_cloudHash||data.version>_cloudVersion){
+        const route=await cloudLoad(_currentRouteId);
+        if(route){
+          clients=route.clients;order=route.order;
+          if(route.cfg){cfg.base=route.cfg.base||cfg.base;cfg.retaddr=route.cfg.retaddr||cfg.retaddr;cfg.saida=route.cfg.saida||cfg.saida;cfg.ret=route.cfg.ret||cfg.ret;cfg.tempo=route.cfg.tempo||cfg.tempo;}
+          renderMotor();
+          toast('Atualiza\xe7\xe3o do motorista recebida','ok');
+        }
+      }
+    }catch(e){}
+  },15000); // 15s para gestor (mais rápido)
+}
+
 /* ══════════════════════════════════════════════════════════════
    SMART CLIENT INSERTION
    ══════════════════════════════════════════════════════════════ */
@@ -1359,7 +1405,7 @@ function goPage(p,el){if(_isMotoristaMode)return;window.scrollTo(0,0);window.scr
   document.querySelectorAll('.ntab').forEach(x=>x.classList.remove('on'));
   g('page-'+p).classList.add('on');el.classList.add('on');
   if(p==='dash')renderDash();
-  if(p==='motor')renderMotor();
+  if(p==='motor'){renderMotor();if(!_isMotoristaMode&&_currentRouteId&&_cloudVersion>0)startGestorPolling();}
   if(p==='hist')renderHist();
 }
 
@@ -2577,7 +2623,8 @@ const MI={
   home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
   map:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>',
   scale:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
-  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'
+  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  eye:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'
 };
 function mi(name,cls){return '<span class="mot-ico'+(cls?' '+cls:'')+'">'+MI[name]+'</span>';}
 
@@ -2678,6 +2725,7 @@ function buildChartsHTML(clientsList,orderList){
 function renderMotor(){
   const el=g('motor-body');const dateEl=g('motor-date');
   if(!clients.length){el.innerHTML='<div class="empty"><span style="font-size:28px;opacity:.3">'+mi('map')+'</span><p>Monte uma rota primeiro</p></div>';dateEl.textContent='';return;}
+  const _gestorReadonly=!_isMotoristaMode&&_currentRouteId&&_cloudVersion>0;
   const d=clients[0]?.data?new Date(clients[0].data+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
   dateEl.textContent=d;
   const tapR=clients.filter(c=>c.tipo==='coleta').reduce((s,c)=>s+(c.qtd||0),0);
@@ -2691,6 +2739,13 @@ function renderMotor(){
     +'<div class="ms-item"><div class="ms-label">Conclu\xEDdos</div><div class="ms-val">'+doneCount+'/'+clients.length+'</div></div>'
     +(cfg.saida?'<div class="ms-item"><div class="ms-label">Sa\xEDda</div><div class="ms-val">'+cfg.saida+'</div></div>':'')
     +'</div>';
+  // Banner gestor acompanhamento
+  if(_gestorReadonly){
+    html+='<div style="border:2px solid var(--pu);border-radius:14px;padding:14px 16px;margin-bottom:12px;font-size:13px;display:flex;gap:12px;align-items:center;background:var(--sf)">'
+      +'<span style="font-size:20px">'+mi('eye')+'</span>'
+      +'<div><div style="font-weight:700;color:var(--tx)">Modo Acompanhamento</div>'
+      +'<div style="color:var(--mu);font-size:12px;margin-top:2px">Rota publicada &mdash; o motorista est\xe1 usando pelo celular. Voc\xea v\xea as atualiza\xe7\xf5es em tempo real.</div></div></div>';
+  }
   // Gráficos donut
   html+=buildChartsHTML(clients,order);
   // Partida
@@ -2712,7 +2767,7 @@ function renderMotor(){
         +'<span class="mot-ico" style="opacity:.4">'+MI[c._motStatus==='ausente'?'x':c._motStatus==='reagendar'?'refresh':'check']+'</span> '
         +(c._motStatus==='coletado'?'Coletado':c._motStatus==='entregue'?'Entregue':c._motStatus==='ausente'?'Ausente':c._motStatus==='reagendar'?'Reagendado':(c._motStatus||''))
         +(c._motPay?' \u2014 '+c._motPay:'')
-        +'<button class="mc-done-edit" onclick="event.stopPropagation();editDoneCard('+idx+')">'+mi('edit','mot-ico-sm')+' Editar</button>'
+        +(!_gestorReadonly?'<button class="mc-done-edit" onclick="event.stopPropagation();editDoneCard('+idx+')">'+mi('edit','mot-ico-sm')+' Editar</button>':'')
         +'</div>':'')
       // Top: número + tipo + horário
       +'<div class="mc-top">'
@@ -2737,8 +2792,19 @@ function renderMotor(){
       +(c.tel?'<a href="tel:'+c.tel+'" class="mc-tel">'+mi('phone')+' '+c.tel+'</a>':'')
       // Observação do gestor
       +(c.obs?'<div style="padding:0 18px 12px;font-size:12px;color:var(--mu);font-style:italic;font-weight:500">'+c.obs+'</div>':'')
-      // Separador + ações
-      +(!isDone?
+      // Separador + ações (ou resumo readonly do gestor)
+      +(!isDone?(_gestorReadonly?
+        // ── Gestor readonly: mostra status atual sem botões ──
+        (c._motStatus||c._motPay||c._motObs?
+          '<div class="mc-sep"></div>'
+          +'<div style="padding:8px 18px 14px;font-size:12px;color:var(--mu)">'
+            +(c._motStatus?'<span style="display:inline-flex;align-items:center;gap:4px;background:var(--s2);border-radius:8px;padding:4px 10px;margin-right:6px;font-weight:600;color:var(--tx)">'+mi('check','mot-ico-sm')+' '+(c._motStatus==='coletado'?'Coletado':c._motStatus==='entregue'?'Entregue':c._motStatus==='ausente'?'Ausente':c._motStatus==='reagendar'?'Reagendado':c._motStatus)+'</span>':'')
+            +(c._motPay?'<span style="display:inline-flex;align-items:center;gap:4px;background:var(--s2);border-radius:8px;padding:4px 10px;font-weight:600;color:var(--tx)">'+c._motPay+'</span>':'')
+            +(c._motObs?'<div style="margin-top:8px;font-style:italic;color:var(--mu)">Obs: '+c._motObs+'</div>':'')
+          +'</div>'
+        :'<div style="padding:8px 18px 14px;font-size:12px;color:var(--mu);opacity:.5">Aguardando motorista...</div>')
+      :
+        // ── Motorista interativo: todos os botões ──
         '<div class="mc-sep"></div>'
         +'<div class="mc-actions">'
           +'<div class="mc-nav-row">'
@@ -2764,7 +2830,7 @@ function renderMotor(){
           +'</div>'
           +'<button class="mc-conclude-btn" onclick="event.stopPropagation();finishMotClient('+idx+')">'+mi('check')+' Concluir</button>'
         +'</div>'
-      :'')
+      ):'')
     +'</div>';
   }).join('');
   // Retorno
@@ -2871,6 +2937,6 @@ function editDoneCard(idx){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v4.1.0</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v4.2.0</div>
 </body>
 </html>
