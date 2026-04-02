@@ -4,12 +4,14 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  v3.4.0 — 02/04/2026 — Modo Motorista Isolado (?modo=motorista)║
+║  v3.5.0 — 02/04/2026 — Trello nav bar + Modo Motorista         ║
 ║  ─────────────────────────────────────────                   ║
+║  • Trello: botões "Mudar Lista" e "Mudar Quadro" na nav bar  ║
+║  • Trello: nav bar unificada (quadro/lista/data/buscar)       ║
+║  • Trello: botão "Voltar" removido (substituído pelos novos)  ║
 ║  • URL ?modo=motorista abre direto no painel do motorista     ║
-║  • Navbar, abas e outras páginas completamente ocultas        ║
-║  • Header próprio com logo + toggle dark mode                 ║
-║  • Navegação para outras páginas bloqueada                    ║
+║  • Navbar, abas e outras páginas ocultas no modo motorista    ║
+║  • Header próprio com logo + toggle dark mode (motorista)     ║
 ║  • Link compartilhável: motorista só vê o que é dele          ║
 ║                                                              ║
 ║  v3.3.0 — 02/04/2026 — Donut charts + Drag fix + Mapa limpo  ║
@@ -1083,35 +1085,11 @@ async function trelloSelectList(id,name){
     g('trello-lists').style.display='none';
     g('trello-step3').style.display='none';
     g('trello-step4').style.display='block';
+    g('trello-nav-bar').innerHTML=buildTrelloNavBar();
   }catch(e){toast('Erro ao buscar cart\xF5es','err');console.error(e);}
 }
 
-function trelloBack(){
-  g('trello-step3').style.display='none';
-  g('trello-lists').style.display='none';
-  if(_tboardsHtml)g('trello-boards').innerHTML=_tboardsHtml;
-  g('trello-boards').style.display='';
-  g('trello-step2').style.display='block';
-}
-function trelloBack2(){
-  g('trello-step4').style.display='none';
-  g('trello-cards').innerHTML='';
-  if(_tlistsHtml){
-    g('trello-lists').innerHTML=_tlistsHtml;
-    g('trello-lists').style.display='block';
-    g('trello-step3').style.display='block';
-  } else {
-    // Sem cache de listas, volta para seleção de quadros
-    if(_tboardsHtml){
-      g('trello-boards').innerHTML=_tboardsHtml;
-      g('trello-boards').style.display='';
-      g('trello-step2').style.display='block';
-    } else {
-      // Sem cache de quadros, volta para step1
-      g('trello-step1').style.display='block';
-    }
-  }
-}
+// trelloBack e trelloBack2 removidos — substituídos por botões "Mudar Lista" e "Mudar Quadro" no nav bar
 
 function togTC(i){
   const cb=g('tch-'+i),el=g('tc-'+i);
@@ -1181,14 +1159,8 @@ async function importTC(){
   }
   order=clients.map((_,i)=>i);renderC();updStats();updBtns();
   toast(count+' cliente(s) importado(s)!','ok');
-  g('trello-cards').innerHTML='<div class="ab ok"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> '+count+' cliente(s) importado(s)!</div>'
-    +'<div style="margin-top:12px;padding:12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px">'
-    +'<div style="font-weight:600;margin-bottom:8px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span> '+selBoard.name+' &rsaquo; '+selList.name+'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:center">'
-    +'<div style="cursor:pointer" onclick="this.querySelector(\'input\').showPicker()"><input type="date" id="td2" value="'+v('td')+'" style="padding:7px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:inherit;background:var(--sf);color:var(--tx);cursor:pointer;width:100%"/></div>'
-    +'<button class="btn bp bsm" onclick="trelloBuscarCartoes()" style="white-space:nowrap;width:100%;justify-content:center"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg></span> Buscar cart\xF5es</button>'
-    +'<button class="btn bo bsm" onclick="resetTrello()" style="white-space:nowrap;width:100%;justify-content:center">Trocar lista</button>'
-    +'</div></div>';
+  g('trello-nav-bar').innerHTML=buildTrelloNavBar();
+  g('trello-cards').innerHTML='<div class="ab ok"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> '+count+' cliente(s) importado(s)!</div>';
 }
 
 function saveTrelloSelection(){
@@ -1200,15 +1172,8 @@ function loadTrelloSelection(){
 }
 function showTrelloQuickPanel(){
   if(!selBoard||!selList)return;
-  const dv=document.getElementById('td')?.value||new Date().toISOString().split('T')[0];
-  g('trello-cards').innerHTML='<div class="ab info" style="margin-bottom:10px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span> Retomando sele&#xe7;&#xe3o anterior</div>'
-    +'<div style="padding:12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px">'
-    +'<div style="font-weight:600;margin-bottom:8px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span> '+selBoard.name+' &rsaquo; '+selList.name+'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:center">'
-    +'<div style="cursor:pointer" onclick="this.querySelector(\'input\').showPicker()"><input type="date" id="td2" value="'+dv+'" style="padding:7px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:inherit;background:var(--sf);color:var(--tx);cursor:pointer;width:100%"/></div>'
-    +'<button class="btn bp bsm" onclick="trelloBuscarCartoes()" style="white-space:nowrap;width:100%;justify-content:center"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg></span> Buscar cart\xF5es</button>'
-    +'<button class="btn bo bsm" onclick="resetTrello()" style="white-space:nowrap;width:100%;justify-content:center">Trocar lista</button>'
-    +'</div></div>';
+  g('trello-nav-bar').innerHTML=buildTrelloNavBar();
+  g('trello-cards').innerHTML='';
   ['trello-step1','trello-step2','trello-step3'].forEach(id=>g(id).style.display='none');
   g('trello-step4').style.display='block';
   g('tlbl').innerHTML='<span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span> Buscar cart\xF5es';
@@ -1221,8 +1186,34 @@ async function reloadTrelloList(){
   if(selList)await trelloSelectList(selList.id,selList.name);
 }
 
+function buildTrelloNavBar(){
+  if(!selBoard||!selList)return '';
+  const dv=document.getElementById('td2')?.value||document.getElementById('td')?.value||new Date().toISOString().split('T')[0];
+  return '<div style="border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:14px;background:var(--sf)">'
+    +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;font-size:12px;color:var(--mu);font-weight:600">'
+      +'<span class="mot-ico" style="opacity:.4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span> '
+      +selBoard.name+' <span style="opacity:.4">&rsaquo;</span> '+selList.name
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center">'
+      +'<div style="cursor:pointer" onclick="this.querySelector(\'input\').showPicker()"><input type="date" id="td2" value="'+dv+'" style="padding:7px 10px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:inherit;background:var(--sf);color:var(--tx);cursor:pointer;width:100%"/></div>'
+      +'<button class="btn bp bsm" onclick="trelloBuscarCartoes()" style="white-space:nowrap" title="Buscar cart\xF5es"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span> Buscar</button>'
+      +'<button class="btn bo bsm" onclick="resetTrello()" style="white-space:nowrap" title="Escolher lista">'+mi('refresh')+' Lista</button>'
+      +'<button class="btn bo bsm" onclick="resetTrelloFull()" style="white-space:nowrap" title="Escolher quadro">'+mi('building')+' Quadro</button>'
+    +'</div>'
+  +'</div>';
+}
+function resetTrelloFull(){
+  selBoard=null;selList=null;window._tcards=[];
+  _tboardsHtml='';_tlistsHtml='';
+  localStorage.removeItem('rota_trello');
+  ['trello-step2','trello-step3','trello-step4'].forEach(id=>g(id).style.display='none');
+  g('trello-step1').style.display='block';
+  g('trello-cards').innerHTML='';
+  g('trello-nav-bar').innerHTML='';
+}
 function resetTrello(){
   selList=null;window._tcards=[];
+  g('trello-nav-bar').innerHTML='';g('trello-cards').innerHTML='';
   if(selBoard){
     localStorage.setItem('rota_trello',JSON.stringify({board:selBoard,list:null}));
     ['trello-step1','trello-step2','trello-step4'].forEach(id=>g(id).style.display='none');
@@ -2305,6 +2296,6 @@ function setMotObs(idx,obs){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v3.4.0</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v3.5.0</div>
 </body>
 </html>
