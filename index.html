@@ -472,7 +472,7 @@ hr{border:none;border-top:1.5px solid var(--bd);margin:16px 0}
     </div>
     <div class="edit-row">
       <div class="edit-field"><label>Qtd. tapetes</label><input type="number" id="em-qtd" min="0"/></div>
-      <div class="edit-field"><label>Valor</label><select id="em-valtipo"><option value="normal">Valor (R$)</option><option value="medir">Medir</option><option value="pago">Pago</option></select></div>
+      <div class="edit-field"><label>Valor</label><select id="em-valtipo" onchange="toggleEmValTipo()"><option value="normal">Valor (R$)</option><option value="medir">Medir</option><option value="pago">Pago</option></select></div>
     </div>
     <div class="edit-field" id="em-val-wrap"><label>Valor (R$)</label><input type="number" id="em-val" min="0" step="0.01"/></div>
     <div class="edit-row">
@@ -923,6 +923,10 @@ function toggleEmJanela(){
   g('em-hi-wrap').style.display=isCustom?'':'none';
   g('em-hf-wrap').style.display=isCustom?'':'none';
 }
+function toggleEmValTipo(){
+  const vt=g('em-valtipo').value;
+  g('em-val-wrap').style.display=vt==='normal'?'':'none';
+}
 function editC(id){
   const c=clients.find(x=>x.id===id);if(!c)return;
   g('em-id').value=id;
@@ -937,6 +941,7 @@ function editC(id){
   g('em-janela').value=c.janela||'livre';
   g('em-hi').value=c.hi||'';
   g('em-hf').value=c.hf||'';
+  toggleEmValTipo();
   toggleEmJanela();
   g('edit-modal').classList.add('on');
 }
@@ -1092,7 +1097,9 @@ function estimateTimesOSRM(legs){
   const al1=cfg.al1,al2=cfg.al2;
   order.forEach((idx,stop)=>{
     const c=clients[idx];
-    if(stop>0&&(stop-1)<legs.length)cur+=legs[stop-1].duration;
+    // Soma deslocamento: leg[stop] = trecho de (stop-1 ou partida) até stop
+    if(stop<legs.length)cur+=legs[stop].duration;
+    // Verifica pausa de almoço
     if(al1&&al2){const s=ts(al1),e=ts(al2);if(cur>=s&&cur<e)cur=e;}
     c.estT=st2(cur);c.conflict=false;c.cmsg='';
     if(c.janela==='manha'&&cur>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
@@ -1105,7 +1112,14 @@ function estimateTimesOSRM(legs){
 function estimateTimesSimple(){
   let cur=ts(cfg.saida||'10:00');
   const retS=ts(cfg.ret||'17:00'),tempo=(cfg.tempo||10)*60;
-  order.forEach(idx=>{const c=clients[idx];c.estT=st2(cur);c.conflict=cur>retS;c.cmsg=c.conflict?'Al\xE9m do limite de retorno':'';cur+=tempo;});
+  const al1=cfg.al1,al2=cfg.al2;
+  order.forEach((idx,stop)=>{
+    const c=clients[idx];
+    // Sem dados de rota real, estima tempo de parada para cada cliente seguinte
+    if(stop>0)cur+=tempo;
+    if(al1&&al2){const s=ts(al1),e=ts(al2);if(cur>=s&&cur<e)cur=e;}
+    c.estT=st2(cur);c.conflict=cur>retS;c.cmsg=c.conflict?'Al\xE9m do limite de retorno':'';
+  });
 }
 function ts(t){const[h,m]=(t||'00:00').split(':').map(Number);return h*3600+m*60;}
 function st2(s){const h=Math.floor(s/3600)%24,m=Math.floor((s%3600)/60);return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');}
