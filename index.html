@@ -1,4 +1,16 @@
-<!DOCTYPE html>let endFinal=ext.endereco||'';
+  if(!hmMap){hmMap=new google.maps.Map(document.getElementById('heatmap'),{center:{lat:-23.55,lng:-46.63},zoom:11,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});}
+  if(hmHeatLayer)hmHeatLayer.setMap(null);
+  hmHeatLayer=new google.maps.visualization.HeatmapLayer({data:pts.map(pt=>new google.maps.LatLng(pt[0],pt[1])),radius:35,map:hmMap});
+  const hmBnds=new google.maps.LatLngBounds();pts.forEach(pt=>hmBnds.extend({lat:pt[0],lng:pt[1]}));hmMap.fitBounds(hmBnds);// ── GOOGLE MAPS ─────────────────────────────────────────────────────────────
+const GKEY='AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM';
+function initGoogleMaps(){
+  const mapEl=document.getElementById('map');
+  if(mapEl){mapEl.style.display='block';document.getElementById('mph').style.display='none';
+    gMap=new google.maps.Map(mapEl,{center:{lat:-23.55,lng:-46.63},zoom:12,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});}
+  const hmEl=document.getElementById('heatmap');
+  if(hmEl){hmMap=new google.maps.Map(hmEl,{center:{lat:-23.55,lng:-46.63},zoom:11,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});}
+}
+function initLeafMap(){}<!DOCTYPE html>let endFinal=ext.endereco||'';
       _pendingCoords=null;
       if(endFinal){
         try{
@@ -882,12 +894,16 @@ function resetTrello(){
 // GEO AMBIGUITY
 function schedGeo(){clearTimeout(geoT);geoT=setTimeout(checkAmb,1400);}
 async function checkAmb(){
-  const addr=v('f-end');if(addr.length<8)return;const box=g('amb-box');
-  try{const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+', São Paulo, SP, Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
-    if(d.status==='OK'&&d.results.length>1){ambRes=d.results.map(r=>({lat:r.geometry.location.lat,lon:r.geometry.location.lng,display_name:r.formatted_address}));
-      let h2='<div class="ab w">&#x26A0;&#xFE0F; <strong>Endere\xE7o amb\xEDguo</strong> &#x2014; selecione o correto:</div>';
-      ambRes.forEach((r,i)=>{h2+='<div class="ao" id="ao-'+i+'" onclick="selAmb('+i+')">'+r.display_name+'</div>';});
-      box.innerHTML=h2;box.style.display='block';}else box.style.display='none';
+  const addr=v('f-end');if(addr.length<8)return;
+  const box=g('amb-box');
+  try{
+    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+', São Paulo, SP, Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
+    if(d.status==='OK'&&d.results.length>1){
+      ambRes=d.results.map(r=>({lat:r.geometry.location.lat,lon:r.geometry.location.lng,display_name:r.formatted_address}));
+      let html='<div class="ab w">&#x26A0;&#xFE0F; <strong>Endere\xE7o amb\xEDguo</strong> \u2014 selecione o correto:</div>';
+      ambRes.forEach((r,i)=>{html+='<div class="ao" id="ao-'+i+'" onclick="selAmb('+i+')">'+r.display_name+'</div>';});
+      box.innerHTML=html;box.style.display='block';
+    } else {box.style.display='none';}
   }catch(e){box.style.display='none';}
 }
 function selAmb(i){
@@ -1023,21 +1039,30 @@ const _geoCache={};
 async function nominatim(addr){
   if(_geoCache[addr])return _geoCache[addr];
   const cached=localStorage.getItem('geo_'+addr);
-  if(cached){const cc=JSON.parse(cached);_geoCache[addr]=cc;return cc;}
-  try{const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+', São Paulo, SP, Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
-    if(d.status==='OK'&&d.results[0]){const loc=d.results[0].geometry.location;
+  if(cached){const c=JSON.parse(cached);_geoCache[addr]=c;return c;}
+  try{
+    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+', São Paulo, SP, Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
+    if(d.status==='OK'&&d.results[0]){
+      const loc=d.results[0].geometry.location;
       const comps=d.results[0].address_components;
       const bairro=(comps.find(c=>c.types.includes('sublocality_level_1'))||comps.find(c=>c.types.includes('sublocality'))||comps.find(c=>c.types.includes('neighborhood'))||{}).long_name||'';
       const result={lat:loc.lat,lng:loc.lng,display:d.results[0].formatted_address,bairro};
-      _geoCache[addr]=result;try{localStorage.setItem('geo_'+addr,JSON.stringify(result));}catch(e){}return result;}
-  }catch(e){console.warn('Geocoding:',e);}return null;
+      _geoCache[addr]=result;try{localStorage.setItem('geo_'+addr,JSON.stringify(result));}catch(e){}
+      return result;
+    }
+  }catch(e){console.warn('Geocoding falhou:',addr,e);}
+  return null;
 }
 async function nominatimReverse(lat,lng){
-  try{const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?latlng='+lat+','+lng+'&key='+GKEY+'&language=pt-BR').then(r=>r.json());
-    if(d.status==='OK'&&d.results[0]){const comps=d.results[0].address_components;
-      return{address:{suburb:(comps.find(c=>c.types.includes('sublocality_level_1'))||comps.find(c=>c.types.includes('sublocality'))||{}).long_name||'',neighbourhood:(comps.find(c=>c.types.includes('neighborhood'))||{}).long_name||''}};}
-  }catch(e){}return{address:{}};}
-
+  try{
+    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?latlng='+lat+','+lng+'&key='+GKEY+'&language=pt-BR').then(r=>r.json());
+    if(d.status==='OK'&&d.results[0]){
+      const comps=d.results[0].address_components;
+      return {address:{suburb:(comps.find(c=>c.types.includes('sublocality_level_1'))||comps.find(c=>c.types.includes('sublocality'))||{}).long_name||''}};
+    }
+  }catch(e){}
+  return {address:{}};
+}
 function sortByWindow(){
   const sc=c=>{if(c.janela==='manha')return 0;if(c.janela==='custom'&&c.hi<'12:00')return 0.5;if(c.janela==='livre')return 1;if(c.janela==='custom')return 1.5;return 2;};
   order.sort((a,b)=>{const ca=clients[a],cb=clients[b];const s=sc(ca)-sc(cb);if(s)return s;return ca.tipo==='coleta'?-1:1;});
@@ -1075,6 +1100,286 @@ async function calcRoute(){
     if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>m.setMap(null));gMarkers=[];
     gRoute=new google.maps.DirectionsRenderer({map:gMap,directions:dirResult,suppressMarkers:true,polylineOptions:{strokeColor:'#6C5CE7',strokeWeight:4,strokeOpacity:0.8}});
     let markerNum=0;order.forEach(idx=>{const c=clients[idx];if(!c.lat||!c.lng)return;markerNum++;
+      const mk=new google.maps.Marker({position:{lat:c.lat,lng:c.lng},map:gMap,label:{text:String(markerNum),color:'#fff',fontSize:'11px',fontWeight:'700'},icon:{path:google.maps.SymbolPath.CIRCLE,scale:13,fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
+      mk.addListener('click',()=>new google.maps.InfoWindow({content:'<strong>'+c.nome+'</strong><br>'+c.endereco}).open(gMap,mk));gMarkers.push(mk);});
+    const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds);
+    const legs=dirResult.routes[0].legs.map(l=>({duration:l.duration.value}));
+    estimateTimesOSRM(legs);
+    renderC();toast('Rota gerada!','ok');
+  }catch(e){toast('Erro ao calcular rota: '+e.message,'err');console.error(e);}
+  finally{g('rp').classList.remove('on');g('route-btn').disabled=!clients.length;}
+}
+
+function estimateTimesOSRM(legs){
+  let cur=ts(cfg.saida||'10:00');
+  const retS=ts(cfg.ret||'17:00'),tempo=(cfg.tempo||10)*60;
+  const al1=cfg.al1,al2=cfg.al2;
+  order.forEach((idx,stop)=>{
+    const c=clients[idx];
+    if(stop>0&&(stop-1)<legs.length)cur+=legs[stop-1].duration;
+    if(al1&&al2){const s=ts(al1),e=ts(al2);if(cur>=s&&cur<e)cur=e;}
+    c.estT=st2(cur);c.conflict=false;c.cmsg='';
+    if(c.janela==='manha'&&cur>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
+    else if(c.janela==='tarde'&&cur<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
+    else if(c.janela==='custom'&&c.hi&&c.hf&&(cur<ts(c.hi)||cur>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
+    if(cur>retS){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
+    cur+=tempo;
+  });
+}
+function estimateTimesSimple(){
+  let cur=ts(cfg.saida||'10:00');
+  const retS=ts(cfg.ret||'17:00'),tempo=(cfg.tempo||10)*60;
+  order.forEach(idx=>{const c=clients[idx];c.estT=st2(cur);c.conflict=cur>retS;c.cmsg=c.conflict?'Al\xE9m do limite de retorno':'';cur+=tempo;});
+}
+function ts(t){const[h,m]=(t||'00:00').split(':').map(Number);return h*3600+m*60;}
+function st2(s){const h=Math.floor(s/3600)%24,m=Math.floor((s%3600)/60);return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');}
+function resetMap(){if(leafRoute&&leafMap){leafMap.removeLayer(leafRoute);leafRoute=null;}if(leafMap)leafMap.eachLayer(l=>{if(l instanceof L.Marker)leafMap.removeLayer(l);});}
+
+async function genImage(){
+  if(!clients.length)return;
+  const btn=g('pdf-btn');btn.disabled=true;btn.innerHTML='<span class="spin"></span> Gerando...';
+  toast('Gerando imagem...','');
+  const col=clients.filter(c=>c.tipo==='coleta'),ent=clients.filter(c=>c.tipo==='entrega');
+  const tapR=col.reduce((s,c)=>s+(c.qtd||0),0),tapE=ent.reduce((s,c)=>s+(c.qtd||0),0);
+  const d=clients[0]?.data?new Date(clients[0].data+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  const wrap=document.createElement('div');
+  wrap.style.cssText='width:520px;background:#F6F7FB;padding:16px;font-family:Figtree,Arial,sans-serif;position:fixed;top:-99999px;left:-99999px;z-index:-1';
+  const cards=order.map((idx,stop)=>{
+    const c=clients[idx];
+    const isCol=c.tipo==='coleta';
+    const vd=c.valTipo==='medir'?'\u2696\uFE0F Medir':c.valTipo==='pago'?'\u2705 Pago':c.val?'R$ '+Number(c.val).toFixed(2):'';
+    const det=[c.tel?'\uD83D\uDCDE '+c.tel:'',c.qtd?c.qtd+' tapete'+(c.qtd>1?'s':''):'',vd].filter(Boolean).join(' \u00B7 ');
+    return `<div style="background:#fff;border:1px solid #E2E4F0;border-left:3.5px solid ${isCol?'#00C875':'#0098F7'};border-radius:8px;padding:11px 12px;margin-bottom:7px;display:flex;gap:10px;align-items:flex-start">
+      <div style="width:20px;height:20px;min-width:20px;border-radius:50%;background:${isCol?'#E6FBF3':'#E6F5FF'};color:${isCol?'#00A65E':'#0098F7'};font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:2px">${stop+1}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <span style="font-weight:600;font-size:13px;color:#1C1F3B;line-height:1.4">${c.nome}</span>
+          <span style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:2px 8px;border-radius:20px;background:${isCol?'#E6FBF3':'#E6F5FF'};color:${isCol?'#00A65E':'#0098F7'};white-space:nowrap;margin-top:2px">${isCol?'Coleta':'Entrega'}</span>
+        </div>
+        ${c.endereco?`<div style="font-size:12px;color:#6B6F8E;margin-top:3px">${c.endereco}</div>`:''}
+        ${det?`<div style="font-size:12px;color:#6B6F8E;margin-top:5px">${det}</div>`:''}
+        ${c.obs?`<div style="font-size:11px;color:#6B6F8E;margin-top:3px;font-style:italic">${c.obs}</div>`:''}
+        ${c.conflict?`<div style="font-size:11px;color:#E2445C;margin-top:3px;font-weight:600">\u26A0\uFE0F ${c.cmsg}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  wrap.innerHTML=`
+    <div style="background:#1C1F3B;border-radius:12px;padding:16px;margin-bottom:12px;text-align:center">
+      <div style="color:#fff;font-weight:700;font-size:16px">Roteiro</div>
+      <div style="color:#A0A5C8;font-size:12px;margin-top:4px">${d.charAt(0).toUpperCase()+d.slice(1)}</div>
+      <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;justify-content:center">
+        <span style="background:rgba(0,200,117,.15);color:#00C875;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">${col.length} coleta${col.length!==1?'s':''} \u00B7 ${tapR} tapete${tapR!==1?'s':''} a retirar</span>
+        <span style="background:rgba(0,152,247,.15);color:#4DB8FF;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">${ent.length} entrega${ent.length!==1?'s':''} \u00B7 ${tapE} tapete${tapE!==1?'s':''} a entregar</span>
+      </div>
+    </div>
+    ${cards}
+    <div style="text-align:center;font-size:10px;color:#A0A5C8;margin-top:8px">Sa\xedda ${cfg.saida||'10:00'} \u00B7 Retorno ${cfg.ret||'17:00'} \u00B7 ${cfg.tempo||10} min/parada \u00B7 Gerado em ${new Date().toLocaleString('pt-BR')}</div>`;
+  document.body.appendChild(wrap);
+  try{
+    const canvas=await html2canvas(wrap,{scale:2,useCORS:true,backgroundColor:'#F6F7FB',logging:false});
+    const link=document.createElement('a');
+    link.download='roteiro-'+new Date().toISOString().split('T')[0]+'.png';
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+    toast('Imagem gerada!','ok');
+    saveHist();
+  }catch(e){toast('Erro ao gerar imagem: '+e.message,'err');console.error(e);}
+  finally{
+    try{document.body.removeChild(wrap);}catch(e){}
+    const btn=g('pdf-btn');if(btn){btn.disabled=false;btn.innerHTML='&#x1F4F8; Gerar imagem do roteiro';}
+  }
+}
+
+function genPDF_unused(){
+  if(!clients.length)return;
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const W=210,M=14,CW=W-M*2;let y=14;
+  // Header
+  doc.setFillColor(28,31,59);doc.rect(0,0,W,28,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(14);doc.setFont('helvetica','bold');
+  doc.text('Roteiro de Coleta',M,16);
+  const d=clients[0]?.data?new Date(clients[0].data+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(160,165,200);
+  doc.text(d.charAt(0).toUpperCase()+d.slice(1),W-M,16,{align:'right'});
+  y=36;
+  // Summary bar
+  const col=clients.filter(c=>c.tipo==='coleta'),ent=clients.filter(c=>c.tipo==='entrega');
+  const tapR=col.reduce((s,c)=>s+(c.qtd||0),0),tapE=ent.reduce((s,c)=>s+(c.qtd||0),0);
+  doc.setFillColor(246,247,251);doc.setDrawColor(226,228,240);doc.rect(M,y,CW,10,'FD');
+  doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(107,111,142);
+  doc.text(clients.length+' clientes   \u2022   '+col.length+' coleta'+(col.length!==1?'s':'')+' / '+ent.length+' entrega'+(ent.length!==1?'s':'')+'   \u2022   Retirar: '+tapR+' tapete'+(tapR!==1?'s':'')+'   \u2022   Entregar: '+tapE+' tapete'+(tapE!==1?'s':''),M+4,y+7);
+  y+=15;
+  const cfls=clients.filter(c=>c.conflict);
+  if(cfls.length){doc.setFillColor(254,232,235);doc.setDrawColor(226,68,92);doc.rect(M,y,CW,9,'FD');doc.setFontSize(8);doc.setTextColor(155,27,46);doc.setFont('helvetica','bold');doc.text('\u26A0  ATENCAO: '+cfls.length+' conflito(s) de horario detectado(s)',M+3,y+6.5);y+=13;}
+  order.forEach((idx,stop)=>{
+    const c=clients[idx];
+    if(y>258){doc.addPage();y=14;}
+    const lines=doc.splitTextToSize(c.endereco||'',CW-30);
+    const hasExtra=c.tel||c.qtd||c.val||c.valTipo!=='normal'&&c.valTipo||c.estT;
+    const h=10+(lines.length*4.5)+(hasExtra?5:0)+(c.obs?5:0)+(c.conflict?5:0)+4;
+    // Card background
+    const isCol=c.tipo==='coleta';
+    doc.setFillColor(isCol?230:230,isCol?251:245,isCol?243:255);
+    doc.setDrawColor(isCol?200:200,isCol?235:230,isCol?220:245);
+    doc.rect(M,y,CW,h,'FD');
+    // Left accent bar
+    doc.setFillColor(isCol?0:0,isCol?200:152,isCol?117:247);
+    doc.rect(M,y,2.5,h,'F');
+    // Stop number
+    doc.setFillColor(isCol?0:0,isCol?200:152,isCol?117:247);
+    doc.circle(M+10,y+6.5,4,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(7.5);doc.setFont('helvetica','bold');
+    doc.text(String(stop+1),M+10,y+8.5,{align:'center'});
+    // Name
+    doc.setTextColor(28,31,59);doc.setFontSize(10);doc.setFont('helvetica','bold');
+    doc.text(c.nome,M+17,y+8);
+    // Type badge
+    const tl=isCol?'COLETA':'ENTREGA';
+    doc.setFontSize(6.5);doc.setTextColor(isCol?0:0,isCol?166:98,isCol?94:200);
+    doc.setFont('helvetica','bold');doc.text(tl,W-M-4,y+8,{align:'right'});
+    // Address
+    let ry=y+14;
+    if(c.endereco){doc.setFontSize(8.5);doc.setFont('helvetica','normal');doc.setTextColor(80,84,110);doc.text(lines,M+17,ry);ry+=lines.length*4.5;}
+    // Details row
+    const parts=[];
+    if(c.tel)parts.push('Tel: '+c.tel);
+    if(c.qtd)parts.push(c.qtd+' tapete'+(c.qtd>1?'s':''));
+    const vLabel=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+Number(c.val).toFixed(2):'';
+    if(vLabel)parts.push(vLabel);
+    if(c.estT)parts.push('~'+c.estT);
+    if(parts.length){doc.setFontSize(8);doc.setTextColor(107,111,142);doc.text(parts.join('   \u2022   '),M+17,ry);ry+=5;}
+    if(c.obs){doc.setFontSize(7.5);doc.setTextColor(130,135,160);doc.setFont('helvetica','italic');doc.text('Obs: '+c.obs.slice(0,90),M+17,ry);}
+    if(c.conflict){doc.setFontSize(7.5);doc.setTextColor(155,27,46);doc.setFont('helvetica','bold');doc.text('\u26A0 '+c.cmsg,M+17,ry);}
+    y+=h+4;
+  });
+  // Maps link
+  if(cfg.gkey&&clients.length>1){
+    if(y>260){doc.addPage();y=14;}
+    const addrs=order.map(i=>encodeURIComponent(clients[i].endereco));
+    const orig=cfg.base?encodeURIComponent(cfg.base):addrs[0];
+    const dest=cfg.retaddr?encodeURIComponent(cfg.retaddr):(cfg.base?encodeURIComponent(cfg.base):addrs[addrs.length-1]);
+    const url='https://www.google.com/maps/dir/'+orig+'/'+addrs.join('/')+'/'+dest;
+    doc.setFillColor(240,238,255);doc.setDrawColor(196,181,253);doc.rect(M,y,CW,14,'FD');
+    doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(86,73,192);doc.text('Rota no Google Maps:',M+3,y+6);
+    doc.setFont('helvetica','normal');doc.setTextColor(108,92,231);doc.textWithLink(url.slice(0,95)+(url.length>95?'...':''),M+3,y+11,{url});
+    y+=18;
+  }
+  // Footer
+  doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(160,165,200);
+  doc.text('Saida: '+(cfg.saida||'10:00')+'  |  Retorno: '+(cfg.ret||'17:00')+'  |  '+(cfg.tempo||10)+' min/parada'+(cfg.base?'  |  Partida: '+cfg.base:''),M,293);
+  doc.text('Gerado em '+new Date().toLocaleString('pt-BR'),W-M,293,{align:'right'});
+  doc.save('roteiro-'+new Date().toISOString().split('T')[0]+'.pdf');
+  saveHist();toast('PDF gerado!','ok');
+}
+
+function getHist(){return JSON.parse(localStorage.getItem('rota_hist')||'[]');}
+function saveHist(){
+  const hist=getHist();const today=new Date().toISOString().split('T')[0];
+  const entry={date:today,savedAt:new Date().toISOString(),clients:JSON.parse(JSON.stringify(clients)),order:[...order]};
+  const i=hist.findIndex(h=>h.date===today);
+  if(i>=0)hist[i]=entry;else hist.unshift(entry);
+  localStorage.setItem('rota_hist',JSON.stringify(hist.slice(0,90)));
+}
+function renderHist(){
+  const hist=getHist();const el=g('hlist');
+  if(!hist.length){el.innerHTML='<div class="empty"><span>\uD83D\uDDC2\uFE0F</span><p>Nenhuma rota salva ainda</p></div>';return;}
+  el.innerHTML=hist.map((h,i)=>{
+    const d=new Date(h.date+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+    const col=h.clients.filter(c=>c.tipo==='coleta').length,ent=h.clients.filter(c=>c.tipo==='entrega').length;
+    return '<div class="hi" onclick="openHist('+i+')"><div style="width:42px;height:42px;background:var(--pul);border-radius:var(--rl2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">\uD83D\uDCC5</div><div><div style="font-weight:700;font-size:14px">'+d.charAt(0).toUpperCase()+d.slice(1)+'</div><div class="hm">'+h.clients.length+' clientes \xB7 '+col+' coleta'+(col!==1?'s':'')+' / '+ent+' entrega'+(ent!==1?'s':'')+'</div></div></div>';
+  }).join('');
+}
+function openHist(i){
+  histIdx=i;const h=getHist()[i];
+  const d=new Date(h.date+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  g('hm-title').textContent=d.charAt(0).toUpperCase()+d.slice(1);
+  const col=h.clients.filter(c=>c.tipo==='coleta'),ent=h.clients.filter(c=>c.tipo==='entrega');
+  let html='<div class="ab ok">'+h.clients.length+' clientes \u2014 '+col.length+' coleta'+(col.length!==1?'s':'')+' / '+ent.length+' entrega'+(ent.length!==1?'s':'')+'</div>';
+  h.order.forEach((idx,stop)=>{const c=h.clients[idx]||h.clients[stop];if(!c)return;html+='<div style="border:1.5px solid var(--bd);border-radius:var(--r);padding:10px 13px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start"><div style="width:26px;height:26px;background:'+(c.tipo==='coleta'?'var(--gn)':'var(--bl)')+';color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+(stop+1)+'</div><div><div style="font-weight:600;font-size:13px">'+c.nome+'</div><div style="font-size:12px;color:var(--mu)">'+c.endereco+'</div><div style="margin-top:5px"><span class="tag '+(c.tipo==='coleta'?'tc':'te')+'">'+(c.tipo==='coleta'?'\u{1F7E2} Coleta':'\uD83D\uDD35 Entrega')+'</span></div></div></div>';});
+  g('hm-body').innerHTML=html;g('hist-modal').classList.add('on');
+}
+function loadHist(){
+  const h=getHist()[histIdx];clients=JSON.parse(JSON.stringify(h.clients));order=[...h.order];
+  closeModal('hist-modal');
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.ntab').forEach(x=>x.classList.remove('on'));
+  g('page-rota').classList.add('on');document.querySelectorAll('.ntab')[0].classList.add('on');
+  renderC();updStats();updBtns();toast('Rota carregada!','ok');
+}
+function delHist(){
+  showConfirm('Excluir rota?','Esta a\xE7\xE3o n\xE3o pode ser desfeita.',()=>{
+    const hist=getHist();hist.splice(histIdx,1);localStorage.setItem('rota_hist',JSON.stringify(hist));
+    closeModal('hist-modal');renderHist();toast('Rota removida','');
+  });
+}
+
+async function renderDash(){
+  const hist=getHist();const allC=hist.flatMap(h=>h.clients);const el=g('dash-stats');
+  if(!allC.length){g('hmph').style.display='flex';g('heatmap').style.display='none';el.innerHTML='<div class="empty"><span>\uD83D\uDCC5</span><p>Salve rotas para ver a concentra\xE7\xE3o de clientes</p></div>';return;}
+  g('hmph').style.display='none';g('heatmap').style.display='block';
+  el.innerHTML='<div class="card"><p class="ct">Identificando bairros... <span class="spin"></span></p></div>';
+  const br={};const pts=[];
+  // Nominatim: sequential to respect rate limit
+  for(const c of allC){
+    try{
+      const r=await nominatim(c.endereco);
+      if(r){
+        pts.push([r.lat,r.lng]);
+        // Reverse geocode to get suburb/neighborhood
+        const rev=await nominatimReverse(r.lat,r.lng);
+        const addr=rev.address||{};
+        const bairro=(addr.suburb||addr.neighbourhood||addr.quarter||addr.city_district||'').trim();
+        if(bairro)br[bairro]=(br[bairro]||0)+1;
+      }
+      await new Promise(res=>setTimeout(res,300));// rate limit
+    }catch(e){}
+  }
+  renderDashStats(br,pts);
+}
+function renderDashStats(br,pts){
+  const el=g('dash-stats');
+  const sorted=Object.entries(br).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  el.innerHTML='<div class="card"><p class="ct">Top bairros</p>'+(sorted.length?sorted.map(([b,n],i)=>
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
+    +'<div style="width:22px;height:22px;background:var(--pul);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--pud);flex-shrink:0">'+(i+1)+'</div>'
+    +'<div style="flex:1"><div style="display:flex;justify-content:space-between;margin-bottom:4px">'
+    +'<span style="font-size:13px;font-weight:600">'+b+'</span><span class="chip">'+n+'</span></div>'
+    +'<div style="height:5px;background:var(--s2);border-radius:3px"><div style="height:100%;background:var(--pu);border-radius:3px;width:'+Math.round(n/sorted[0][1]*100)+'%"></div></div>'
+    +'</div></div>'
+  ).join(''):'<p style="font-size:13px;color:var(--mu)">Nenhum bairro identificado ainda.</p>')+'</div>';
+  if(!pts.length)return;
+  if(!hmMap){hmMap=new google.maps.Map(document.getElementById('heatmap'),{center:{lat:-23.55,lng:-46.63},zoom:11,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});}
+  if(hmHeatLayer)hmHeatLayer.setMap(null);
+  hmHeatLayer=new google.maps.visualization.HeatmapLayer({data:pts.map(pt=>new google.maps.LatLng(pt[0],pt[1])),radius:35,map:hmMap});
+  const hmBnds=new google.maps.LatLngBounds();pts.forEach(pt=>hmBnds.extend({lat:pt[0],lng:pt[1]}));hmMap.fitBounds(hmBnds);
+}
+
+function renderMotor(){
+  const el=g('motor-body');const dateEl=g('motor-date');
+  if(!clients.length){el.innerHTML='<div class="empty"><span>\uD83D\uDE97</span><p>Monte uma rota primeiro</p></div>';dateEl.textContent='';return;}
+  const d=clients[0]?.data?new Date(clients[0].data+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
+  dateEl.textContent=d;
+  const tapR=clients.filter(c=>c.tipo==='coleta').reduce((s,c)=>s+(c.qtd||0),0);
+  const tapE=clients.filter(c=>c.tipo==='entrega').reduce((s,c)=>s+(c.qtd||0),0);
+  let html='<div style="background:var(--pul);border-radius:var(--rl2);padding:18px;margin-bottom:18px;display:flex;gap:18px;flex-wrap:wrap;border:1.5px solid #C4B5FD"><div><div style="font-size:11px;color:var(--pud);font-weight:700;text-transform:uppercase">Paradas</div><div style="font-size:28px;font-weight:700;color:var(--pud)">'+clients.length+'</div></div><div><div style="font-size:11px;color:var(--gnd);font-weight:700;text-transform:uppercase">Retirar</div><div style="font-size:28px;font-weight:700;color:var(--gnd)">'+tapR+' \uD83E\uDDBA</div></div><div><div style="font-size:11px;color:var(--bl);font-weight:700;text-transform:uppercase">Entregar</div><div style="font-size:28px;font-weight:700;color:var(--bl)">'+tapE+' \uD83E\uDDBA</div></div>'+(cfg.saida?'<div><div style="font-size:11px;color:var(--pud);font-weight:700;text-transform:uppercase">Sa\xEDda</div><div style="font-size:28px;font-weight:700;color:var(--pud)">'+cfg.saida+'</div></div>':'')+'</div>';
+  if(cfg.base)html+='<div style="border:1.5px solid var(--bd);border-radius:var(--rl2);padding:13px 15px;margin-bottom:14px;font-size:13px;display:flex;gap:10px;align-items:center;background:var(--sf)"><span style="font-size:20px">\uD83C\uDFE2</span><div><div style="font-weight:700">Partida</div><div style="color:var(--mu);font-size:13px">'+cfg.base+'</div></div></div>';
+  if(cfg.retaddr)html+='<div style="border:1.5px solid var(--bd);border-radius:var(--rl2);padding:13px 15px;margin-bottom:14px;font-size:13px;display:flex;gap:10px;align-items:center;background:var(--sf)"><span style="font-size:20px">\uD83C\uDFE0</span><div><div style="font-weight:700">Retorno</div><div style="color:var(--mu);font-size:13px">'+cfg.retaddr+'</div></div></div>';
+  html+=order.map((idx,stop)=>{const c=clients[idx];return '<div style="background:var(--sf);border-radius:var(--rl2);padding:18px;margin-bottom:13px;border:1.5px solid '+(c.conflict?'var(--rd)':'var(--bd)')+';box-shadow:0 2px 8px rgba(28,31,59,.06)"><div style="display:flex;align-items:flex-start;justify-content:space-between"><div style="font-size:36px;font-weight:700;color:var(--pu);line-height:1">'+(stop+1)+'</div>'+(c.estT?'<div style="font-family:DM Mono,monospace;font-size:22px;font-weight:700;color:var(--gn)">'+c.estT+'</div>':'')+'</div><div style="font-size:18px;font-weight:700;margin:6px 0 3px">'+c.nome+'</div><div style="font-size:14px;color:var(--mu);font-weight:500">'+c.endereco+'</div><div style="display:flex;gap:7px;margin:10px 0;flex-wrap:wrap"><span class="tag '+(c.tipo==='coleta'?'tc':'te')+'">'+(c.tipo==='coleta'?'\u{1F7E2} Coleta':'\uD83D\uDD35 Entrega')+'</span>'+(c.qtd?'<span class="tag tg">'+c.qtd+' tapete'+(c.qtd>1?'s':'')+'</span>':'')+(c.tel?'<span class="tag tg"><a href="tel:'+c.tel+'" style="color:inherit;text-decoration:none">\uD83D\uDCDE '+c.tel+'</a></span>':'')+'</div>'+(c.obs?'<div style="font-size:13px;color:var(--mu);border-top:1.5px solid var(--bd);padding-top:10px;font-style:italic;font-weight:500">\uD83D\uDCAC '+c.obs+'</div>':'')+(c.conflict?'<div style="margin-top:10px;font-size:12px;color:var(--rd);border-top:1.5px solid var(--rd);padding-top:10px;font-weight:600">\u26A0\uFE0F '+c.cmsg+'</div>':'')+'</div>';}).join('');
+  if(clients.length>1){const addrs=order.map(i=>encodeURIComponent(clients[i].endereco));const orig=cfg.base?encodeURIComponent(cfg.base):addrs[0];const dest=cfg.retaddr?encodeURIComponent(cfg.retaddr):(cfg.base?encodeURIComponent(cfg.base):addrs[addrs.length-1]);const url='https://www.google.com/maps/dir/'+orig+'/'+addrs.join('/')+'/'+dest;html+='<a href="'+url+'" target="_blank" class="btn bpk" style="width:100%;justify-content:center;margin-top:6px;text-decoration:none">\uD83D\uDDFA\uFE0F Abrir rota no Google Maps</a>';}
+  el.innerHTML=html;
+}
+</script>
+</body>
+</html    // Google Directions API
+    const origin={lat:geocoded[0].lat,lng:geocoded[0].lng};
+    const destination={lat:geocoded[geocoded.length-1].lat,lng:geocoded[geocoded.length-1].lng};
+    const waypoints=geocoded.slice(1,-1).map(c=>({location:{lat:c.lat,lng:c.lng},stopover:true}));
+    const dirResult=await new Promise((res2,rej2)=>new google.maps.DirectionsService().route({origin,destination,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR'},(result,status)=>status==='OK'?res2(result):rej2(new Error('Directions: '+status))));
+    if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>m.setMap(null));gMarkers=[];
+    gRoute=new google.maps.DirectionsRenderer({map:gMap,directions:dirResult,suppressMarkers:true,polylineOptions:{strokeColor:'#6C5CE7',strokeWeight:4,strokeOpacity:0.8}});
+    let markerNum=0;
+    order.forEach(idx=>{const c=clients[idx];if(!c.lat||!c.lng)return;markerNum++;
       const mk=new google.maps.Marker({position:{lat:c.lat,lng:c.lng},map:gMap,label:{text:String(markerNum),color:'#fff',fontSize:'11px',fontWeight:'700'},icon:{path:google.maps.SymbolPath.CIRCLE,scale:13,fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
       mk.addListener('click',()=>new google.maps.InfoWindow({content:'<strong>'+c.nome+'</strong><br>'+c.endereco}).open(gMap,mk));gMarkers.push(mk);});
     const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds);
