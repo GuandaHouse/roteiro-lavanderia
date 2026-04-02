@@ -4,7 +4,7 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  v4.0.0 — 02/04/2026 — Cloud Sync + Smart Insert + Dashboard    ║
+║  v4.1.0 — 02/04/2026 — AdvancedMarker Migration + Cloud Sync    ║
 ║  ─────────────────────────────────────────                   ║
 ║  • CLOUD SYNC: rota sincroniza entre gestor e motorista         ║
 ║  • Cloudflare Worker + KV como backend (48h TTL)                ║
@@ -329,7 +329,12 @@ body.dark .mot-card .mc-nav-btn.primary{background:var(--pu);border-color:var(--
 .mot-card .mc-obs-input:focus{outline:none;border-color:var(--pu);box-shadow:0 0 0 3px rgba(108,92,231,.08)}
 .mot-card .mc-obs-input::placeholder{color:var(--mu);opacity:.5}
 .mot-card .mc-done-banner{background:rgba(30,27,75,.03);padding:12px 18px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--mu)}
+.mot-card .mc-done-banner .mc-done-edit{margin-left:auto;background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--mu);cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .15s;flex-shrink:0}
+.mot-card .mc-done-banner .mc-done-edit:active{background:var(--s2);transform:scale(.96)}
 body.dark .mot-card .mc-done-banner{background:rgba(255,255,255,.03)}
+.mc-conclude-btn{width:100%;padding:14px;border-radius:12px;font-size:14px;font-weight:700;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--tx);color:var(--bg);margin-top:10px;transition:all .15s;letter-spacing:-.01em}
+.mc-conclude-btn:active{transform:scale(.97);opacity:.9}
+body.dark .mc-conclude-btn{background:var(--pu);color:#fff}
 .tc{background:var(--gnl);color:var(--gnd)}
 .te{background:var(--bll);color:var(--bl)}
 .tw{background:var(--ywl);color:#8B6F00}
@@ -1026,6 +1031,7 @@ async function cloudUpdateStatus(clientIdx,field,value){
     if(field==='status')body.status=value;
     if(field==='pay')body.pay=value;
     if(field==='obs')body.obs=value;
+    if(field==='done')body.done=value;
     const res=await fetch(WORKER_URL+'/api/route/'+_currentRouteId+'/status',{
       method:'PUT',
       headers:{'Content-Type':'application/json'},
@@ -1083,13 +1089,13 @@ async function doSmartInsert(){
     obs:document.getElementById('si-obs').value.trim(),
     data:clients[0]?.data||new Date().toISOString().split('T')[0],
     lat:null,lng:null,estT:null,
-    _motStatus:null,_motPay:null,_motObs:''
+    _motStatus:null,_motPay:null,_motObs:'',_motDone:false
   };
 
   // Encontrar a melhor posicao: apos o ultimo cliente concluido
   let insertAfterIdx=-1;
   for(let i=order.length-1;i>=0;i--){
-    if(clients[order[i]]._motStatus){
+    if(clients[order[i]]._motDone){
       insertAfterIdx=order[i];
       break;
     }
@@ -1133,7 +1139,7 @@ async function doSmartInsert(){
    ══════════════════════════════════════════════════════════════ */
 function checkCompletion(){
   if(!order.length)return;
-  const allDone=order.every(i=>clients[i]._motStatus);
+  const allDone=order.every(i=>clients[i]._motDone);
   if(allDone)showCompletionSummary();
 }
 
@@ -2024,14 +2030,14 @@ async function recalcRouteFromOrder(){
       origin:baseAddr,destination:retAddr,waypoints,
       travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR'
     },(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
-    if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>m.setMap(null));gMarkers=[];
+    if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>{if(m.map)m.map=null;});gMarkers=[];
     gRoute=new google.maps.DirectionsRenderer({map:gMap,directions:dirResult,suppressMarkers:true,polylineOptions:{strokeColor:'#6C5CE7',strokeWeight:4,strokeOpacity:0.8}});
     const legs=dirResult.routes[0].legs;
-    // Markers na nova ordem
+    // Markers na nova ordem (AdvancedMarkerElement)
     geocoded.forEach((c,pos)=>{
       if(legs[pos]&&legs[pos].end_location){c.lat=legs[pos].end_location.lat();c.lng=legs[pos].end_location.lng();}
-      const mk=new google.maps.Marker({position:{lat:c.lat,lng:c.lng},map:gMap,label:{text:String(pos+1),color:'#fff',fontSize:'11px',fontWeight:'700'},icon:{path:google.maps.SymbolPath.CIRCLE,scale:13,fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
-      mk.addListener('click',()=>new google.maps.InfoWindow({content:'<strong>'+c.nome+'</strong><br>'+c.endereco}).open(gMap,mk));gMarkers.push(mk);
+      const mk=createAdvMarker({position:{lat:c.lat,lng:c.lng},map:gMap,label:String(pos+1),fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',onClick:()=>{new google.maps.InfoWindow({content:'<strong>'+c.nome+'</strong><br>'+c.endereco}).open({anchor:mk,map:gMap});}});
+      gMarkers.push(mk);
     });
     const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds);
     const legsDur=legs.map(l=>({duration:l.duration.value}));
@@ -2073,7 +2079,7 @@ function toggleMapFullscreen(){
   colIcon.style.display=mapIsFullscreen?'block':'none';
   btn.title=mapIsFullscreen?'Reduzir mapa':'Expandir mapa';
   document.body.style.overflow=mapIsFullscreen?'hidden':'';
-  if(gMap){setTimeout(()=>{google.maps.event.trigger(gMap,'resize');if(gMarkers.length){const bnds=new google.maps.LatLngBounds();gMarkers.forEach(m=>bnds.extend(m.getPosition()));gMap.fitBounds(bnds);}},150);}
+  if(gMap){setTimeout(()=>{google.maps.event.trigger(gMap,'resize');if(gMarkers.length){const bnds=new google.maps.LatLngBounds();gMarkers.forEach(m=>{const p=m.position;if(p)bnds.extend(p);});gMap.fitBounds(bnds);}},150);}
 }
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
@@ -2085,13 +2091,23 @@ document.addEventListener('keydown',e=>{
 
 // ---- GOOGLE MAPS ----
 const GKEY='AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM';
+const GMAP_ID=cfg.mapid||'DEMO_MAP_ID';
+// Helper: cria AdvancedMarkerElement com visual circular (substitui google.maps.Marker deprecated)
+function createAdvMarker({position,map,label,fillColor,strokeColor,strokeWeight,onClick}){
+  const el=document.createElement('div');
+  el.style.cssText='width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;cursor:pointer;background:'+fillColor+';border:'+(strokeWeight||2)+'px solid '+(strokeColor||'#fff')+';box-shadow:0 2px 6px rgba(0,0,0,.3);';
+  if(label)el.textContent=label;
+  const mk=new google.maps.marker.AdvancedMarkerElement({position,map,content:el});
+  if(onClick)mk.addListener('gmp-click',onClick);
+  return mk;
+}
 function initGoogleMaps(){
   const mapEl=document.getElementById('map');
   if(mapEl){mapEl.style.display='block';document.getElementById('mph').style.display='none';
     document.getElementById('map-expand-btn').style.display='flex';
-    gMap=new google.maps.Map(mapEl,{center:{lat:-23.55,lng:-46.63},zoom:12,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});}
+    gMap=new google.maps.Map(mapEl,{center:{lat:-23.55,lng:-46.63},zoom:12,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});}
   const hmEl=document.getElementById('heatmap');
-  if(hmEl)hmMap=new google.maps.Map(hmEl,{center:{lat:-23.55,lng:-46.63},zoom:11,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});
+  if(hmEl)hmMap=new google.maps.Map(hmEl,{center:{lat:-23.55,lng:-46.63},zoom:11,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});
 }
 function initLeafMap(){}
 const _geoCache={};
@@ -2166,7 +2182,7 @@ async function calcRoute(){
     if(!geocoded.length){toast('Nenhum endere\xE7o encontrado','err');return;}
     if(geocoded.length===1){
       gMap.setCenter({lat:geocoded[0].lat,lng:geocoded[0].lng});gMap.setZoom(15);
-      new google.maps.Marker({position:{lat:geocoded[0].lat,lng:geocoded[0].lng},map:gMap});
+      createAdvMarker({position:{lat:geocoded[0].lat,lng:geocoded[0].lng},map:gMap,label:'1',fillColor:'#6C5CE7'});
       order=geocodedIdx.slice();
       estimateTimesSimple();renderC();return;
     }
@@ -2247,7 +2263,7 @@ async function calcRoute(){
     for(let i=0;i<clients.length;i++){if(!clients[i].lat||!clients[i].lng)noCoords.push(i);}
     order=newOrder.concat(noCoords);
     // Renderizar mapa
-    if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>m.setMap(null));gMarkers=[];
+    if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>{if(m.map)m.map=null;});gMarkers=[];
     gRoute=new google.maps.DirectionsRenderer({map:gMap,directions:dirResult,suppressMarkers:true,polylineOptions:{strokeColor:'#6C5CE7',strokeWeight:4,strokeOpacity:0.8}});
     // Atualizar coordenadas com posições resolvidas pelo Google
     finalWpOrder.forEach((gi,pos)=>{
@@ -2256,11 +2272,10 @@ async function calcRoute(){
         geocoded[gi].lng=legs[pos].end_location.lng();
       }
     });
-    // Markers
+    // Markers (AdvancedMarkerElement)
     finalWpOrder.forEach((gi,pos)=>{const c=geocoded[gi];
       const isUrg=pos<urgentes.length&&urgentes.length>0;
-      const mk=new google.maps.Marker({position:{lat:c.lat,lng:c.lng},map:gMap,label:{text:String(pos+1),color:'#fff',fontSize:'11px',fontWeight:'700'},icon:{path:google.maps.SymbolPath.CIRCLE,scale:13,fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',fillOpacity:1,strokeColor:isUrg?'#FF6B35':'#fff',strokeWeight:isUrg?3:2}});
-      mk.addListener('click',()=>new google.maps.InfoWindow({content:'<strong>'+c.nome+'</strong><br>'+c.endereco+(isUrg?'<br><em style="color:#FF6B35">⚠️ Janela: '+(c.janela==='manha'?'até 12h':c.hi+'-'+c.hf)+'</em>':'')}).open(gMap,mk));
+      const mk=createAdvMarker({position:{lat:c.lat,lng:c.lng},map:gMap,label:String(pos+1),fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',strokeColor:isUrg?'#FF6B35':'#fff',strokeWeight:isUrg?3:2,onClick:()=>{new google.maps.InfoWindow({content:'<strong>'+c.nome+'</strong><br>'+c.endereco+(isUrg?'<br><em style="color:#FF6B35">Janela: '+(c.janela==='manha'?'até 12h':c.hi+'-'+c.hf)+'</em>':'')}).open({anchor:mk,map:gMap});}});
       gMarkers.push(mk);
     });
     const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds);
@@ -2561,7 +2576,8 @@ const MI={
   building:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M8 10h.01M16 10h.01M12 10h.01M8 14h.01M16 14h.01M12 14h.01"/></svg>',
   home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
   map:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>',
-  scale:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'
+  scale:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'
 };
 function mi(name,cls){return '<span class="mot-ico'+(cls?' '+cls:'')+'">'+MI[name]+'</span>';}
 
@@ -2666,7 +2682,7 @@ function renderMotor(){
   dateEl.textContent=d;
   const tapR=clients.filter(c=>c.tipo==='coleta').reduce((s,c)=>s+(c.qtd||0),0);
   const tapE=clients.filter(c=>c.tipo==='entrega').reduce((s,c)=>s+(c.qtd||0),0);
-  const doneCount=order.filter(i=>clients[i]._motStatus).length;
+  const doneCount=order.filter(i=>clients[i]._motDone).length;
   // Resumo
   let html='<div class="mot-summary">'
     +'<div class="ms-item"><div class="ms-label">Paradas</div><div class="ms-val">'+clients.length+'</div></div>'
@@ -2682,8 +2698,8 @@ function renderMotor(){
   // Cards dos clientes
   html+=order.map((idx,stop)=>{
     const c=clients[idx];
-    const isDone=!!c._motStatus;
-    const isActive=!isDone&&stop===order.findIndex(i=>!clients[i]._motStatus);
+    const isDone=!!c._motDone;
+    const isActive=!isDone&&stop===order.findIndex(i=>!clients[i]._motDone);
     const isCol=c.tipo==='coleta';
     const statusLabel=isCol?'Coletado':'Entregue';
     const statusClass=isCol?'s-coletado':'s-entregue';
@@ -2694,8 +2710,9 @@ function renderMotor(){
       // Banner de concluído
       +(isDone?'<div class="mc-done-banner">'
         +'<span class="mot-ico" style="opacity:.4">'+MI[c._motStatus==='ausente'?'x':c._motStatus==='reagendar'?'refresh':'check']+'</span> '
-        +(c._motStatus==='coletado'?'Coletado':c._motStatus==='entregue'?'Entregue':c._motStatus==='ausente'?'Ausente':c._motStatus==='reagendar'?'Reagendado':c._motStatus)
+        +(c._motStatus==='coletado'?'Coletado':c._motStatus==='entregue'?'Entregue':c._motStatus==='ausente'?'Ausente':c._motStatus==='reagendar'?'Reagendado':(c._motStatus||''))
         +(c._motPay?' \u2014 '+c._motPay:'')
+        +'<button class="mc-done-edit" onclick="event.stopPropagation();editDoneCard('+idx+')">'+mi('edit','mot-ico-sm')+' Editar</button>'
         +'</div>':'')
       // Top: número + tipo + horário
       +'<div class="mc-top">'
@@ -2725,8 +2742,8 @@ function renderMotor(){
         '<div class="mc-sep"></div>'
         +'<div class="mc-actions">'
           +'<div class="mc-nav-row">'
-            +'<a href="'+wazeUrl+'" target="_blank" class="mc-nav-btn">'+mi('nav')+' Waze</a>'
-            +'<a href="'+gmapsUrl+'" target="_blank" class="mc-nav-btn primary">'+mi('pin')+' Google Maps</a>'
+            +'<a href="'+wazeUrl+'" target="_blank" class="mc-nav-btn" onclick="autoConcludePrev('+stop+')">'+mi('nav')+' Waze</a>'
+            +'<a href="'+gmapsUrl+'" target="_blank" class="mc-nav-btn primary" onclick="autoConcludePrev('+stop+')">'+mi('pin')+' Google Maps</a>'
           +'</div>'
           +'<div class="mc-status-row">'
             +'<button class="mc-status-btn '+statusClass+(c._motStatus===(isCol?'coletado':'entregue')?' selected':'')+'" onclick="event.stopPropagation();setMotStatus('+idx+',&#39;'+(isCol?'coletado':'entregue')+'&#39;)">'+mi('check')+' '+statusLabel+'</button>'
@@ -2743,8 +2760,9 @@ function renderMotor(){
             +'</div>'
           +'</div>'
           +'<div class="mc-obs-section" style="padding:0">'
-            +'<textarea class="mc-obs-input" rows="2" placeholder="Observa\xe7\xe3o..." onchange="setMotObs('+idx+',this.value)">'+(c._motObs||'')+'</textarea>'
+            +'<textarea class="mc-obs-input" id="mot-obs-'+idx+'" rows="2" placeholder="Observa\xe7\xe3o..." onchange="setMotObs('+idx+',this.value)">'+(c._motObs||'')+'</textarea>'
           +'</div>'
+          +'<button class="mc-conclude-btn" onclick="event.stopPropagation();finishMotClient('+idx+')">'+mi('check')+' Concluir</button>'
         +'</div>'
       :'')
     +'</div>';
@@ -2761,36 +2779,81 @@ function renderMotor(){
   }
   el.innerHTML=html;
 }
-// Status do motorista por cliente
+// ── Anti-scroll: evita cliques acidentais durante rolagem ──
+let _motScrolling=false,_motScrollT;
+document.addEventListener('touchmove',()=>{_motScrolling=true;clearTimeout(_motScrollT);_motScrollT=setTimeout(()=>_motScrolling=false,300);},{passive:true});
+document.addEventListener('touchend',()=>{setTimeout(()=>_motScrolling=false,100);},{passive:true});
+
+// ── Auto-concluir cards anteriores quando interage com o próximo ──
+function autoConcludePrev(currentStop){
+  let changed=false;
+  for(let s=0;s<currentStop;s++){
+    const i=order[s];
+    if(clients[i]._motStatus&&!clients[i]._motDone){
+      // Capturar obs se tiver algo digitado
+      const ta=document.getElementById('mot-obs-'+i);
+      if(ta&&ta.value.trim()){clients[i]._motObs=ta.value.trim();cloudUpdateStatus(i,'obs',clients[i]._motObs);}
+      clients[i]._motDone=true;
+      cloudUpdateStatus(i,'done',true);
+      changed=true;
+    }
+  }
+  if(changed){saveHist();renderMotor();checkCompletion();}
+}
+
+// ── Status do motorista por cliente ──
 function setMotStatus(idx,status){
+  if(_motScrolling)return;
   const c=clients[idx];
+  // Auto-concluir anteriores
+  const stop=order.indexOf(idx);
+  if(stop>0)autoConcludePrev(stop);
   if(c._motStatus===status){c._motStatus=null;} // toggle off
   else{c._motStatus=status;}
   renderMotor();
-  // Scroll pro card
   const card=document.getElementById('mot-card-'+idx);
   if(card)card.scrollIntoView({behavior:'smooth',block:'center'});
   toast(c.nome+': '+(c._motStatus||'status removido'),'ok');
-  // Cloud sync
   cloudUpdateStatus(idx,'status',c._motStatus);
-  // Salvar localmente
   saveHist();
-  // Verificar se rota esta completa
-  checkCompletion();
 }
 function setMotPay(idx,pay){
+  if(_motScrolling)return;
   const c=clients[idx];
+  // Auto-concluir anteriores
+  const stop=order.indexOf(idx);
+  if(stop>0)autoConcludePrev(stop);
   if(c._motPay===pay){c._motPay=null;}
   else{c._motPay=pay;}
   renderMotor();
-  // Cloud sync
   cloudUpdateStatus(idx,'pay',c._motPay);
 }
 function setMotObs(idx,obs){
   clients[idx]._motObs=obs;
-  // Cloud sync (debounced)
   clearTimeout(clients[idx]._obsTimeout);
   clients[idx]._obsTimeout=setTimeout(()=>cloudUpdateStatus(idx,'obs',obs),2000);
+}
+// ── Concluir card manualmente ──
+function finishMotClient(idx){
+  if(_motScrolling)return;
+  const c=clients[idx];
+  const ta=document.getElementById('mot-obs-'+idx);
+  if(ta&&ta.value.trim()){c._motObs=ta.value.trim();cloudUpdateStatus(idx,'obs',c._motObs);}
+  c._motDone=true;
+  cloudUpdateStatus(idx,'done',true);
+  saveHist();
+  renderMotor();
+  checkCompletion();
+  toast(c.nome+': conclu\xEDdo!','ok');
+}
+// ── Reabrir card concluído para edição ──
+function editDoneCard(idx){
+  if(_motScrolling)return;
+  clients[idx]._motDone=false;
+  renderMotor();
+  const card=document.getElementById('mot-card-'+idx);
+  if(card)card.scrollIntoView({behavior:'smooth',block:'center'});
+  toast(clients[idx].nome+': editando...','ok');
 }
 
 </script>
@@ -2801,13 +2864,13 @@ function setMotObs(idx,obs){
     var k=c.gkey||'';
     if(k){
       var s=document.createElement('script');
-      s.src='https://maps.googleapis.com/maps/api/js?key='+k+'&libraries=visualization&callback=initGoogleMaps';
+      s.src='https://maps.googleapis.com/maps/api/js?key='+k+'&libraries=visualization,marker&callback=initGoogleMaps';
       s.async=true;s.defer=true;
       document.head.appendChild(s);
     }
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v4.0.0</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v4.1.0</div>
 </body>
 </html>
