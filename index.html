@@ -4,6 +4,14 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v3.4.0 — 02/04/2026 — Modo Motorista Isolado (?modo=motorista)║
+║  ─────────────────────────────────────────                   ║
+║  • URL ?modo=motorista abre direto no painel do motorista     ║
+║  • Navbar, abas e outras páginas completamente ocultas        ║
+║  • Header próprio com logo + toggle dark mode                 ║
+║  • Navegação para outras páginas bloqueada                    ║
+║  • Link compartilhável: motorista só vê o que é dele          ║
+║                                                              ║
 ║  v3.3.0 — 02/04/2026 — Donut charts + Drag fix + Mapa limpo  ║
 ║  ─────────────────────────────────────────                   ║
 ║  • 3 gráficos donut no painel do motorista (tempo real)       ║
@@ -424,6 +432,15 @@ body.dark .hi:hover{background:rgba(255,255,255,.06);box-shadow:0 4px 16px rgba(
 .sel-opt:hover{border-color:rgba(108,92,231,.15);background:var(--pul);transform:translateY(-1px)}
 .sel-opt-icon{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
 
+/* MODO MOTORISTA ISOLADO */
+body.motorista-mode nav{display:none!important}
+body.motorista-mode .page:not(#page-motor){display:none!important}
+body.motorista-mode #page-motor{display:block!important;padding-top:20px!important}
+body.motorista-mode .mot-mode-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:0 4px}
+body.motorista-mode .mot-mode-header .logo-i{width:28px;height:28px;background:linear-gradient(135deg,#6C5CE7,#a78bfa);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+body.motorista-mode .mot-mode-header .mot-mode-title{font-size:15px;font-weight:700;color:var(--tx);letter-spacing:-.02em}
+body.motorista-mode .mot-mode-header .mot-mode-theme{margin-left:auto}
+
 /* UTILITY */
 hr{border:none;border-top:1.5px solid var(--bd);margin:16px 0}
 .empty{text-align:center;padding:36px 18px;color:var(--mu)}
@@ -505,17 +522,12 @@ body.dark .toast{background:rgba(255,255,255,.12)}
         <div id="trello-boards"></div>
       </div>
       <div id="trello-step3" style="display:none">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-          <button class="btn bo bsm" onclick="trelloBack()">← Voltar</button>
-          <p style="font-size:13px;font-weight:600;color:var(--mu)">2. Selecione a lista:</p>
-        </div>
+        <p style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--mu)">2. Selecione a lista:</p>
         <div id="trello-lists"></div>
       </div>
       <div id="trello-step4" style="display:none">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-          <button class="btn bo bsm" onclick="trelloBack2()">← Voltar</button>
-          <p style="font-size:13px;font-weight:600;color:var(--mu)">Cart&#xF5;es encontrados:</p>
-        </div>
+        <div id="trello-nav-bar"></div>
+        <p style="font-size:13px;font-weight:600;color:var(--mu);margin-bottom:10px">Cart&#xF5;es encontrados:</p>
         <div id="trello-cards"></div>
       </div>
     </div>
@@ -659,6 +671,18 @@ body.dark .toast{background:rgba(255,255,255,.12)}
 <!-- MOTORISTA -->
 <div class="page" id="page-motor">
   <div style="max-width:580px;margin:0 auto">
+    <div id="mot-mode-header" class="mot-mode-header" style="display:none">
+      <div class="logo-i"><span class="mot-ico" style="width:15px;height:15px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span></div>
+      <div class="mot-mode-title">Roteiro de Coleta</div>
+      <div class="mot-mode-theme">
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Alternar tema">
+          <span class="knob">
+            <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
       <div class="ph" style="margin:0"><h2>Roteiro do Motorista</h2></div>
       <span id="motor-date" style="font-size:13px;color:var(--mu);font-family:'DM Mono',monospace;font-weight:500"></span>
@@ -808,6 +832,20 @@ document.addEventListener('DOMContentLoaded',()=>{
 function toggleTheme(){document.body.classList.toggle('dark');localStorage.setItem('rota_theme',document.body.classList.contains('dark')?'dark':'light');}
 (function(){if(localStorage.getItem('rota_theme')==='dark')document.body.classList.add('dark');})();
 
+/* Modo Motorista Isolado — ?modo=motorista */
+const _isMotoristaMode=new URLSearchParams(window.location.search).get('modo')==='motorista';
+if(_isMotoristaMode){
+  document.body.classList.add('motorista-mode');
+  document.addEventListener('DOMContentLoaded',()=>{
+    // Mostrar header do modo motorista (com logo + dark mode toggle)
+    const mh=document.getElementById('mot-mode-header');if(mh)mh.style.display='';
+    // Forçar página do motorista como ativa
+    document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+    document.getElementById('page-motor').classList.add('on');
+    renderMotor();
+  });
+}
+
 function g(id){return document.getElementById(id);}
 function v(id){return g(id)?.value?.trim()||'';}
 function toast(msg,t){const el=g('toast');el.textContent=msg;el.className='toast show '+(t||'');clearTimeout(window._tt);window._tt=setTimeout(()=>el.className='toast',3200);}
@@ -852,7 +890,7 @@ function saveCfg(){
   if(warn)setTimeout(()=>g('cfg-msg').innerHTML='',6000);
 }
 
-function goPage(p,el){window.scrollTo(0,0);window.scrollTo(0,0);
+function goPage(p,el){if(_isMotoristaMode)return;window.scrollTo(0,0);window.scrollTo(0,0);
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(x=>x.classList.remove('on'));
   g('page-'+p).classList.add('on');el.classList.add('on');
@@ -2267,6 +2305,6 @@ function setMotObs(idx,obs){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v3.3.0</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v3.4.0</div>
 </body>
 </html>
