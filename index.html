@@ -1202,18 +1202,29 @@ function updStats(){
 function updBtns(){const has=clients.length>0;g('route-btn').disabled=!has;g('pdf-btn').disabled=!has;}
 
 // ---- MAPA FULLSCREEN ----
+let mapOriginalParent=null,mapOriginalNext=null,mapIsFullscreen=false;
 function toggleMapFullscreen(){
-  const wrap=g('mapw'),mapEl=g('map'),expIcon=g('expand-icon'),colIcon=g('collapse-icon'),btn=g('map-expand-btn');
-  const isFS=wrap.classList.toggle('map-fullscreen');
-  expIcon.style.display=isFS?'none':'block';
-  colIcon.style.display=isFS?'block':'none';
-  btn.title=isFS?'Reduzir mapa':'Expandir mapa';
-  document.body.style.overflow=isFS?'hidden':'';
-  // Forçar redimensionamento do mapa do Google
-  if(gMap){setTimeout(()=>{google.maps.event.trigger(gMap,'resize');if(gMarkers.length){const bnds=new google.maps.LatLngBounds();gMarkers.forEach(m=>bnds.extend(m.getPosition()));gMap.fitBounds(bnds);}},100);}
+  const wrap=g('mapw'),expIcon=g('expand-icon'),colIcon=g('collapse-icon'),btn=g('map-expand-btn');
+  mapIsFullscreen=!mapIsFullscreen;
+  if(mapIsFullscreen){
+    // Salvar posição original e mover para body (evita bug do position:fixed dentro de backdrop-filter)
+    mapOriginalParent=wrap.parentNode;
+    mapOriginalNext=wrap.nextSibling;
+    document.body.appendChild(wrap);
+    wrap.classList.add('map-fullscreen');
+  } else {
+    wrap.classList.remove('map-fullscreen');
+    // Devolver para posição original
+    if(mapOriginalNext)mapOriginalParent.insertBefore(wrap,mapOriginalNext);
+    else mapOriginalParent.appendChild(wrap);
+  }
+  expIcon.style.display=mapIsFullscreen?'none':'block';
+  colIcon.style.display=mapIsFullscreen?'block':'none';
+  btn.title=mapIsFullscreen?'Reduzir mapa':'Expandir mapa';
+  document.body.style.overflow=mapIsFullscreen?'hidden':'';
+  if(gMap){setTimeout(()=>{google.maps.event.trigger(gMap,'resize');if(gMarkers.length){const bnds=new google.maps.LatLngBounds();gMarkers.forEach(m=>bnds.extend(m.getPosition()));gMap.fitBounds(bnds);}},150);}
 }
-// ESC para sair do fullscreen
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&g('mapw').classList.contains('map-fullscreen'))toggleMapFullscreen();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&mapIsFullscreen)toggleMapFullscreen();});
 
 // ---- GOOGLE MAPS ----
 const GKEY='AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM';
