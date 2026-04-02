@@ -4,6 +4,15 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v3.3.0 — 02/04/2026 — Donut charts + Drag fix + Mapa limpo  ║
+║  ─────────────────────────────────────────                   ║
+║  • 3 gráficos donut no painel do motorista (tempo real)       ║
+║  • Gráficos: Status / Pagamento / Valores (recebido vs cobrar)║
+║  • Gráficos também aparecem no histórico (dados salvos)       ║
+║  • Drag & drop: offset corrigido (cartão segue mouse exato)   ║
+║  • Drag & drop: linha indicadora de posição entre cards       ║
+║  • Mapa pequeno: controles de zoom/câmera removidos           ║
+║                                                              ║
 ║  v3.2.0 — 02/04/2026 — Auditoria completa + SVG site inteiro ║
 ║  ─────────────────────────────────────────                   ║
 ║  • ZERO EMOJIS em TODO o site — SVG traço fino em tudo       ║
@@ -227,6 +236,15 @@ textarea{resize:vertical;min-height:56px}
 .mot-summary .ms-item{text-align:center}
 .mot-summary .ms-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);margin-bottom:4px}
 .mot-summary .ms-val{font-size:28px;font-weight:800;line-height:1;color:var(--tx)}
+.mot-charts{background:var(--sf);backdrop-filter:blur(12px);border:1px solid var(--bd);border-radius:16px;padding:20px 16px;margin-bottom:16px;display:flex;gap:12px;justify-content:space-around;flex-wrap:wrap}
+.mot-chart-item{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;min-width:90px}
+.mot-chart-item svg{width:90px;height:90px}
+.mot-chart-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);text-align:center}
+.mot-chart-legend{display:flex;flex-wrap:wrap;gap:4px 10px;justify-content:center;margin-top:2px}
+.mot-chart-legend span{font-size:10px;color:var(--mu);display:flex;align-items:center;gap:4px}
+.mot-chart-legend span{line-height:1.3}
+.mot-chart-center{font-size:16px;font-weight:800;fill:var(--tx)}
+.mot-chart-center-sub{font-size:8px;font-weight:600;fill:var(--mu);text-transform:uppercase;letter-spacing:.04em}
 .mot-start-btn{width:100%;padding:18px;border-radius:14px;border:none;font-size:18px;font-weight:800;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:16px;transition:transform .15s,box-shadow .15s;letter-spacing:-.02em}
 .mot-start-btn:active{transform:scale(.97)}
 .mot-start-btn.go{background:var(--tx);box-shadow:0 2px 12px rgba(30,27,75,.15)}
@@ -301,8 +319,13 @@ body.dark .mot-card .mc-done-banner{background:rgba(255,255,255,.03)}
 /* CLIENT CARD */
 .cc{background:var(--sf);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--bd);border-left:3px solid var(--bd);border-radius:12px;padding:12px 14px 12px 13px;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;cursor:pointer;transition:transform .2s cubic-bezier(.4,0,.2,1),box-shadow .2s ease,background .2s ease,border-color .2s ease;font-size:13px;position:relative;user-select:none;-webkit-user-select:none}
 .cc.dragging{opacity:.4;transform:scale(.97);box-shadow:none!important}
-.cc.drag-over-top{border-top:2px solid var(--pu);margin-top:-2px}
-.cc.drag-over-bottom{border-bottom:2px solid var(--pu);margin-bottom:-2px}
+.cc.drag-over-top{box-shadow:0 -2px 0 0 var(--pu),0 -6px 12px -4px rgba(108,92,231,.25)}
+.cc.drag-over-bottom{box-shadow:0 2px 0 0 var(--pu),0 6px 12px -4px rgba(108,92,231,.25)}
+.drop-indicator{height:3px;background:var(--pu);border-radius:2px;margin:2px 12px;position:relative;opacity:0;transition:opacity .15s}
+.drop-indicator::before,.drop-indicator::after{content:'';position:absolute;top:50%;width:8px;height:8px;background:var(--pu);border-radius:50%;transform:translateY(-50%)}
+.drop-indicator::before{left:-4px}
+.drop-indicator::after{right:-4px}
+.drop-indicator.visible{opacity:1}
 .drag-ghost{position:fixed;pointer-events:none;z-index:10001;opacity:.92;transform:rotate(1.5deg);box-shadow:0 12px 40px rgba(108,92,231,.18),0 2px 8px rgba(0,0,0,.08);border-radius:12px;transition:none}
 .cc:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(108,92,231,.08);background:rgba(255,255,255,.85);border-color:rgba(108,92,231,.12)}
 body.dark .cc:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.1);box-shadow:0 4px 16px rgba(0,0,0,.2)}
@@ -1412,12 +1435,13 @@ function startDrag(stopIdx,x,y,isTouch){
   const ghost=card.cloneNode(true);
   ghost.classList.add('drag-ghost');
   ghost.style.width=rect.width+'px';
-  ghost.style.left=(x-30)+'px';
-  ghost.style.top=(y-rect.height/2)+'px';
+  ghost.style.left=rect.left+'px';
+  ghost.style.top=rect.top+'px';
   document.body.appendChild(ghost);
   card.classList.add('dragging');
   // Atualizar dragState mantendo referências
   dragState.ghost=ghost;
+  dragState.offsetX=x-rect.left;
   dragState.offsetY=y-rect.top;
   // Substituir listeners de tracking por listeners de drag
   document.removeEventListener('mousemove',onDragTrack);
@@ -1438,18 +1462,23 @@ function onDragMove(e){
   const touch=e.touches?e.touches[0]:e;
   const y=touch.clientY,x=touch.clientX;
   dragState.ghost.style.top=(y-dragState.offsetY)+'px';
-  dragState.ghost.style.left=(x-30)+'px';
+  dragState.ghost.style.left=(x-dragState.offsetX)+'px';
   // Determinar sobre qual card estamos
   const cards=[...document.querySelectorAll('.cc[data-stop]')];
   cards.forEach(c=>c.classList.remove('drag-over-top','drag-over-bottom'));
+  // Gerenciar indicador de drop
+  let indicator=document.getElementById('drop-indicator');
+  if(!indicator){indicator=document.createElement('div');indicator.id='drop-indicator';indicator.className='drop-indicator';}
+  indicator.classList.remove('visible');
   for(const c of cards){
     const r=c.getBoundingClientRect();
     const mid=r.top+r.height/2;
     if(y>r.top&&y<r.bottom){
       const si=parseInt(c.dataset.stop);
       if(si!==dragState.stopIdx){
-        if(y<mid)c.classList.add('drag-over-top');
-        else c.classList.add('drag-over-bottom');
+        if(y<mid){c.classList.add('drag-over-top');c.parentNode.insertBefore(indicator,c);}
+        else{c.classList.add('drag-over-bottom');c.parentNode.insertBefore(indicator,c.nextSibling);}
+        indicator.classList.add('visible');
       }
       dragState.overStop=si;dragState.overHalf=y<mid?'top':'bottom';
       return;
@@ -1465,6 +1494,7 @@ function onDragEnd(e){
   document.removeEventListener('touchend',onDragEnd);
   // Limpar classes visuais
   document.querySelectorAll('.cc').forEach(c=>c.classList.remove('dragging','drag-over-top','drag-over-bottom'));
+  const dropInd=document.getElementById('drop-indicator');if(dropInd)dropInd.remove();
   if(dragState.ghost)dragState.ghost.remove();
   // Aplicar reordenação
   const from=dragState.stopIdx;
@@ -1559,7 +1589,7 @@ function initGoogleMaps(){
   const mapEl=document.getElementById('map');
   if(mapEl){mapEl.style.display='block';document.getElementById('mph').style.display='none';
     document.getElementById('map-expand-btn').style.display='flex';
-    gMap=new google.maps.Map(mapEl,{center:{lat:-23.55,lng:-46.63},zoom:12,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});}
+    gMap=new google.maps.Map(mapEl,{center:{lat:-23.55,lng:-46.63},zoom:12,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});}
   const hmEl=document.getElementById('heatmap');
   if(hmEl)hmMap=new google.maps.Map(hmEl,{center:{lat:-23.55,lng:-46.63},zoom:11,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});
 }
@@ -1943,7 +1973,10 @@ function openHist(i){
   g('hm-title').textContent=d.charAt(0).toUpperCase()+d.slice(1);
   const col=h.clients.filter(c=>c.tipo==='coleta'),ent=h.clients.filter(c=>c.tipo==='entrega');
   let html='<div class="ab ok">'+h.clients.length+' clientes — '+col.length+' coleta'+(col.length!==1?'s':'')+' / '+ent.length+' entrega'+(ent.length!==1?'s':'')+'</div>';
-  h.order.forEach((idx,stop)=>{const c=h.clients[idx]||h.clients[stop];if(!c)return;html+='<div style="border:1.5px solid var(--bd);border-radius:var(--r);padding:10px 13px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start"><div style="width:26px;height:26px;background:'+(c.tipo==='coleta'?'var(--gn)':'var(--bl)')+';color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+(stop+1)+'</div><div><div style="font-weight:600;font-size:13px">'+c.nome+'</div><div style="font-size:12px;color:var(--mu)">'+c.endereco+'</div><div style="margin-top:5px"><span class="tag '+(c.tipo==='coleta'?'tc':'te')+'">'+(c.tipo==='coleta'?'Coleta':'Entrega')+'</span></div></div></div>';});
+  // Gráficos donut no histórico (se houver dados de status/pagamento)
+  const hasMotorData=h.order.some(idx=>{const c=h.clients[idx]||h.clients[0];return c&&(c._motStatus||c._motPay);});
+  if(hasMotorData)html+=buildChartsHTML(h.clients,h.order);
+  h.order.forEach((idx,stop)=>{const c=h.clients[idx]||h.clients[stop];if(!c)return;html+='<div style="border:1.5px solid var(--bd);border-radius:var(--r);padding:10px 13px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start"><div style="width:26px;height:26px;background:'+(c.tipo==='coleta'?'var(--gn)':'var(--bl)')+';color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+(stop+1)+'</div><div><div style="font-weight:600;font-size:13px">'+c.nome+'</div><div style="font-size:12px;color:var(--mu)">'+c.endereco+'</div><div style="margin-top:5px"><span class="tag '+(c.tipo==='coleta'?'tc':'te')+'">'+(c.tipo==='coleta'?'Coleta':'Entrega')+'</span>'+(c._motStatus?'<span class="tag" style="background:var(--pul);color:var(--pud);margin-left:4px">'+c._motStatus+'</span>':'')+(c._motPay?'<span class="tag" style="background:rgba(30,27,75,.06);color:var(--tx);margin-left:4px">'+c._motPay+'</span>':'')+'</div></div></div>';});
   g('hm-body').innerHTML=html;g('hist-modal').classList.add('on');
 }
 function loadHist(){
@@ -2029,6 +2062,73 @@ const MI={
 };
 function mi(name,cls){return '<span class="mot-ico'+(cls?' '+cls:'')+'">'+MI[name]+'</span>';}
 
+function buildDonutSVG(segments,centerText,centerSub){
+  // segments: [{value,color,label}]
+  const total=segments.reduce((s,seg)=>s+seg.value,0);
+  if(!total)return '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="var(--bd)" stroke-width="10" opacity=".3"/><text x="50" y="48" text-anchor="middle" class="mot-chart-center" style="font-size:14px">0</text><text x="50" y="58" text-anchor="middle" class="mot-chart-center-sub">'+centerSub+'</text></svg>';
+  const R=38,C=2*Math.PI*R;
+  let offset=0;
+  let arcs='';
+  segments.forEach(seg=>{
+    if(seg.value<=0)return;
+    const pct=seg.value/total;
+    const dash=pct*C;
+    const gap=C-dash;
+    arcs+='<circle cx="50" cy="50" r="'+R+'" fill="none" stroke="'+seg.color+'" stroke-width="10" stroke-dasharray="'+dash.toFixed(2)+' '+gap.toFixed(2)+'" stroke-dashoffset="'+(-offset).toFixed(2)+'" transform="rotate(-90 50 50)" stroke-linecap="round" style="transition:all .4s ease"/>';
+    offset+=dash;
+  });
+  return '<svg viewBox="0 0 100 100">'+arcs+'<text x="50" y="48" text-anchor="middle" class="mot-chart-center">'+centerText+'</text><text x="50" y="59" text-anchor="middle" class="mot-chart-center-sub">'+centerSub+'</text></svg>';
+}
+function buildDonutLegend(segments){
+  return '<div class="mot-chart-legend">'+segments.filter(s=>s.value>0).map(s=>'<span style="--dot-color:'+s.color+'"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:'+s.color+';flex-shrink:0"></span>'+s.label+' ('+s.value+')</span>').join('')+'</div>';
+}
+function buildChartsHTML(clientsList,orderList){
+  const total=orderList.length;if(!total)return '';
+  // 1) Status
+  const done=orderList.filter(i=>clientsList[i]._motStatus==='coletado'||clientsList[i]._motStatus==='entregue').length;
+  const ausente=orderList.filter(i=>clientsList[i]._motStatus==='ausente').length;
+  const reagendar=orderList.filter(i=>clientsList[i]._motStatus==='reagendar').length;
+  const pendente=total-done-ausente-reagendar;
+  const statusSegs=[
+    {value:done,color:'var(--tx)',label:'Conclu\xEDdo'},
+    {value:ausente,color:'#94a3b8',label:'Ausente'},
+    {value:reagendar,color:'var(--pu)',label:'Reagendar'},
+    {value:pendente,color:'var(--bd)',label:'Pendente'}
+  ];
+  const pctDone=total?Math.round((done+ausente+reagendar)/total*100):0;
+  // 2) Pagamento
+  const pixPago=orderList.filter(i=>clientsList[i]._motPay==='Pix (pago)').length;
+  const pixCobrar=orderList.filter(i=>clientsList[i]._motPay==='Pix (cobrar)').length;
+  const cartao=orderList.filter(i=>clientsList[i]._motPay==='Cart\xe3o').length;
+  const dinheiro=orderList.filter(i=>clientsList[i]._motPay==='Dinheiro').length;
+  const semPay=total-pixPago-pixCobrar-cartao-dinheiro;
+  const paySegs=[
+    {value:pixPago,color:'var(--tx)',label:'Pix pago'},
+    {value:cartao,color:'#64748b',label:'Cart\xe3o'},
+    {value:dinheiro,color:'var(--pu)',label:'Dinheiro'},
+    {value:pixCobrar,color:'#94a3b8',label:'Pix cobrar'},
+    {value:semPay,color:'var(--bd)',label:'Sem info'}
+  ];
+  const payTotal=pixPago+pixCobrar+cartao+dinheiro;
+  // 3) Recebido vs A Cobrar
+  let recebido=0,aCobrar=0;
+  orderList.forEach(i=>{
+    const c=clientsList[i];
+    const v=parseFloat(c.val)||0;
+    if(!v||c.valTipo==='pago'||c.valTipo==='medir')return;
+    if(c._motPay==='Pix (cobrar)')aCobrar+=v;
+    else if(c._motPay)recebido+=v;
+  });
+  const valSegs=[
+    {value:recebido,color:'var(--tx)',label:'Recebido'},
+    {value:aCobrar,color:'var(--pu)',label:'A cobrar'}
+  ];
+  return '<div class="mot-charts">'
+    +'<div class="mot-chart-item">'+buildDonutSVG(statusSegs,pctDone+'%','progresso')+'<div class="mot-chart-label">Status</div>'+buildDonutLegend(statusSegs)+'</div>'
+    +'<div class="mot-chart-item">'+buildDonutSVG(paySegs,payTotal,'de '+total)+'<div class="mot-chart-label">Pagamento</div>'+buildDonutLegend(paySegs)+'</div>'
+    +'<div class="mot-chart-item">'+buildDonutSVG(valSegs,'R$'+fmtBRL(recebido),(aCobrar?'R$'+fmtBRL(aCobrar)+' cobrar':'tudo recebido'))+'<div class="mot-chart-label">Valores</div>'+buildDonutLegend(valSegs)+'</div>'
+  +'</div>';
+}
 function renderMotor(){
   const el=g('motor-body');const dateEl=g('motor-date');
   if(!clients.length){el.innerHTML='<div class="empty"><span style="font-size:28px;opacity:.3">'+mi('map')+'</span><p>Monte uma rota primeiro</p></div>';dateEl.textContent='';return;}
@@ -2045,6 +2145,8 @@ function renderMotor(){
     +'<div class="ms-item"><div class="ms-label">Conclu\xEDdos</div><div class="ms-val">'+doneCount+'/'+clients.length+'</div></div>'
     +(cfg.saida?'<div class="ms-item"><div class="ms-label">Sa\xEDda</div><div class="ms-val">'+cfg.saida+'</div></div>':'')
     +'</div>';
+  // Gráficos donut
+  html+=buildChartsHTML(clients,order);
   // Partida
   if(cfg.base)html+='<div style="border:1px solid var(--bd);border-radius:14px;padding:14px 16px;margin-bottom:12px;font-size:14px;display:flex;gap:12px;align-items:center;background:var(--sf)"><span style="opacity:.35">'+mi('building')+'</span><div><div style="font-weight:700;font-size:13px;color:var(--tx)">Partida</div><div style="color:var(--mu);font-size:12px">'+cfg.base+'</div></div></div>';
   // Cards dos clientes
@@ -2165,6 +2267,6 @@ function setMotObs(idx,obs){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v3.2.0</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v3.3.0</div>
 </body>
 </html>
