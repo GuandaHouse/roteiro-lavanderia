@@ -4,6 +4,25 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.3.3 — 03/04/2026 — Tags + InfoWindow + Rota Fix + Escala    ║
+║  ─────────────────────────────────────────                   ║
+║  TAGS CONFIGURÁVEIS:                                             ║
+║  • Sistema de tags com cores personalizáveis (estilo Trello)     ║
+║  • Paleta de 12 cores, até 10 tags, filtro por tag               ║
+║  • Tags padrão: Coleta, Entrega, Devolução, Retirada            ║
+║  MAPA:                                                           ║
+║  • InfoWindow redesenhado — compacto, elegante, sem área branca  ║
+║  • "ETA" substituído por "Previsão de chegada" em toda a UI      ║
+║  • Drag and drop restaurado na sidebar do mapa expandido         ║
+║  • Cartões da sidebar com identidade visual preservada (tags)    ║
+║  ROTA:                                                           ║
+║  • Correção de zigue-zague: waypoints agora usam coordenadas     ║
+║  • Endereços dinâmicos via âncora (removido hardcode SP)         ║
+║  ESCALA:                                                         ║
+║  • Referências a "tapete" substituídas por termos genéricos      ║
+║  • Labels "Quantidade" em vez de "Qtd. tapetes"                  ║
+║  • Preparação para v4.4.0 (campos personalizáveis por segmento) ║
+║                                                                  ║
 ║  v4.3.2 — 03/04/2026 — OAuth + QR + Offline + Busca + Notif     ║
 ║  ─────────────────────────────────────────                   ║
 ║  TRELLO:                                                         ║
@@ -29,7 +48,7 @@
 ║  MAP PRO:                                                        ║
 ║  • Layout side-by-side: cards visíveis ao lado do mapa expandido ║
 ║  • Estatísticas da rota: km total + tempo estimado de conclusão  ║
-║  • ETA visível em cada marcador do mapa                          ║
+║  • Previsão de chegada visível em cada marcador do mapa          ║
 ║  • InfoWindow com dados completos ao clicar marcador             ║
 ║  • InfoWindow fecha ao clicar fora (fix)                         ║
 ║  CLOUD SYNC:                                                     ║
@@ -443,6 +462,9 @@ body.dark .mc-conclude-btn{background:var(--pu);color:#fff}
 .drop-indicator::after{right:-4px}
 .drop-indicator.visible{opacity:1}
 .drag-ghost{position:fixed;pointer-events:none;z-index:10001;opacity:.92;transform:rotate(1.5deg);box-shadow:0 12px 40px rgba(108,92,231,.18),0 2px 8px rgba(0,0,0,.08);border-radius:12px;transition:none}
+.tag-color-opt{display:inline-block;width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s}
+.tag-color-opt:hover{transform:scale(1.15);border-color:rgba(0,0,0,.2)}
+.tag-color-opt.sel{border-color:#1e1b4b;transform:scale(1.2);box-shadow:0 0 0 2px rgba(108,92,231,.3)}
 .cc:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(108,92,231,.08);background:rgba(255,255,255,.85);border-color:rgba(108,92,231,.12)}
 body.dark .cc:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.1);box-shadow:0 4px 16px rgba(0,0,0,.2)}
 .cc.col{border-left-color:var(--gn)}.cc.ent{border-left-color:var(--bl)}
@@ -494,12 +516,12 @@ body.dark .map-expand-btn{background:rgba(30,27,50,.85);color:#e4e4e7;box-shadow
 .map-sidebar .ms-stat{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;text-align:center}
 .map-sidebar .ms-stat-val{font-size:18px;font-weight:800;color:var(--tx)}
 .map-sidebar .ms-stat-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-top:2px}
-.map-sidebar .ms-client{border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:13px;background:var(--sf);cursor:pointer;transition:all .15s}
+.map-sidebar .ms-client{border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:13px;background:var(--sf);cursor:grab;transition:all .15s}
 .map-sidebar .ms-client:hover{border-color:var(--pu);background:var(--pul)}
 .map-sidebar .ms-client.done{opacity:.5}
-.map-sidebar .ms-client-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700;color:#fff;margin-right:8px;flex-shrink:0}
-.map-sidebar .ms-client-num.col{background:#00C875}
-.map-sidebar .ms-client-num.ent{background:#0098F7}
+.map-sidebar .ms-client.drag-over-top{border-top:2px solid var(--pu)}
+.map-sidebar .ms-client.drag-over-bottom{border-bottom:2px solid var(--pu)}
+.map-sidebar .ms-client-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
 @media(max-width:768px){.map-sidebar{width:100%;height:40vh;border-right:none;border-top:1px solid var(--bd);order:1}.map-fullscreen{flex-direction:column!important}.map-fullscreen #map{height:60vh!important}}
 #map{position:absolute;inset:0;display:block}
 .mph{text-align:center;color:var(--mu);font-size:13px;padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%}
@@ -739,7 +761,7 @@ body.dark .toast{background:rgba(255,255,255,.12)}
             <option value="entrega">Entrega</option>
           </select>
         </div>
-        <div class="fg"><label>Qtd. tapetes</label><input type="number" id="f-qtd" placeholder="0" min="1"/></div>
+        <div class="fg"><label>Quantidade</label><input type="number" id="f-qtd" placeholder="0" min="1"/></div>
         <div class="fg"><label>Status valor</label><select id="f-valtipo" onchange="toggleFValTipo()"><option value="normal">Valor (R$)</option><option value="medir">Medir</option><option value="pago"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> Pago</option></select></div>
         <div class="fg" id="f-val-wrap"><label>Valor (R$)</label><input type="text" inputmode="decimal" id="f-val" placeholder="0,00"/></div>
         <div class="fg"><label>Data</label><input type="date" id="f-data"/></div>
@@ -790,12 +812,12 @@ body.dark .toast{background:rgba(255,255,255,.12)}
       <div class="st sc">
         <div class="sl sc">Retiradas</div>
         <div class="sv" id="s-ret">0</div>
-        <div class="ss">tapetes</div>
+        <div class="ss">itens</div>
       </div>
       <div class="st se">
         <div class="sl se">Entregas</div>
         <div class="sv" id="s-ent">0</div>
-        <div class="ss">tapetes</div>
+        <div class="ss">itens</div>
       </div>
     </div>
   </div>
@@ -938,6 +960,15 @@ body.dark .toast{background:rgba(255,255,255,.12)}
       </div>
       <p style="color:#888;font-size:.85em;font-weight:500">Mapa e rota via Google Maps.</p>
     </div>
+    <!-- v4.3.3: Tags configur\xe1veis -->
+    <div class="card">
+      <p class="ct">Tags (cores dos cart&#xF5;es)</p>
+      <p style="font-size:12px;color:var(--mu);margin-bottom:10px;font-weight:500">Personalize as categorias e cores dos seus cart&#xF5;es. Arraste para reordenar.</p>
+      <div id="tags-config-list"></div>
+      <button class="btn bo bsm" style="margin-top:8px;width:100%;justify-content:center;gap:4px" onclick="addNewTag()">
+        <span style="font-size:16px;line-height:1">+</span> Nova tag
+      </button>
+    </div>
     <div class="card">
       <button class="btn bp" style="width:100%;justify-content:center" onclick="saveCfg()"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span> Salvar configura&#xE7;&#xF5;es</button>
       <div id="cfg-msg" style="margin-top:10px"></div>
@@ -974,7 +1005,7 @@ body.dark .toast{background:rgba(255,255,255,.12)}
       <div class="edit-field"><label>Tipo</label><select id="em-tipo"><option value="coleta">Coleta</option><option value="entrega">Entrega</option></select></div>
     </div>
     <div class="edit-row">
-      <div class="edit-field"><label>Qtd. tapetes</label><input type="number" id="em-qtd" min="0"/></div>
+      <div class="edit-field"><label>Quantidade</label><input type="number" id="em-qtd" min="0"/></div>
       <div class="edit-field"><label>Valor</label><select id="em-valtipo" onchange="toggleEmValTipo()"><option value="normal">Valor (R$)</option><option value="medir">Medir</option><option value="pago">Pago</option></select></div>
     </div>
     <div class="edit-field" id="em-val-wrap"><label>Valor (R$)</label><input type="text" inputmode="decimal" id="em-val" placeholder="0,00"/></div>
@@ -1030,7 +1061,7 @@ body.dark .toast{background:rgba(255,255,255,.12)}
       <div class="fg"><label>Complemento</label><input type="text" id="si-compl" placeholder="Apto, bloco, andar..."/></div>
       <div class="fg"><label>Telefone</label><input type="text" id="si-tel" placeholder="(11) 99999-9999"/></div>
       <div class="fg"><label>Tipo</label><select id="si-tipo"><option value="coleta">Coleta</option><option value="entrega">Entrega</option></select></div>
-      <div class="fg"><label>Qtd tapetes</label><input type="number" id="si-qtd" min="0" value="0"/></div>
+      <div class="fg"><label>Quantidade</label><input type="number" id="si-qtd" min="0" value="0"/></div>
       <div class="fg"><label>Status valor</label><select id="si-valtipo" onchange="toggleSiValTipo()"><option value="normal">Valor (R$)</option><option value="medir">Medir</option><option value="pago">Pago</option></select></div>
       <div class="fg" id="si-val-wrap"><label>Valor R$</label><input type="text" id="si-val" inputmode="decimal" placeholder="0,00"/></div>
       <div class="fg"><label>Janela de horario</label><select id="si-janela" onchange="toggleSiJanela()"><option value="livre">Qualquer horario</option><option value="manha">Manha (ate 12h)</option><option value="tarde">Tarde (apos 12h)</option><option value="custom">Horario especifico</option></select></div>
@@ -1055,6 +1086,25 @@ body.dark .toast{background:rgba(255,255,255,.12)}
 let clients=[],order=[],gMap=null,gRoute=null,gMarkers=[],hmMap=null,hmHeatLayer=null;
 let imgData=null,ambRes=[],ambSel=-1,histIdx=-1,geoT=null,cfg={},_pendingCoords=null;
 let selBoard=null,selList=null,_tboardsHtml='',_tlistsHtml='';
+
+/* ══════════════════════════════════════════════════════════════
+   v4.3.3: SISTEMA DE TAGS CONFIGUR\xc1VEIS
+   Usu\xe1rio pode personalizar cores e r\xf3tulos por tipo de servi\xe7o.
+   Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
+   ══════════════════════════════════════════════════════════════ */
+const TAG_PALETTE=['#00C875','#0098F7','#6C5CE7','#FF6B35','#E2445C','#FDAB3D','#00D2D3','#9B59B6','#2D3436','#E17055','#00B894','#636E72'];
+const DEFAULT_TAGS=[
+  {id:'coleta',label:'Coleta',color:'#00C875'},
+  {id:'entrega',label:'Entrega',color:'#0098F7'},
+  {id:'devolucao',label:'Devolu\xe7\xe3o',color:'#FDAB3D'},
+  {id:'retirada',label:'Retirada',color:'#9B59B6'}
+];
+let _tags=JSON.parse(localStorage.getItem('rota_tags')||'null')||DEFAULT_TAGS.map(t=>({...t}));
+function _saveTags(){localStorage.setItem('rota_tags',JSON.stringify(_tags));}
+function _getTagColor(tipo){const t=_tags.find(t=>t.id===tipo);return t?t.color:(tipo==='coleta'?'#00C875':'#0098F7');}
+function _getTagLabel(tipo){const t=_tags.find(t=>t.id===tipo);return t?t.label:(tipo==='coleta'?'Coleta':'Entrega');}
+function _getTagById(id){return _tags.find(t=>t.id===id);}
+function _getActiveTagIds(){return _tags.map(t=>t.id);}
 
 /* ══════════════════════════════════════════════════════════════
    CLOUD SYNC — Cloudflare Worker + KV
@@ -1421,7 +1471,7 @@ function showCompletionSummary(){
     else if(c._motPay)recebido+=v;
   });
 
-  // Tapetes
+  // Quantidade de itens
   const tapR=order.filter(i=>clients[i].tipo==='coleta').reduce((s,i)=>s+(clients[i].qtd||0),0);
   const tapE=order.filter(i=>clients[i].tipo==='entrega').reduce((s,i)=>s+(clients[i].qtd||0),0);
 
@@ -1526,6 +1576,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('td').value=now.toISOString().split('T')[0];
   document.getElementById('f-data').value=now.toISOString().split('T')[0];
   loadCfg();renderHist();loadTrelloSelection();
+  // v4.3.3: Inicializar tags configur\xe1veis e atualizar selects
+  renderTagsConfig();updateTagSelects();
   if(!cfg.tkey||!cfg.ttoken){const el=g('trello-nocred');if(el)el.style.display='block';const s1=g('trello-step1');if(s1)s1.style.display='none';}
   document.querySelectorAll('.mbg').forEach(m=>{let downOnBg=false;m.addEventListener('mousedown',e=>{downOnBg=e.target===m;});m.addEventListener('click',e=>{if(e.target===m&&downOnBg)m.classList.remove('on');downOnBg=false;});});
   document.addEventListener('paste',e=>{
@@ -1616,6 +1668,8 @@ function saveCfg(){
   if(cfg.tempo<1){cfg.tempo=1;}
   if(cfg.al1&&cfg.al2&&cfg.al1>=cfg.al2){toast('Pausa almoço: início deve ser anterior ao fim','err');return;}
   localStorage.setItem('rota_cfg',JSON.stringify(cfg));
+  // v4.3.3: Salvar tags configuráveis
+  _saveTags();
   // v4.3.1: Resetar âncora de geocodificação quando muda endereço base
   _geoAnchor=null;
   toastCenter();
@@ -1624,6 +1678,49 @@ function saveCfg(){
   if(!cfg.saida)warn+='<div class="ab w" style="margin-top:8px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <strong>Hor\xE1rio de sa\xEDda</strong> n\xE3o preenchido.</div>';
   g('cfg-msg').innerHTML=warn;
   if(warn)setTimeout(()=>g('cfg-msg').innerHTML='',6000);
+}
+
+// v4.3.3: Gerenciamento de tags configur\xe1veis
+function renderTagsConfig(){
+  const el=g('tags-config-list');if(!el)return;
+  el.innerHTML=_tags.map((t,i)=>{
+    const paletteHtml=TAG_PALETTE.map(c=>'<span class="tag-color-opt'+(c===t.color?' sel':'')+'" style="background:'+c+'" data-color="'+c+'" onclick="setTagColor('+i+',&quot;'+c+'&quot;)"></span>').join('');
+    return '<div class="tag-cfg-item" style="border-left:3px solid '+t.color+';padding:8px 10px;margin-bottom:6px;border-radius:var(--r);background:var(--sf);border:1px solid var(--bd);border-left:3px solid '+t.color+'">'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<span style="width:14px;height:14px;border-radius:50%;background:'+t.color+';flex-shrink:0"></span>'
+        +'<input type="text" value="'+t.label+'" style="flex:1;border:none;background:transparent;font-size:13px;font-weight:600;color:var(--tx);outline:none" onchange="setTagLabel('+i+',this.value)"/>'
+        +(i>=2?'<button class="bic del" style="width:20px;height:20px;font-size:10px;flex-shrink:0" onclick="removeTag('+i+')">\u2715</button>':'')
+      +'</div>'
+      +'<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">'+paletteHtml+'</div>'
+    +'</div>';
+  }).join('');
+}
+function setTagColor(idx,color){_tags[idx].color=color;_saveTags();renderTagsConfig();renderC();}
+function setTagLabel(idx,label){_tags[idx].label=label.trim()||_tags[idx].label;_saveTags();updateTagSelects();renderC();}
+function removeTag(idx){
+  if(_tags.length<=2){toast('M\xednimo de 2 tags','warn');return;}
+  const removedId=_tags[idx].id;
+  _tags.splice(idx,1);_saveTags();
+  // Migrar clientes com a tag removida para a primeira tag
+  clients.forEach(c=>{if(c.tipo===removedId)c.tipo=_tags[0].id;});
+  renderTagsConfig();updateTagSelects();renderC();
+}
+function addNewTag(){
+  if(_tags.length>=10){toast('M\xe1ximo de 10 tags','warn');return;}
+  const usedColors=_tags.map(t=>t.color);
+  const availColor=TAG_PALETTE.find(c=>!usedColors.includes(c))||TAG_PALETTE[_tags.length%TAG_PALETTE.length];
+  const id='tag_'+Date.now();
+  _tags.push({id,label:'Nova tag',color:availColor});
+  _saveTags();renderTagsConfig();updateTagSelects();
+}
+function updateTagSelects(){
+  // Atualizar todos os selects de tipo no sistema
+  ['f-tipo','em-tipo','si-tipo'].forEach(selId=>{
+    const sel=g(selId);if(!sel)return;
+    const curVal=sel.value;
+    sel.innerHTML=_tags.map(t=>'<option value="'+t.id+'">'+t.label+'</option>').join('');
+    if(_tags.find(t=>t.id===curVal))sel.value=curVal;
+  });
 }
 
 function goPage(p,el){if(_isMotoristaMode)return;window.scrollTo(0,0);window.scrollTo(0,0);
@@ -1894,16 +1991,15 @@ async function importTC(){
     const dv=v('td')||new Date().toISOString().split('T')[0];
     const valTipo=ext.valorTipo==='medir'?'medir':ext.valorTipo==='pago'?'pago':'normal';
     let endFinal=ext.endereco||'';
+    // v4.3.3: Usar sistema de geocodifica\xe7\xe3o din\xe2mico (nominatim com \xe2ncora)
+    let pc=null;
     if(endFinal){try{
-      const gd=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address=__ADDR__&region=br&key=AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM'+encodeURIComponent(endFinal+', São Paulo, SP'),{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
-      const spR=gd.find(x=>{const la=parseFloat(x.lat),ln=parseFloat(x.lon);return la>-24.0&&la<-23.3&&ln>-47.0&&ln<-46.0;});
-      if(spR){const rd=await fetch('https://maps.googleapis.com/maps/api/geocode/json?latlng=__LAT__,__LNG__&key=AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM&language=pt-BR'+spR.lat+'&lon='+spR.lon,{headers:{'Accept-Language':'pt-BR'}}).then(r=>r.json());
-        const bairro=rd.address?.quarter||rd.address?.neighbourhood||rd.address?.suburb||rd.address?.city_district||'';
-        if(bairro)endFinal=endFinal.replace(/\s*-\s*[^,]+$/,'').trim()+' - '+bairro;}
+      const geoResult=await nominatim(endFinal);
+      if(geoResult){pc={lat:geoResult.lat,lng:geoResult.lng};if(geoResult.cidade)ext._cidade=geoResult.cidade;}
     }catch(e){}}
-    const pc=_pendingCoords;_pendingCoords=null;
+    if(!pc){pc=_pendingCoords;}_pendingCoords=null;
     const nomeFmt=fmtNomeValor(card.name,ext.valor||0,valTipo);
-    return {id:Date.now()+Math.random(),nome:nomeFmt,endereco:endFinal,complemento:normalizeComplemento(ext.complemento),tel:ext.telefone||'',tipo:ext.tipo||'entrega',qtd:ext.qtd||0,val:ext.valor||0,valTipo,data:dv,janela:ext.janela||'livre',hi:ext.hi||'',hf:ext.hf||'',obs:ext.obs||'',estT:null,conflict:false,cmsg:'',lat:pc?.lat||null,lng:pc?.lng||null};
+    return {id:Date.now()+Math.random(),nome:nomeFmt,endereco:endFinal,complemento:normalizeComplemento(ext.complemento),tel:ext.telefone||'',tipo:ext.tipo||'entrega',qtd:ext.qtd||0,val:ext.valor||0,valTipo,data:dv,janela:ext.janela||'livre',hi:ext.hi||'',hf:ext.hf||'',obs:ext.obs||'',estT:null,conflict:false,cmsg:'',lat:pc?.lat||null,lng:pc?.lng||null,_cidade:ext._cidade||null};
   }
   // Processa em lotes de 3 para maior velocidade
   const BATCH=3;
@@ -2092,7 +2188,7 @@ async function checkAmb(){
   const addr=v('f-end');if(addr.length<8)return;
   const box=g('amb-box');
   try{
-    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+', São Paulo, SP, Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
+    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+_getAddrSuffix())+'&region=br&key='+GKEY+_getAnchorBounds()+_getAnchorComponents()).then(r=>r.json());
     if(d.status==='OK'&&d.results.length>1){
       ambRes=d.results.map(r=>({lat:r.geometry.location.lat,lon:r.geometry.location.lng,display_name:r.formatted_address}));
       let html='<div class="ab w"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <strong>Endere\xE7o amb\xEDguo</strong> \u2014 selecione o correto:</div>';
@@ -2122,7 +2218,7 @@ function addClient(){
   if(end.length<10||!/\d/.test(end)){toast('Endere\xE7o parece inv\xE1lido (inclua rua e n\xFAmero)','err');return;}
   if(!tipo){toast('Selecione Coleta ou Entrega','err');return;}
   const qtd=parseInt(v('f-qtd'))||0;
-  if(qtd<0){toast('Qtd. tapetes n\xE3o pode ser negativa','err');return;}
+  if(qtd<0){toast('Quantidade n\xe3o pode ser negativa','err');return;}
   const valTipo=g('f-valtipo')?.value||'normal';
   const val=valTipo==='normal'?(parseFloat(v('f-val').replace(',','.'))||0):0;
   if(val<0){toast('Valor n\xE3o pode ser negativo','err');return;}
@@ -2201,27 +2297,31 @@ function renderC(){
   g('cfl-banner').innerHTML=cfls.length?'<div class="ab w" style="margin-bottom:12px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <div><strong>'+cfls.length+' conflito(s) de hor\xE1rio.</strong> '+cfls.filter(c=>c.tipo==='coleta').length+' coleta(s) em risco.</div></div>':'';
   el.innerHTML=order.map((idx,stop)=>{
     const c=clients[idx];
-    const jl={livre:'',manha:'Até 12h',tarde:'Após 12h',custom:c.hi+'–'+c.hf}[c.janela]||'';
+    const jl={livre:'',manha:'At\xe9 12h',tarde:'Ap\xf3s 12h',custom:c.hi+'\u2013'+c.hf}[c.janela]||'';
     const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';
-    return '<div class="cc '+(c.tipo==='coleta'?'col':'ent')+(c.conflict?(c.tipo==='coleta'?' cfl':' cwn'):'')+'" data-stop="'+stop+'" onclick="editC('+c.id+')">'
-      +'<div class="sn '+(c.tipo==='coleta'?'c':'e')+'">'+(stop+1)+'</div>'
+    // v4.3.3: Tags din\xe2micas com cores configur\xe1veis
+    const tagColor=_getTagColor(c.tipo);
+    const tagLabel=_getTagLabel(c.tipo);
+    const isCol=c.tipo==='coleta';
+    return '<div class="cc'+(c.conflict?(isCol?' cfl':' cwn'):'')+'" data-stop="'+stop+'" style="border-left:3px solid '+(c.conflict?'':tagColor)+'" onclick="editC('+c.id+')">'
+      +'<div class="sn" style="background:'+tagColor+'20;color:'+tagColor+'">'+(stop+1)+'</div>'
       +'<div class="ci">'
         +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
           +'<span class="cn">'+c.nome+'</span>'
-          +'<span class="cc-type '+(c.tipo==='coleta'?'col':'ent')+'">'+(c.tipo==='coleta'?'Coleta':'Entrega')+'</span>'
+          +'<span class="cc-type" style="color:'+tagColor+'">'+tagLabel+'</span>'
         +'</div>'
         +(c.endereco?'<div class="ca">'+fmtEnderecoComCidade(c)+'</div>':'')
         +'<div class="cm">'
-          +(c.tel?'<span>☎ '+c.tel+'</span>':'')
-          +(c.qtd?'<span>'+c.qtd+' tapete'+(c.qtd>1?'s':'')+'</span>':'')
+          +(c.tel?'<span>\u260E '+c.tel+'</span>':'')
+          +(c.qtd?'<span>'+c.qtd+' '+(cfg._itemLabel||'item')+(c.qtd>1?'s':'')+'</span>':'')
           +(vd?'<span>'+vd+'</span>':'')
           +(jl?'<span>'+jl+'</span>':'')
           +(c.estT?'<span class="et '+(c.conflict?'late':'')+'">'+c.estT+'</span>':'')
         +'</div>'
         +(c.obs?'<div style="font-size:12px;color:var(--mu);margin-top:3px;font-style:italic">'+c.obs+'</div>':'')
-        +(c.conflict?'<div class="cmsg">⚠ '+c.cmsg+'</div>':'')
+        +(c.conflict?'<div class="cmsg">\u26A0 '+c.cmsg+'</div>':'')
       +'</div>'
-      +'<button class="bic del" style="width:24px;height:24px;font-size:11px;flex-shrink:0;margin-top:1px" onclick="event.stopPropagation();removeC('+c.id+')">✕</button>'
+      +'<button class="bic del" style="width:24px;height:24px;font-size:11px;flex-shrink:0;margin-top:1px" onclick="event.stopPropagation();removeC('+c.id+')">\u2715</button>'
       +'</div>';
   }).join('');
   g('cc-count').textContent=clients.length+' cliente'+(clients.length!==1?'s':'');
@@ -2419,7 +2519,7 @@ async function recalcRouteFromOrder(){
   const baseAddr=cfg.base;
   const retAddr=cfg.retaddr||baseAddr;
   try{
-    const waypoints=geocoded.map(c=>({location:c.endereco+', São Paulo, SP, Brasil',stopover:true}));
+    const waypoints=geocoded.map(c=>_waypointFor(c));
     const dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({
       origin:baseAddr,destination:retAddr,waypoints,
       travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR'
@@ -2493,7 +2593,6 @@ function updateMapSidebar(){
   const sb=g('map-sidebar');if(!sb||!clients.length)return;
   const doneCount=order.filter(i=>clients[i]._motDone).length;
   const totalStops=order.length;
-  // Calcular hora prevista de término
   const lastClient=order.length?clients[order[order.length-1]]:null;
   const etaFim=lastClient?.estT||'--:--';
   let html='<div style="font-size:15px;font-weight:800;margin-bottom:12px;color:var(--tx)">Painel da Rota</div>';
@@ -2504,20 +2603,92 @@ function updateMapSidebar(){
     +'<div class="ms-stat"><div class="ms-stat-val">'+etaFim+'</div><div class="ms-stat-label">\xDAltima parada</div></div>'
   +'</div>';
   html+='<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:8px">Paradas</div>';
+  // v4.3.3: Cart\xf5es com identidade visual preservada (tags coloridas) + drag and drop
+  html+='<div id="ms-client-list">';
   order.forEach((idx,stop)=>{
     const c=clients[idx];
     const isDone=!!c._motDone;
-    const isCol=c.tipo==='coleta';
-    html+='<div class="ms-client'+(isDone?' done':'')+'" onclick="focusMapMarker('+stop+')">'
-      +'<span class="ms-client-num '+(isCol?'col':'ent')+'">'+(stop+1)+'</span>'
-      +'<div style="display:inline-block;vertical-align:middle">'
-        +'<div style="font-weight:600;font-size:13px;color:var(--tx)">'+c.nome+'</div>'
-        +'<div style="font-size:11px;color:var(--mu);margin-top:2px">'+c.endereco+(c.complemento?' — '+c.complemento:'')+'</div>'
-        +(c.estT?'<div style="font-size:11px;color:var(--pu);font-weight:600;margin-top:2px">ETA: '+c.estT+'</div>':'')
+    const tagColor=_getTagColor(c.tipo);
+    const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';
+    html+='<div class="ms-client'+(isDone?' done':'')+'" data-msstop="'+stop+'" style="border-left:3px solid '+tagColor+';display:flex;align-items:center;gap:8px;cursor:grab">'
+      +'<span class="ms-client-num" style="background:'+tagColor+'">'+(stop+1)+'</span>'
+      +'<div style="flex:1;min-width:0">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;gap:4px">'
+          +'<div style="font-weight:600;font-size:13px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.nome+'</div>'
+          +'<span style="font-size:9px;font-weight:700;color:'+tagColor+';text-transform:uppercase;letter-spacing:.04em;flex-shrink:0">'+_getTagLabel(c.tipo)+'</span>'
+        +'</div>'
+        +'<div style="font-size:11px;color:var(--mu);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.endereco+(c.complemento?' \u2014 '+c.complemento:'')+'</div>'
+        +'<div style="display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap">'
+          +(c.estT?'<span style="font-size:10px;color:var(--pu);font-weight:600">'+c.estT+'</span>':'')
+          +(vd?'<span style="font-size:10px;color:var(--mu)">'+vd+'</span>':'')
+        +'</div>'
       +'</div>'
     +'</div>';
   });
+  html+='</div>';
   sb.innerHTML=html;
+  initMapSidebarDragDrop();
+}
+// v4.3.3: Drag and drop para cart\xf5es na sidebar do mapa expandido
+function initMapSidebarDragDrop(){
+  const cards=document.querySelectorAll('#ms-client-list .ms-client[data-msstop]');
+  let msDrag=null;
+  cards.forEach(card=>{
+    card.addEventListener('mousedown',e=>{
+      if(e.target.closest('button'))return;
+      const stop=parseInt(card.dataset.msstop);
+      msDrag={stop,startY:e.clientY,card,started:false,overStop:null,overHalf:null};
+      document.addEventListener('mousemove',msMove);
+      document.addEventListener('mouseup',msEnd);
+    });
+    card.addEventListener('click',e=>{
+      if(msDrag&&msDrag.started)return;
+      focusMapMarker(parseInt(card.dataset.msstop));
+    });
+  });
+  function msMove(e){
+    if(!msDrag)return;
+    const dy=Math.abs(e.clientY-msDrag.startY);
+    if(!msDrag.started&&dy>DRAG_THRESHOLD){
+      msDrag.started=true;
+      msDrag.card.style.opacity='.4';
+    }
+    if(!msDrag.started)return;
+    e.preventDefault();
+    const allCards=[...document.querySelectorAll('#ms-client-list .ms-client[data-msstop]')];
+    allCards.forEach(c=>c.classList.remove('drag-over-top','drag-over-bottom'));
+    for(const c of allCards){
+      const r=c.getBoundingClientRect();
+      if(e.clientY>r.top&&e.clientY<r.bottom){
+        const si=parseInt(c.dataset.msstop);
+        if(si!==msDrag.stop){
+          const mid=r.top+r.height/2;
+          c.classList.add(e.clientY<mid?'drag-over-top':'drag-over-bottom');
+          msDrag.overStop=si;msDrag.overHalf=e.clientY<mid?'top':'bottom';
+        }
+        return;
+      }
+    }
+    msDrag.overStop=null;
+  }
+  function msEnd(e){
+    document.removeEventListener('mousemove',msMove);
+    document.removeEventListener('mouseup',msEnd);
+    if(!msDrag)return;
+    document.querySelectorAll('#ms-client-list .ms-client').forEach(c=>{c.style.opacity='';c.classList.remove('drag-over-top','drag-over-bottom');});
+    if(msDrag.started&&msDrag.overStop!==null&&msDrag.overStop!==undefined&&msDrag.overStop!==msDrag.stop){
+      let to=msDrag.overStop;
+      if(msDrag.overHalf==='bottom')to++;
+      if(to>msDrag.stop)to--;
+      if(to!==msDrag.stop&&to>=0&&to<order.length){
+        const item=order.splice(msDrag.stop,1)[0];
+        order.splice(to,0,item);
+        renderC();recalcRouteFromOrder();updateMapSidebar();
+        toast('Ordem da rota atualizada','ok');
+      }
+    }
+    msDrag=null;
+  }
 }
 function focusMapMarker(stop){
   if(!gMarkers[stop]||!gMap)return;
@@ -2530,14 +2701,30 @@ function focusMapMarker(stop){
 }
 function openMarkerInfoWindow(mk,c,stop){
   if(_activeInfoWindow)_activeInfoWindow.close();
-  const iw=new google.maps.InfoWindow({
-    content:'<div style="font-family:inherit;padding:4px"><strong style="font-size:14px">'+(stop+1)+'. '+c.nome+'</strong><br>'
-      +'<span style="color:#666;font-size:12px">'+c.endereco+(c.complemento?' — '+c.complemento:'')+'</span>'
-      +(c.tel?'<br><span style="font-size:12px">Tel: '+c.tel+'</span>':'')
-      +(c.estT?'<br><span style="font-size:12px;color:#6C5CE7;font-weight:600">Previs\xe3o: '+c.estT+'</span>':'')
-      +(c.janela&&c.janela!=='livre'?'<br><span style="font-size:11px;color:#FF6B35">Janela: '+(c.janela==='manha'?'at\xe9 12h':c.janela==='tarde'?'ap\xf3s 12h':c.hi+'-'+c.hf)+'</span>':'')
-      +'</div>'
-  });
+  const isCol=c.tipo==='coleta';
+  const tagColor=isCol?'#00C875':'#0098F7';
+  const tagLabel=isCol?'Coleta':'Entrega';
+  const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';
+  // v4.3.3: Bal\xe3o redesenhado \u2014 compacto, elegante, sem \xe1rea branca excessiva
+  let details=[];
+  if(c.tel)details.push('\u260E '+c.tel);
+  if(c.qtd)details.push(c.qtd+' '+(cfg._itemLabel||'item')+(c.qtd>1?'s':''));
+  if(vd)details.push(vd);
+  const jl=c.janela&&c.janela!=='livre'?(c.janela==='manha'?'At\xe9 12h':c.janela==='tarde'?'Ap\xf3s 12h':c.hi+'\u2013'+c.hf):'';
+  let html='<div style="font-family:\'Plus Jakarta Sans\',sans-serif;padding:0;min-width:200px;max-width:280px">'
+    +'<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid rgba(0,0,0,.08)">'
+      +'<span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:'+tagColor+';color:#fff;font-size:11px;font-weight:700;flex-shrink:0">'+(stop+1)+'</span>'
+      +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:#1e1b4b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.nome+'</div>'
+      +'<span style="font-size:10px;font-weight:600;color:'+tagColor+';text-transform:uppercase;letter-spacing:.04em">'+tagLabel+'</span></div>'
+    +'</div>'
+    +'<div style="padding:6px 10px;font-size:11px;color:#555;line-height:1.5">'
+      +c.endereco+(c.complemento?' \u2014 '+c.complemento:'');
+  if(details.length)html+='<div style="margin-top:4px;color:#333;font-weight:500">'+details.join(' \xB7 ')+'</div>';
+  if(c.estT)html+='<div style="margin-top:4px;color:#6C5CE7;font-weight:600">Previs\xe3o de chegada: '+c.estT+'</div>';
+  if(jl)html+='<div style="margin-top:2px;color:#FF6B35;font-weight:600;font-size:10px">Janela: '+jl+'</div>';
+  if(c.obs)html+='<div style="margin-top:4px;color:#888;font-style:italic;font-size:10px">'+c.obs+'</div>';
+  html+='</div></div>';
+  const iw=new google.maps.InfoWindow({content:html,maxWidth:300});
   iw.open({anchor:mk,map:gMap});
   _activeInfoWindow=iw;
 }
@@ -2606,6 +2793,17 @@ function _getAnchorBounds(){
 function _getAnchorComponents(){
   if(!_geoAnchor||!_geoAnchor.state)return '&components=country:BR';
   return '&components=administrative_area:'+_geoAnchor.state+'|country:BR';
+}
+// v4.3.3: Sufixo din\xe2mico para endere\xe7os enviados ao Google Directions (escala Brasil)
+function _getAddrSuffix(){
+  if(_geoAnchor&&_geoAnchor.city&&_geoAnchor.state)return ', '+_geoAnchor.city+', '+_geoAnchor.state+', Brasil';
+  if(_geoAnchor&&_geoAnchor.state)return ', '+_geoAnchor.state+', Brasil';
+  return ', Brasil';
+}
+// v4.3.3: Gerar waypoint para Google Directions usando coordenadas quando dispon\xedveis
+function _waypointFor(c){
+  if(c.lat&&c.lng)return{location:new google.maps.LatLng(c.lat,c.lng),stopover:true};
+  return{location:c.endereco+_getAddrSuffix(),stopover:true};
 }
 function _extractGeoResult(result){
   const loc=result.geometry.location;
@@ -2688,6 +2886,8 @@ async function calcRoute(){
   g('rp').classList.add('on');
   g('route-btn').disabled=true;
   try{
+    // v4.3.3: Resolver \xe2ncora geogr\xe1fica antes de calcular rota
+    await _resolveGeoAnchor();
     // Geocode all clients without coords
     const notFound=[];
     for(const c of clients){
@@ -2729,7 +2929,7 @@ async function calcRoute(){
     let finalWpOrder;
     if(urgentes.length===0){
       // Sem urgentes — Google otimiza tudo normalmente
-      const waypoints=geocoded.map(c=>({location:c.endereco+', São Paulo, SP, Brasil',stopover:true}));
+      const waypoints=geocoded.map(c=>_waypointFor(c));
       const dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:true,region:'BR'},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
       finalWpOrder=dirResult.routes[0].waypoint_order;
       console.log('[ROTA HÍBRIDA] Sem urgentes — Google otimizou tudo:',JSON.stringify(finalWpOrder));
@@ -2744,9 +2944,9 @@ async function calcRoute(){
       } else {
         // Pedir ao Google para otimizar APENAS os livres, com ponto de partida = último urgente
         const lastUrgent=urgentes[urgentes.length-1].c;
-        const livWaypoints=livres.map(l=>({location:l.c.endereco+', São Paulo, SP, Brasil',stopover:true}));
+        const livWaypoints=livres.map(l=>_waypointFor(l.c));
         const livResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({
-          origin:lastUrgent.endereco+', São Paulo, SP, Brasil',
+          origin:lastUrgent.lat&&lastUrgent.lng?new google.maps.LatLng(lastUrgent.lat,lastUrgent.lng):lastUrgent.endereco+_getAddrSuffix(),
           destination:retAddr,
           waypoints:livWaypoints,
           travelMode:google.maps.TravelMode.DRIVING,
@@ -2760,7 +2960,7 @@ async function calcRoute(){
       }
     }
     // ── ROTA FINAL: pedir ao Google a rota completa NA ORDEM DEFINIDA (sem otimização) ──
-    const orderedWaypoints=finalWpOrder.map(gi=>({location:geocoded[gi].endereco+', São Paulo, SP, Brasil',stopover:true}));
+    const orderedWaypoints=finalWpOrder.map(gi=>_waypointFor(geocoded[gi]));
     const dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({
       origin:baseAddr,destination:retAddr,
       waypoints:orderedWaypoints,
@@ -2889,7 +3089,7 @@ async function genImage(){
     const c=clients[idx];
     const isCol=c.tipo==='coleta';
     const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';
-    const det=[c.tel?'☎ '+c.tel:'',c.qtd?c.qtd+' tapete'+(c.qtd>1?'s':''):'',vd].filter(Boolean).join(' · ');
+    const det=[c.tel?'☎ '+c.tel:'',c.qtd?c.qtd+' '+(cfg._itemLabel||'item')+(c.qtd>1?'s':''):'',vd].filter(Boolean).join(' · ');
     return `<div style="background:#fff;border:1px solid #E2E4F0;border-left:3.5px solid ${isCol?'#00C875':'#0098F7'};border-radius:8px;padding:11px 12px;margin-bottom:7px;display:flex;gap:10px;align-items:flex-start">
       <div style="width:20px;height:20px;min-width:20px;border-radius:50%;background:${isCol?'#E6FBF3':'#E6F5FF'};color:${isCol?'#00A65E':'#0098F7'};font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:2px">${stop+1}</div>
       <div style="flex:1;min-width:0">
@@ -2909,8 +3109,8 @@ async function genImage(){
       <div style="color:#fff;font-weight:700;font-size:16px">Roteiro</div>
       <div style="color:#A0A5C8;font-size:12px;margin-top:4px">${d.charAt(0).toUpperCase()+d.slice(1)}</div>
       <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;justify-content:center">
-        <span style="background:rgba(0,200,117,.15);color:#00C875;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">${col.length} coleta${col.length!==1?'s':''} · ${tapR} tapete${tapR!==1?'s':''} a retirar</span>
-        <span style="background:rgba(0,152,247,.15);color:#4DB8FF;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">${ent.length} entrega${ent.length!==1?'s':''} · ${tapE} tapete${tapE!==1?'s':''} a entregar</span>
+        <span style="background:rgba(0,200,117,.15);color:#00C875;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">${col.length} coleta${col.length!==1?'s':''} · ${tapR} ite${tapR!==1?'ns':'m'} a retirar</span>
+        <span style="background:rgba(0,152,247,.15);color:#4DB8FF;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">${ent.length} entrega${ent.length!==1?'s':''} · ${tapE} ite${tapE!==1?'ns':'m'} a entregar</span>
       </div>
     </div>
     ${cards}
@@ -2949,7 +3149,7 @@ function genPDF_unused(){
   const tapR=col.reduce((s,c)=>s+(c.qtd||0),0),tapE=ent.reduce((s,c)=>s+(c.qtd||0),0);
   doc.setFillColor(246,247,251);doc.setDrawColor(226,228,240);doc.rect(M,y,CW,10,'FD');
   doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(107,111,142);
-  doc.text(clients.length+' clientes   \u2022   '+col.length+' coleta'+(col.length!==1?'s':'')+' / '+ent.length+' entrega'+(ent.length!==1?'s':'')+'   \u2022   Retirar: '+tapR+' tapete'+(tapR!==1?'s':'')+'   \u2022   Entregar: '+tapE+' tapete'+(tapE!==1?'s':''),M+4,y+7);
+  doc.text(clients.length+' clientes   \u2022   '+col.length+' coleta'+(col.length!==1?'s':'')+' / '+ent.length+' entrega'+(ent.length!==1?'s':'')+'   \u2022   Retirar: '+tapR+' ite'+(tapR!==1?'ns':'m')+'   \u2022   Entregar: '+tapE+' ite'+(tapE!==1?'ns':'m'),M+4,y+7);
   y+=15;
   const cfls=clients.filter(c=>c.conflict);
   if(cfls.length){doc.setFillColor(254,232,235);doc.setDrawColor(226,68,92);doc.rect(M,y,CW,9,'FD');doc.setFontSize(8);doc.setTextColor(155,27,46);doc.setFont('helvetica','bold');doc.text('\u26A0  ATENCAO: '+cfls.length+' conflito(s) de horario detectado(s)',M+3,y+6.5);y+=13;}
@@ -2986,7 +3186,7 @@ function genPDF_unused(){
     // Details row
     const parts=[];
     if(c.tel)parts.push('Tel: '+c.tel);
-    if(c.qtd)parts.push(c.qtd+' tapete'+(c.qtd>1?'s':''));
+    if(c.qtd)parts.push(c.qtd+' '+(cfg._itemLabel||'item')+(c.qtd>1?'s':''));
     const vLabel=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';
     if(vLabel)parts.push(vLabel);
     if(c.estT)parts.push('~'+c.estT);
@@ -3323,7 +3523,7 @@ function renderMotor(){
       +'<div class="mc-addr">'+fmtEnderecoComCidade(c)+'</div>'
       // Detalhes
       +'<div class="mc-details">'
-        +(c.qtd?'<span class="mc-detail">'+mi('bag','mot-ico-sm')+' '+c.qtd+' tapete'+(c.qtd>1?'s':'')+'</span>':'')
+        +(c.qtd?'<span class="mc-detail">'+mi('bag','mot-ico-sm')+' '+c.qtd+' '+(cfg._itemLabel||'item')+(c.qtd>1?'s':'')+'</span>':'')
         +(c.val&&c.valTipo!=='medir'&&c.valTipo!=='pago'?'<span class="mc-detail">R$ '+fmtBRL(c.val)+'</span>':'')
         +(c.valTipo==='medir'?'<span class="mc-detail alert">'+mi('scale','mot-ico-sm')+' Medir</span>':'')
         +(c.valTipo==='pago'?'<span class="mc-detail">'+mi('check','mot-ico-sm')+' Pago</span>':'')
@@ -3480,6 +3680,6 @@ function editDoneCard(idx){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v4.3.2</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v4.3.3</div>
 </body>
 </html>
