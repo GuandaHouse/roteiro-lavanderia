@@ -4,6 +4,35 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.6.1 — 03/04/2026 — Cleanup + UX Polish                             ║
+║  ─────────────────────────────────────────                   ║
+║  REMOÇÕES:                                                             ║
+║  • Toggle KM/Tempo do Painel da Rota (descontinuado)                   ║
+║  • Notificar Clientes via WhatsApp (sidebar da rota)                   ║
+║  • Relatório da Rota / Score de Eficiência                             ║
+║  • Campo Pronome nos 3 formulários + lógica JS                         ║
+║  • Agrupamento por Dia (chips bottom bar)                              ║
+║  • Notificação WhatsApp das Configurações (template + margem)          ║
+║  CORREÇÕES:                                                            ║
+║  • Títulos do drawer centralizados + "Locais mais atendidos"           ║
+║  • Mapa expandido: sidebar não fica atrás do header (top:56px fix)     ║
+║  • Densidade 0.0 clientes/km²: cálculo corrigido (min 1km² area)      ║
+║  • Limpeza de código órfão (WPP, pronome, report, day grouping)        ║
+║                                                                      ║
+║  v4.6.0 — 03/04/2026 — Premium Map-First Redesign                      ║
+║  ─────────────────────────────────────────                   ║
+║  MAPA DE CLIENTES:                                                     ║
+║  • Redesign completo: mapa fullscreen como protagonista absoluto       ║
+║  • Top bar unificada (título + stats + toggle Concentração/Receita)    ║
+║  • Drawer lateral colapsável (bairros, zonas, cobertura)               ║
+║  • Agrupamento por Dia: chips horizontais na bottom bar                ║
+║  • "Locais Mais Atendidos" substitui "Top Bairros"                     ║
+║  • Glassmorphism coeso em todos os painéis                             ║
+║  • Tipografia com hierarquia clara (DM Mono para métricas)             ║
+║  • Donut compacto horizontal com legenda lateral                       ║
+║  • Cobertura em grid cards em vez de lista vertical                    ║
+║  • Paleta restrita: roxo acento, cinzas secundários                    ║
+║                                                                      ║
 ║  v4.5.1 — 03/04/2026 — Business Intelligence + Premium UX              ║
 ║  ─────────────────────────────────────────                   ║
 ║  CORREÇÕES:                                                           ║
@@ -546,52 +575,30 @@ body.dark .mc-conclude-btn{background:var(--pu);color:#fff}
 .tg{background:var(--s2);color:var(--mu)}
 .tpu{background:var(--pul);color:var(--pud)}
 /* v4.5.1: Top Bairros Premium Redesign */
-.dash-bairro-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:all .18s;border:1px solid transparent}
-.dash-bairro-item:hover{background:rgba(108,92,231,.05);border-color:rgba(108,92,231,.1)}
-body.dark .dash-bairro-item:hover{background:rgba(167,139,250,.08);border-color:rgba(167,139,250,.12)}
-.dash-bairro-rank{width:22px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;font-family:'DM Mono',monospace}
-.dash-bairro-rank.top3{background:var(--pu);color:#fff}
-.dash-bairro-rank.rest{background:var(--pul);color:var(--pud)}
-.dash-bairro-name{font-size:12.5px;font-weight:600;color:var(--tx);letter-spacing:-.01em}
-.dash-bairro-count{font-size:11px;font-weight:700;color:var(--pu);font-family:'DM Mono',monospace;min-width:20px;text-align:right}
-.dash-bairro-bar{height:3px;background:var(--s2);border-radius:2px;flex:1;min-width:40px;overflow:hidden}
-.dash-bairro-bar-fill{height:100%;background:linear-gradient(90deg,var(--pu),var(--pud));border-radius:2px;transition:width .4s ease}
-/* v4.5.1: Heatmap mode toggle (concentração vs receita) */
-.hm-mode-toggle{display:flex;align-items:center;background:var(--sf);border:1.5px solid var(--bd);border-radius:20px;padding:2px;cursor:pointer;user-select:none}
-.hm-mode-opt{padding:4px 10px;border-radius:16px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--mu);transition:all .2s}
-.hm-mode-opt.active{background:var(--pu);color:#fff;box-shadow:0 1px 6px rgba(108,92,231,.25)}
-/* v4.5.1: Day grouping panel */
-.day-group-panel{background:var(--sf);border:1.5px solid var(--bd);border-radius:14px;padding:14px;margin-top:12px}
-.day-group-item{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;border:1px solid var(--bd);margin-bottom:6px;transition:all .15s}
-.day-group-item:hover{border-color:var(--pu);background:var(--pul)}
-.day-group-day{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--pu);min-width:40px}
-.day-group-clients{font-size:12px;font-weight:600;color:var(--tx)}
-.day-group-saving{font-size:10px;font-weight:700;color:var(--gnd);margin-left:auto;white-space:nowrap}
+/* v4.6.0: Drawer bairro items — premium minimal */
+.dash-bairro-item{display:flex;align-items:center;gap:10px;padding:8px 0;cursor:default;transition:opacity .15s}
+.dash-bairro-item:not(:last-child){border-bottom:1px solid var(--bd)}
+.dash-bairro-item:hover{opacity:.7}
+.dash-bairro-rank{width:22px;height:22px;border-radius:6px;background:var(--pul);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--pu);flex-shrink:0;font-family:'DM Mono',monospace}
+.dash-bairro-name{font-size:13px;font-weight:500;color:var(--tx);flex:1}
+.dash-bairro-count{font-size:12px;font-weight:700;color:var(--pu);font-family:'DM Mono',monospace}
+/* v4.6.0: Heatmap mode toggle — premium pill style */
+.hm-mode-toggle{display:flex;background:rgba(255,255,255,.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(0,0,0,.06);border-radius:10px;box-shadow:0 4px 24px rgba(0,0,0,.06);padding:3px;gap:2px}
+body.dark .hm-mode-toggle{background:rgba(13,11,20,.82);border-color:rgba(255,255,255,.06);box-shadow:0 4px 24px rgba(0,0,0,.3)}
+.hm-mode-opt{padding:7px 14px;border-radius:8px;font-size:11px;font-weight:600;color:var(--mu);transition:all .2s;cursor:pointer;border:none;background:transparent;font-family:inherit;white-space:nowrap}
+.hm-mode-opt.active{background:var(--tx);color:var(--bg);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.hm-mode-opt:hover:not(.active){color:var(--tx);background:rgba(0,0,0,.03)}
+body.dark .hm-mode-opt:hover:not(.active){background:rgba(255,255,255,.06)}
+/* v4.6.1: Day grouping CSS removido */
 /* v4.5.1: WhatsApp notification panel */
-.wpp-panel{background:var(--sf);border:1.5px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
-.wpp-preview{background:#DCF8C6;border-radius:8px;padding:10px 12px;font-size:12px;color:#303030;line-height:1.5;margin:8px 0;font-family:'Plus Jakarta Sans',sans-serif;position:relative;max-width:280px}
-body.dark .wpp-preview{background:rgba(0,92,75,.3);color:var(--tx)}
-.wpp-preview::after{content:'';position:absolute;bottom:-5px;left:12px;width:10px;height:10px;background:#DCF8C6;clip-path:polygon(0 0,100% 0,0 100%)}
-body.dark .wpp-preview::after{background:rgba(0,92,75,.3)}
-.wpp-send-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:none;background:#25D366;color:#fff;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;font-family:'Plus Jakarta Sans',sans-serif}
-.wpp-send-btn:hover{background:#20BD5A;transform:scale(1.02)}
+/* v4.6.1: .wpp-panel, .wpp-preview CSS removido */
+/* v4.6.1: .wpp-send-btn CSS removido */
 /* v4.5.1: Post-route report */
-.report-card{background:var(--sf);border:1.5px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:12px}
-.report-score{font-size:48px;font-weight:800;background:linear-gradient(135deg,var(--pu),var(--gn));-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;line-height:1}
-.report-score-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);text-align:center;margin-top:4px}
-.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
-.report-metric{text-align:center;padding:10px 8px;border-radius:10px;border:1px solid var(--bd)}
-.report-metric-val{font-size:18px;font-weight:800;color:var(--tx)}
-.report-metric-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-top:2px}
+/* v4.6.1: .report-card, .report-score, .report-grid CSS removido */
 /* v4.5.1: Route learning indicator */
 .learn-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;background:rgba(52,199,89,.08);border:1px solid rgba(52,199,89,.15);font-size:10px;font-weight:700;color:var(--gnd)}
 /* v4.5.0: Route optimization toggle */
-.route-mode-toggle{display:flex;align-items:center;background:var(--sf);border:1.5px solid var(--bd);border-radius:20px;padding:3px;gap:0;cursor:pointer;user-select:none;-webkit-user-select:none;transition:all .2s}
-.route-mode-toggle .rmt-opt{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:16px;font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--mu);transition:all .25s;white-space:nowrap}
-.route-mode-toggle .rmt-opt.active{background:var(--pu);color:#fff;box-shadow:0 2px 8px rgba(108,92,231,.25)}
-.route-mode-toggle .rmt-knob{width:22px;height:22px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;box-shadow:0 1px 4px rgba(0,0,0,.12);transition:transform .3s cubic-bezier(.4,0,.2,1);pointer-events:none}
-.route-mode-toggle.distance .rmt-knob{transform:translateX(calc(100% + 4px))}
-.route-mode-toggle .rmt-opt svg{width:14px;height:14px}
+/* v4.6.1: .route-mode-toggle CSS removido (toggle descontinuado) */
 /* v4.5.0: Undo button */
 .undo-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:10px;border:1.5px solid var(--bd);background:var(--sf);font-size:11px;font-weight:700;color:var(--mu);cursor:pointer;transition:all .15s;opacity:.5;pointer-events:none}
 .undo-btn.active{opacity:1;pointer-events:auto}
@@ -619,10 +626,7 @@ body.dark .wpp-preview::after{background:rgba(0,92,75,.3)}
 .hist-card .hc-addr{font-size:12px;color:var(--mu);margin-top:2px}
 .hist-card .hc-meta{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap;font-size:11px;color:var(--mu)}
 .hist-card .hc-tag{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:20px;line-height:1.6;flex-shrink:0}
-/* v4.4.1: Bairro hover highlight */
-.dash-bairro-item{display:flex;align-items:center;gap:8px;padding:6px 4px;border-radius:8px;cursor:pointer;transition:background .15s}
-.dash-bairro-item:hover{background:rgba(108,92,231,.08)}
-body.dark .dash-bairro-item:hover{background:rgba(167,139,250,.1)}
+/* v4.4.1: Bairro hover highlight (styles in drawer section above) */
 /* v4.4.0: Sync feedback indicator */
 .sync-indicator{position:fixed;top:60px;right:16px;z-index:300;display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;pointer-events:none;transition:all .4s cubic-bezier(.4,0,.2,1);opacity:0;transform:translateY(-8px)}
 .sync-indicator.show{opacity:1;transform:translateY(0)}
@@ -675,20 +679,35 @@ body.dark .cep-amb-alert{color:#fbbf24;background:rgba(245,158,11,.1);border-col
 /* v4.3.9: Hide Google Maps default My Location button */
 .gm-bundled-control,.gm-svpc,.gm-fullscreen-control{display:none!important}
 
-/* v4.3.9: Dashboard geográfico */
-.geo-dash{position:absolute;top:16px;right:16px;z-index:10;display:flex;flex-direction:column;gap:10px;pointer-events:auto;width:280px}
-.geo-card{background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border:1px solid rgba(0,0,0,.06);border-radius:14px;padding:16px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
-body.dark .geo-card{background:rgba(26,25,37,.92);border-color:rgba(255,255,255,.08)}
-.geo-card h4{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);margin:0 0 8px}
-.donut-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
-.donut-svg{width:160px;height:160px;flex-shrink:0}
-.donut-legend{display:flex;flex-direction:column;gap:4px}
-.donut-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:500}
-.donut-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.geo-stat{text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)}
-.geo-stat .gs-val{font-size:20px;font-weight:800;color:var(--tx)}
-.geo-stat .gs-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-top:2px}
-@media(max-width:768px){.geo-dash{top:auto;bottom:8px;right:8px;width:200px}.geo-card{min-width:auto}}
+/* v4.6.0: Drawer — right side collapsible panel */
+.dash-drawer{position:absolute;top:72px;right:16px;bottom:16px;width:300px;z-index:10;display:flex;flex-direction:column;gap:10px;overflow-y:auto;scrollbar-width:none;transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .25s;pointer-events:auto}
+.dash-drawer::-webkit-scrollbar{display:none}
+.dash-drawer.closed{transform:translateX(calc(100% + 32px));opacity:0;pointer-events:none}
+.dash-drawer-card{background:rgba(255,255,255,.82);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(0,0,0,.06);border-radius:12px;padding:18px;box-shadow:0 4px 24px rgba(0,0,0,.06)}
+body.dark .dash-drawer-card{background:rgba(13,11,20,.82);border-color:rgba(255,255,255,.06);box-shadow:0 4px 24px rgba(0,0,0,.3)}
+.dash-drawer-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);margin-bottom:14px;text-align:center}
+/* Zone donut — horizontal layout */
+.zone-section{display:flex;align-items:flex-start;gap:16px}
+.donut-container{width:100px;height:100px;flex-shrink:0}
+.donut-container svg{width:100%;height:100%}
+.zone-legend{display:flex;flex-direction:column;gap:6px;flex:1;padding-top:6px}
+.zone-legend-item{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:500}
+.zone-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.zone-legend-count{margin-left:auto;font-family:'DM Mono',monospace;color:var(--mu);font-size:11px}
+/* Coverage stats — grid cards */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat-item{background:rgba(108,92,231,.04);border-radius:8px;padding:12px;text-align:center}
+body.dark .stat-item{background:rgba(108,92,231,.08)}
+.stat-value{font-size:20px;font-weight:800;letter-spacing:-.02em;color:var(--tx);font-family:'DM Mono',monospace;line-height:1}
+.stat-unit{font-size:10px;font-weight:500;color:var(--mu);margin-top:4px}
+.stat-full{grid-column:1/-1}
+/* Drawer toggle button */
+.dash-drawer-toggle{position:absolute;right:16px;bottom:80px;z-index:11;width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(0,0,0,.06);box-shadow:0 4px 24px rgba(0,0,0,.06);display:none;align-items:center;justify-content:center;cursor:pointer;color:var(--mu);transition:all .2s}
+body.dark .dash-drawer-toggle{background:rgba(13,11,20,.82);border-color:rgba(255,255,255,.06);box-shadow:0 4px 24px rgba(0,0,0,.3)}
+.dash-drawer-toggle:hover{color:var(--tx)}
+.dash-drawer-toggle svg{width:16px;height:16px;transition:transform .3s}
+.dash-drawer-toggle.open svg{transform:rotate(180deg)}
+@media(max-width:768px){.dash-drawer{width:260px;right:8px;top:64px;bottom:8px}}
 
 /* v4.3.9: Field validation */
 @keyframes fieldShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-4px)}40%,80%{transform:translateX(4px)}}
@@ -806,12 +825,12 @@ body.dark .st:hover{box-shadow:0 4px 16px rgba(0,0,0,.2)}
 .map-expand-btn:hover{transform:scale(1.08);box-shadow:0 2px 8px rgba(0,0,0,.14)}
 .map-expand-btn svg{width:18px;height:18px}
 body.dark .map-expand-btn{background:rgba(30,27,50,.85);color:#e4e4e7;box-shadow:0 1px 4px rgba(0,0,0,.3)}
-.map-fullscreen{position:fixed!important;inset:0!important;z-index:9999!important;height:100vh!important;width:100vw!important;border-radius:0!important;border:none!important;margin:0!important;display:flex!important;flex-direction:row!important}
+.map-fullscreen{position:fixed!important;top:56px!important;left:0!important;right:0!important;bottom:0!important;z-index:9999!important;height:calc(100vh - 56px)!important;width:100vw!important;border-radius:0!important;border:none!important;margin:0!important;display:flex!important;flex-direction:row!important}
 .map-fullscreen #map{display:block!important;flex:1;position:relative!important;height:100%!important}
 .map-fullscreen .mph{display:none!important}
 .map-fullscreen .map-expand-btn{top:16px;right:16px;width:42px;height:42px;border-radius:12px;z-index:10002}
 .map-fullscreen .map-expand-btn svg{width:20px;height:20px}
-.map-sidebar{display:none;width:440px;height:100vh;overflow-y:auto;background:var(--bg);border-right:1px solid var(--bd);padding:16px;flex-shrink:0;z-index:10001;order:-1;position:relative;min-width:300px;max-width:700px}
+.map-sidebar{display:none;width:440px;height:100%;overflow-y:auto;background:var(--bg);border-right:1px solid var(--bd);padding:20px 16px 16px;flex-shrink:0;z-index:10001;order:-1;position:relative;min-width:300px;max-width:700px}
 .map-sidebar-resize{position:absolute;top:0;right:-3px;width:6px;height:100%;cursor:col-resize;z-index:10002;background:transparent;display:flex;align-items:center;justify-content:center;transition:background .15s}
 .map-sidebar-resize::after{content:'';width:2px;height:40px;border-radius:2px;background:rgba(108,92,231,.25);transition:all .15s}
 .map-sidebar-resize:hover,.map-sidebar-resize.active{background:rgba(108,92,231,.08)}
@@ -828,7 +847,7 @@ body.dark .map-expand-btn{background:rgba(30,27,50,.85);color:#e4e4e7;box-shadow
 .map-sidebar .ms-client.drag-over-bottom{border-bottom:2px solid var(--pu)}
 .map-sidebar .ms-client-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
 body.map-fs nav{position:fixed;top:0;left:0;right:0;z-index:10003}
-body.map-fs .map-fullscreen{top:56px!important;height:calc(100vh - 56px)!important}
+body.map-fs .map-fullscreen{top:56px!important;height:calc(100vh - 56px)!important}/* redundant safety net */
 @media(max-width:768px){.map-sidebar{width:100%;height:40vh;border-right:none;border-top:1px solid var(--bd);order:1}.map-fullscreen{flex-direction:column!important}.map-fullscreen #map{height:60vh!important}}
 #map{position:absolute;inset:0;display:block}
 .mph{text-align:center;color:var(--mu);font-size:13px;padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%}
@@ -867,20 +886,18 @@ body.dark .hi:hover{background:rgba(255,255,255,.06);box-shadow:0 4px 16px rgba(
 .hm{font-size:12px;color:var(--mu);margin-top:2px}
 
 /* HEATMAP */
-/* v4.3.7: Mapa de Clientes fullscreen com painel flutuante */
+/* v4.6.0: Mapa de Clientes — premium map-first layout */
 .dash-map-wrap{position:relative;width:100%;height:calc(100vh - 56px);overflow:hidden;background:var(--s2)}
 #heatmap{width:100%;height:100%;display:none}
 .hmph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--mu);font-size:13px;text-align:center;padding:20px;z-index:1}
-.dash-float-header{position:absolute;top:16px;left:16px;z-index:2;background:rgba(255,255,255,.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(0,0,0,.06);border-radius:12px;padding:12px 16px;box-shadow:0 2px 12px rgba(0,0,0,.06);display:none}
-body.dark .dash-float-header{background:rgba(20,18,30,.85);border-color:rgba(255,255,255,.08)}
-.dash-float-panel{position:absolute;top:80px;left:16px;z-index:2;background:rgba(255,255,255,.92);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(0,0,0,.06);border-radius:14px;padding:0;box-shadow:0 4px 24px rgba(0,0,0,.08);width:260px;max-height:calc(100vh - 160px);overflow:hidden;display:none;transition:all .25s ease}
-body.dark .dash-float-panel{background:rgba(20,18,30,.9);border-color:rgba(255,255,255,.08)}
-.dash-panel-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none;-webkit-user-select:none}
-.dash-panel-header:hover{background:rgba(108,92,231,.04)}
-.dash-panel-toggle{width:16px;height:16px;transition:transform .2s}
-.dash-panel-toggle.collapsed{transform:rotate(-90deg)}
-.dash-panel-body{padding:0 16px 14px;overflow-y:auto;max-height:calc(100vh - 180px)}
-@media(max-width:768px){.dash-float-panel{width:200px;left:8px;top:64px}.dash-float-header{left:8px;top:8px}}
+/* Top bar — unified horizontal strip */
+.dash-top-bar{position:absolute;top:16px;left:16px;right:16px;z-index:12;display:none;align-items:center;gap:8px}
+.dash-top-chip{background:rgba(255,255,255,.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(0,0,0,.06);border-radius:10px;padding:10px 16px;box-shadow:0 4px 24px rgba(0,0,0,.06);display:flex;align-items:center;gap:10px}
+body.dark .dash-top-chip{background:rgba(13,11,20,.82);border-color:rgba(255,255,255,.06);box-shadow:0 4px 24px rgba(0,0,0,.3)}
+.dash-top-title{font-size:14px;font-weight:700;letter-spacing:-.01em}
+.dash-top-stat{font-size:12px;color:var(--mu);font-weight:500;font-family:'DM Mono',monospace}
+.dash-top-sep{width:1px;height:16px;background:var(--bd)}
+@media(max-width:768px){.dash-top-bar{left:8px;right:8px;top:8px;flex-wrap:wrap}}
 
 /* TRELLO CARD */
 .tcc{border:1px solid var(--bd);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px;font-size:13px;cursor:pointer;transition:all .2s;background:var(--sf);backdrop-filter:blur(8px)}
@@ -1072,7 +1089,6 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
       <div class="fg2">
         <div class="fg"><label>Nome *</label><input type="text" id="f-nome" placeholder="Nome completo"/></div>
         <div class="fg"><label>Telefone</label><input type="tel" id="f-tel" placeholder="(11) 99999-9999"/></div>
-        <div class="fg"><label>Pronome</label><select id="f-pronome"><option value="">Nenhum</option><option value="Dona">Dona</option><option value="Seu">Seu</option><option value="Sr.">Sr.</option><option value="Sra.">Sra.</option><option value="Dr.">Dr.</option><option value="Dra.">Dra.</option></select></div>
         <div class="fg full cep-row"><div class="fg"><label>Endere&#xE7;o completo *</label><input type="text" id="f-end" placeholder="Rua, n&#xBA;, complemento, bairro, cidade" oninput="schedGeo();onEndInput('f')"/></div><div class="fg"><label>CEP</label><input type="text" id="f-cep" class="cep-input" placeholder="00000-000" maxlength="9" oninput="onCepInput('f')"/><div class="cep-status" id="f-cep-status"></div></div></div>
         <div class="fg"><label>Tipo *</label>
           <div id="f-tipo" class="tag-multi-wrap"></div>
@@ -1171,42 +1187,50 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   <div id="hlist"></div>
 </div>
 
-<!-- DASHBOARD -->
+<!-- DASHBOARD — v4.6.0 Premium Map-First Layout -->
 <div class="page" id="page-dash" style="max-width:none;padding:56px 0 0">
-  <!-- v4.3.7: Mapa fullscreen com painel flutuante -->
   <div class="dash-map-wrap">
     <div id="heatmap"></div>
     <div class="hmph" id="hmph"><span class="mot-ico" style="width:32px;height:32px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span><p>Salve rotas para ver a concentra&#xE7;&#xE3;o de clientes</p></div>
-    <!-- Header flutuante -->
-    <div class="dash-float-header" id="dash-float-header">
-      <h2 style="font-size:16px;font-weight:700;margin:0">Concentra&#xE7;&#xE3;o de Clientes</h2>
-      <p id="dash-summary" style="font-size:12px;color:var(--mu);margin:0"></p>
-    </div>
-    <!-- Painel flutuante de bairros -->
-    <div class="dash-float-panel" id="dash-float-panel">
-      <div class="dash-panel-header" onclick="toggleDashPanel()">
-        <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)">Top Bairros</span>
-        <span class="mot-ico dash-panel-toggle" id="dash-panel-toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+    <!-- v4.6.0: Top bar — title + stats + mode toggle -->
+    <div class="dash-top-bar" id="dash-top-bar">
+      <div class="dash-top-chip">
+        <span class="dash-top-title">Concentra&#xE7;&#xE3;o de Clientes</span>
+        <span class="dash-top-sep"></span>
+        <span class="dash-top-stat" id="dash-summary"></span>
       </div>
-      <div class="dash-panel-body" id="dash-panel-body"></div>
+      <div class="hm-mode-toggle" id="hm-mode-toggle-bar">
+        <button class="hm-mode-opt active" data-mode="concentration" onclick="setHeatmapMode('concentration')">Concentra&#xE7;&#xE3;o</button>
+        <button class="hm-mode-opt" data-mode="revenue" onclick="setHeatmapMode('revenue')">Receita</button>
+      </div>
     </div>
-    <!-- v4.3.9: Dashboard geográfico -->
-    <div id="day-group-section" class="day-group-panel" style="display:none;position:absolute;bottom:16px;left:16px;z-index:3;width:260px;pointer-events:auto"></div>
-    <div class="geo-dash" id="geo-dash" style="display:none">
-      <div class="geo-card">
-        <h4>Distribui&#xE7;&#xE3;o por Zona</h4>
-        <div class="donut-wrap">
-          <svg class="donut-svg" viewBox="0 0 36 36" id="zone-donut"></svg>
-          <div class="donut-legend" id="zone-legend"></div>
+    <!-- v4.6.0: Right drawer — collapsible info panels -->
+    <div class="dash-drawer" id="dash-drawer">
+      <div class="dash-drawer-card">
+        <div class="dash-drawer-title">Locais mais atendidos</div>
+        <div id="dash-panel-body"></div>
+      </div>
+      <div class="dash-drawer-card" id="geo-zone-card" style="display:none">
+        <div class="dash-drawer-title">Distribui&#xE7;&#xE3;o por Zona</div>
+        <div class="zone-section">
+          <div class="donut-container"><svg viewBox="0 0 36 36" id="zone-donut"></svg></div>
+          <div class="zone-legend" id="zone-legend"></div>
         </div>
       </div>
-      <div class="geo-card">
-        <h4>Cobertura</h4>
-        <div class="geo-stat"><div class="gs-val" id="geo-radius">—</div><div class="gs-lbl">Raio m&#xE1;ximo (km)</div></div>
-        <div class="geo-stat"><div class="gs-val" id="geo-density">—</div><div class="gs-lbl">Clientes/km&#xB2;</div></div>
-        <div class="geo-stat"><div class="gs-val" id="geo-avg-dist">—</div><div class="gs-lbl">Dist&#xE2;ncia m&#xE9;dia (km)</div></div>
+      <div class="dash-drawer-card" id="geo-stats-card" style="display:none">
+        <div class="dash-drawer-title">Cobertura</div>
+        <div class="stats-grid">
+          <div class="stat-item"><div class="stat-value" id="geo-radius">&#x2014;</div><div class="stat-unit">Raio m&#xE1;ximo (km)</div></div>
+          <div class="stat-item"><div class="stat-value" id="geo-density">&#x2014;</div><div class="stat-unit">Clientes/km&#xB2;</div></div>
+          <div class="stat-item stat-full"><div class="stat-value" id="geo-avg-dist">&#x2014;</div><div class="stat-unit">Dist&#xE2;ncia m&#xE9;dia (km)</div></div>
+        </div>
       </div>
     </div>
+    <!-- Drawer toggle button -->
+    <div class="dash-drawer-toggle" id="dash-drawer-toggle" onclick="toggleDashDrawer()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+    <!-- v4.6.1: Day grouping removido -->
   </div>
 </div>
 
@@ -1260,7 +1284,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
         <div class="fg"><label>Limite de retorno</label><input type="time" id="cfg-ret" value="17:00"/></div>
         <div class="fg"><label>Tempo/parada (min)</label><input type="number" id="cfg-tempo" value="10" min="1" max="240"/></div>
         <div class="fg"><label>Prioridade da rota</label><select id="cfg-route-priority"><option value="time">Tempo (mais r\xe1pida)</option><option value="distance">Quilometragem (mais curta)</option></select></div>
-        <div class="fg"><label>Margem de hor\xe1rio (WhatsApp)</label><select id="cfg-wpp-margin"><option value="60">1 hora</option><option value="120" selected>2 horas</option><option value="180">3 horas</option><option value="30">30 minutos</option></select></div>
+        <!-- v4.6.1: cfg-wpp-margin removido -->
         <div class="fg"><label>Pausa almoço — início</label><input type="time" id="cfg-al1"/></div>
         <div class="fg full"><label>Pausa almo&#xE7;o &#x2014; fim</label><input type="time" id="cfg-al2"/></div>
       </div>
@@ -1294,13 +1318,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
         </div>
       </div>
     </div>
-    <div class="card">
-      <p class="ct">Notifica\xe7\xe3o WhatsApp</p>
-      <div class="fg2">
-        <div class="fg full"><label>Template da mensagem</label><textarea id="cfg-wpp-template" rows="3" style="font-size:12px" placeholder="Ol\xe1 {pronome} {nome}, {saudacao}! Previs\xe3o de chegada entre {inicio} e {fim}. Obrigado!">Ol\xe1 {pronome} {nome}, {saudacao}! Previs\xe3o de chegada entre {inicio} e {fim}. Obrigado!</textarea></div>
-        <p style="font-size:11px;color:var(--mu);margin-top:-4px;font-weight:500">Vari\xe1veis: {nome}, {pronome}, {saudacao}, {inicio}, {fim}, {tipo}, {valor}, {endereco}</p>
-      </div>
-    </div>
+    <!-- v4.6.1: Card "Notificação WhatsApp" removido -->
   </div>
   <div>
     <!-- v4.3.7: API keys ocultas da interface (continuam funcionando no c\xf3digo) -->
@@ -1358,7 +1376,6 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
     <div class="edit-field" style="grid-column:1/-1"><div class="cep-row"><div class="edit-field"><label>Endere&#xe7;o completo</label><input type="text" id="em-end" placeholder="Rua, n&#xBA;, complemento, bairro, cidade" oninput="onEndInput('em')"/></div><div class="edit-field"><label>CEP</label><input type="text" id="em-cep" class="cep-input" placeholder="00000-000" maxlength="9" oninput="onCepInput('em')"/><div class="cep-status" id="em-cep-status"></div></div></div></div>
     <div class="edit-row">
       <div class="edit-field"><label>Telefone</label><input type="text" id="em-tel"/></div>
-      <div class="edit-field"><label>Pronome</label><select id="em-pronome"><option value="">Nenhum</option><option value="Dona">Dona</option><option value="Seu">Seu</option><option value="Sr.">Sr.</option><option value="Sra.">Sra.</option><option value="Dr.">Dr.</option><option value="Dra.">Dra.</option></select></div>
       <div class="edit-field"><label>Tipo</label><div id="em-tipo" class="tag-multi-wrap"></div></div>
     </div>
     <div class="edit-row">
@@ -1416,7 +1433,6 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
       <div class="fg full"><label>Nome</label><input type="text" id="si-nome" placeholder="Nome do cliente"/></div>
       <div class="fg full cep-row"><div class="fg"><label>Endere&#xe7;o completo</label><input type="text" id="si-end" placeholder="Rua, n&#xBA;, complemento, bairro, cidade" oninput="onEndInput('si')"/></div><div class="fg"><label>CEP</label><input type="text" id="si-cep" class="cep-input" placeholder="00000-000" maxlength="9" oninput="onCepInput('si')"/><div class="cep-status" id="si-cep-status"></div></div></div>
       <div class="fg"><label>Telefone</label><input type="text" id="si-tel" placeholder="(11) 99999-9999"/></div>
-      <div class="fg"><label>Pronome</label><select id="si-pronome"><option value="">Nenhum</option><option value="Dona">Dona</option><option value="Seu">Seu</option><option value="Sr.">Sr.</option><option value="Sra.">Sra.</option><option value="Dr.">Dr.</option><option value="Dra.">Dra.</option></select></div>
       <div class="fg"><label>Tipo</label><div id="si-tipo" class="tag-multi-wrap"></div></div>
       <div class="fg"><label>Quantidade</label><input type="number" id="si-qtd" min="0" placeholder="0"/></div>
       <div class="fg"><label>Status valor</label><select id="si-valtipo" onchange="toggleSiValTipo()"><option value="normal">Valor (R$)</option><option value="medir">Medir</option><option value="pago">Pago</option></select></div>
@@ -2143,7 +2159,7 @@ async function doSmartInsert(){
     id:Date.now(),nome,endereco:end,cep:siCep,
     complemento:'',
     tel:document.getElementById('si-tel').value.trim(),
-    pronome:document.getElementById('si-pronome')?.value||'',
+    
     tipo:getFormTags('si-tipo'),
     qtd:parseInt(document.getElementById('si-qtd').value)||0,
     val:siValTipo==='normal'?(parseFloat((document.getElementById('si-val').value||'0').replace(',','.'))||0):0,
@@ -2540,15 +2556,11 @@ function loadCfg(){
   cfg=JSON.parse(localStorage.getItem('rota_cfg')||'{}');
   ['saida','ret','tempo','base','retaddr','al1','al2','tkey','ttoken','akey','gkey'].forEach(k=>{if(cfg[k]&&g('cfg-'+k))g('cfg-'+k).value=cfg[k];});
   if(cfg.routePriority&&g('cfg-route-priority'))g('cfg-route-priority').value=cfg.routePriority;
-  if(cfg.wppMargin&&g('cfg-wpp-margin'))g('cfg-wpp-margin').value=cfg.wppMargin;
-  if(cfg.wppTemplate&&g('cfg-wpp-template'))g('cfg-wpp-template').value=cfg.wppTemplate;
 }
 function saveCfg(){
   cfg={saida:v('cfg-saida'),ret:v('cfg-ret'),tempo:parseInt(v('cfg-tempo'))||10,
     base:v('cfg-base'),retaddr:v('cfg-retaddr'),
     routePriority:v('cfg-route-priority')||'time',
-    wppMargin:parseInt(v('cfg-wpp-margin'))||120,
-    wppTemplate:v('cfg-wpp-template')||'Ol\xe1 {pronome} {nome}, {saudacao}! Previs\xe3o de chegada entre {inicio} e {fim}. Obrigado!',
     al1:v('cfg-al1'),al2:v('cfg-al2'),
     tkey:v('cfg-tkey'),ttoken:v('cfg-ttoken'),
     akey:v('cfg-akey'),gkey:v('cfg-gkey')};
@@ -2707,7 +2719,7 @@ function toggleSiJanela(){
 }
 function resetForm(){
   ['f-nome','f-tel','f-cep','f-end','f-qtd','f-val','f-obs','f-hi','f-hf'].forEach(id=>g(id).value='');
-  if(g('f-pronome'))g('f-pronome').value='';
+  
   initTagMultiSelect('f-tipo',[]);g('f-janela').value='livre';if(g('f-valtipo')){g('f-valtipo').value='normal';toggleFValTipo();}
   g('f-data').value=new Date().toISOString().split('T')[0];
   g('ai-badge').style.display='none';g('amb-box').style.display='none';
@@ -3176,7 +3188,7 @@ function addClient(){
     if(hi&&hf&&hi>=hf){toast('Horário início deve ser anterior ao fim','err');return;}
   }
   const cep=v('f-cep').replace(/\D/g,'');
-  clients.push({id:Date.now()+Math.random(),nome,endereco:end,cep,complemento:'',tel:v('f-tel'),pronome:g('f-pronome')?.value||'',tipo:tipos,qtd,val,valTipo,data:v('f-data')||new Date().toISOString().split('T')[0],janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null});
+  clients.push({id:Date.now()+Math.random(),nome,endereco:end,cep,complemento:'',tel:v('f-tel'),tipo:tipos,qtd,val,valTipo,data:v('f-data')||new Date().toISOString().split('T')[0],janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null});
   order=clients.map((_,i)=>i);
   resetForm();clearImg();renderC();updStats();updBtns();
   toast(nome+' adicionado!','ok');
@@ -3204,7 +3216,7 @@ function editC(id){
   g('em-cep').value=c.cep?fmtCep(c.cep):'';
   g('em-end').value=(c.endereco||'')+(c.complemento?' — '+c.complemento:'');
   g('em-tel').value=c.tel||'';
-  if(g('em-pronome'))g('em-pronome').value=c.pronome||'';
+  
   initTagMultiSelect('em-tipo',normalizeTipo(c.tipo));
   g('em-qtd').value=c.qtd||'';
   g('em-valtipo').value=c.valTipo||'normal';
@@ -3229,7 +3241,7 @@ function saveEditC(){
   c.endereco=_emEnd?titleCase(_emEnd):c.endereco;
   c.complemento='';
   c.tel=g('em-tel').value.trim();
-  c.pronome=g('em-pronome')?.value||'';
+  
   c.tipo=getFormTags('em-tipo');
   c.qtd=parseInt(g('em-qtd').value)||0;
   c.valTipo=g('em-valtipo').value;
@@ -3822,16 +3834,7 @@ function updateMapSidebar(){
     +'<button class="undo-btn'+((_routeHistory.length>0)?' active':'')+'" onclick="undoRoute()" title="Desfazer (Ctrl+Z)">'
     +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>'
     +'Desfazer</button></div>';
-  // v4.5.1: Route mode toggle — true toggle (click anywhere to switch, like dark mode)
-  html+='<div style="display:flex;align-items:center;justify-content:center;margin-bottom:12px">'
-    +'<div class="route-mode-toggle'+(_routeMode==='distance'?' distance':'')+'" onclick="toggleRouteMode()" style="position:relative;width:120px;height:28px;cursor:pointer">'
-    +'<div class="rmt-opt'+(_routeMode==='time'?' active':'')+'" style="position:absolute;left:4px;top:50%;transform:translateY(-50%);pointer-events:none">'
-    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
-    +'Tempo</div>'
-    +'<div class="rmt-opt'+(_routeMode==='distance'?' active':'')+'" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);pointer-events:none">'
-    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M8 6h10v10"/></svg>'
-    +'Km</div>'
-    +'</div></div>';
+  // v4.6.1: Toggle KM/Tempo removido (funcionalidade descontinuada)
   // v4.5.0: Savings indicator
   html+='<div class="opt-savings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span class="opt-savings-text"></span></div>';
   html+='<div class="ms-route-stats">'
@@ -4656,25 +4659,26 @@ async function preloadDashData(){
 }
 async function renderDash(){
   const hist=getHist();const allC=hist.flatMap(h=>h.clients);
-  const panel=g('dash-float-panel');const header=g('dash-float-header');
+  const topBar=g('dash-top-bar');const drawer=g('dash-drawer');const drawerToggle=g('dash-drawer-toggle');
   if(!allC.length){
     g('hmph').style.display='flex';g('heatmap').style.display='none';
-    if(panel)panel.style.display='none';if(header)header.style.display='none';
+    if(topBar)topBar.style.display='none';if(drawer)drawer.style.display='none';if(drawerToggle)drawerToggle.style.display='none';
     return;
   }
   g('hmph').style.display='none';g('heatmap').style.display='block';
-  if(header)header.style.display='block';
+  if(topBar)topBar.style.display='flex';
+  if(drawerToggle)drawerToggle.style.display='flex';
+  if(drawer){drawer.style.display='flex';drawer.classList.remove('closed');if(drawerToggle)drawerToggle.classList.add('open');}
   const totalClientes=allC.length;const totalRotas=hist.length;
   const sumEl=g('dash-summary');
-  if(sumEl)sumEl.textContent=totalClientes+' clientes \xB7 '+totalRotas+' rota'+(totalRotas!==1?'s':'')+' analisada'+(totalRotas!==1?'s':'');
-  // v4.3.9: Use cached data if available
+  if(sumEl)sumEl.textContent=totalClientes+' clientes \xB7 '+totalRotas+' rota'+(totalRotas!==1?'s':'');
+  // v4.6.0: Use cached data if available
   if(_dashCache.loaded){
-    if(panel){panel.style.display='block';}
     renderDashStats(_dashCache.br,_dashCache.pts);
     return;
   }
-  if(panel){panel.style.display='block';g('dash-panel-body').innerHTML='<div style="padding:8px 0;text-align:center;font-size:12px;color:var(--mu)">Identificando bairros... <span class="spin"></span></div>';}
-  const _dashT=setTimeout(()=>{const body=g('dash-panel-body');if(body&&body.innerHTML.includes('Identificando'))body.innerHTML='<p style="font-size:12px;color:var(--mu);padding:8px 0">⚠ï¸ Não foi possível identificar bairros.</p>';},15000);
+  const _pBody=g('dash-panel-body');if(_pBody)_pBody.innerHTML='<div style="padding:8px 0;text-align:center;font-size:12px;color:var(--mu)">Identificando bairros... <span class="spin"></span></div>';
+  const _dashT=setTimeout(()=>{const b=g('dash-panel-body');if(b&&b.innerHTML.includes('Identificando'))b.innerHTML='<p style="font-size:12px;color:var(--mu);padding:8px 0">N\u00e3o foi poss\u00edvel identificar bairros.</p>';},15000);
   const br={};const pts=[];
   // Nominatim: sequential to respect rate limit
   for(const c of allC){
@@ -4699,13 +4703,24 @@ async function renderDash(){
   }
   renderDashStats(br,pts);
 }
-// v4.3.7: Toggle painel flutuante de bairros
-function toggleDashPanel(){
-  const body=g('dash-panel-body');const icon=g('dash-panel-toggle');
-  if(!body)return;
-  const isOpen=body.style.display!=='none';
-  body.style.display=isOpen?'none':'block';
-  if(icon)icon.classList.toggle('collapsed',isOpen);
+// v4.6.0: Toggle drawer lateral
+function toggleDashDrawer(){
+  const drawer=g('dash-drawer');const toggle=g('dash-drawer-toggle');
+  if(!drawer)return;
+  const isOpen=!drawer.classList.contains('closed');
+  if(isOpen){
+    drawer.classList.add('closed');if(toggle)toggle.classList.remove('open');
+  } else {
+    drawer.classList.remove('closed');if(toggle)toggle.classList.add('open');
+  }
+}
+// v4.6.0: Set heatmap mode from top bar buttons
+function setHeatmapMode(mode){
+  _heatmapMode=mode;
+  document.querySelectorAll('.hm-mode-opt').forEach(el=>{
+    el.classList.toggle('active',el.dataset.mode===_heatmapMode);
+  });
+  rerenderHeatmap();
 }
 // v4.4.1: Store bairro coordinates for hover highlight
 let _bairroCoords={};
@@ -4714,19 +4729,16 @@ function renderDashStats(br,pts){
   const sorted=Object.entries(br).sort((a,b)=>b[1]-a[1]).slice(0,10);
   const sumEl2=g('dash-summary');
   if(sumEl2){const cur=sumEl2.textContent;if(!cur.includes('bairro'))sumEl2.textContent=cur+' \xb7 '+sorted.length+' bairro'+(sorted.length!==1?'s':'');}
-  // v4.4.1: Calculate approximate center for each bairro from pts
   _bairroCoords={};
   if(pts.length&&typeof _dashCache!=='undefined'&&_dashCache.br){
-    // We have bairro names from br, and pts from geocoding
-    // Map each bairro to average of its pts (we stored them during preload)
   }
+  // v4.6.0: Premium bairro list — clean, minimal, no bars
   el.innerHTML=sorted.length?sorted.map(([b,n],i)=>
     '<div class="dash-bairro-item" onmouseenter="highlightBairroByName(\''+b.replace(/'/g,"\\'")+'\',this)" onmouseleave="clearBairroHighlight()">'
-    +'<div style="width:20px;height:20px;background:var(--pul);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--pud);flex-shrink:0">'+(i+1)+'</div>'
-    +'<div style="flex:1"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'
-    +'<span style="font-size:12px;font-weight:600">'+b+'</span><span style="font-size:11px;font-weight:700;color:var(--pu)">'+n+'</span></div>'
-    +'<div style="height:4px;background:var(--s2);border-radius:2px"><div style="height:100%;background:var(--pu);border-radius:2px;width:'+Math.round(n/sorted[0][1]*100)+'%"></div></div>'
-    +'</div></div>'
+    +'<div class="dash-bairro-rank">'+(i+1)+'</div>'
+    +'<div class="dash-bairro-name">'+b+'</div>'
+    +'<div class="dash-bairro-count">'+n+'</div>'
+    +'</div>'
   ).join(''):'<p style="font-size:12px;color:var(--mu);padding:4px 0">Nenhum bairro identificado.</p>';
   if(!pts.length)return;
   if(!hmMap){hmMap=new google.maps.Map(document.getElementById('heatmap'),{center:{lat:-23.55,lng:-46.63},zoom:11,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});}
@@ -4736,17 +4748,7 @@ function renderDashStats(br,pts){
   // v4.4.0: Enforce minimum zoom level to prevent extreme zoom out
   google.maps.event.addListenerOnce(hmMap,'idle',()=>{if(hmMap.getZoom()>15)hmMap.setZoom(15);if(hmMap.getZoom()<10)hmMap.setZoom(10);});
   renderGeoDash(pts);
-  // v4.5.1: Day grouping suggestions
-  const groupings=generateDayGroupings();
-  const groupEl=g('day-group-section');
-  if(groupEl&&groupings&&groupings.length){
-    groupEl.style.display='block';
-    groupEl.innerHTML='<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:8px">Agrupamento por Dia</div>'
-      +groupings.map(gr=>'<div class="day-group-item"><span class="day-group-day">'+gr.day+'</span>'
-      +'<div><div class="day-group-clients">'+gr.count+' clientes</div>'
-      +'<div style="font-size:10px;color:var(--mu)">'+gr.bairros+'</div></div>'
-      +'<span class="day-group-saving">-'+gr.savingMin+'min</span></div>').join('');
-  }
+  // v4.6.1: Day grouping removido
 }
 // v4.3.9: Dashboard geográfico — zonas, cobertura, densidade
 const ZONE_COLORS={Norte:'#6366F1',Sul:'#EC4899',Leste:'#F59E0B',Oeste:'#10B981',Centro:'#8B5CF6'};
@@ -4769,13 +4771,13 @@ function haversine(lat1,lng1,lat2,lng2){
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 function renderGeoDash(pts){
-  const el=g('geo-dash');if(!el||!pts||pts.length<2){if(el)el.style.display='none';return;}
-  el.style.display='flex';
+  const zoneCard=g('geo-zone-card');const statsCard=g('geo-stats-card');
+  if(!pts||pts.length<2){if(zoneCard)zoneCard.style.display='none';if(statsCard)statsCard.style.display='none';return;}
+  if(zoneCard)zoneCard.style.display='block';if(statsCard)statsCard.style.display='block';
   // Classificar zonas
   const zones={Norte:0,Sul:0,Leste:0,Oeste:0,Centro:0};
   const cLat=-23.5505,cLng=-46.6333;
   let baseLat=cLat,baseLng=cLng;
-  // Usar âncora se disponível
   if(_geoAnchor){baseLat=_geoAnchor.lat;baseLng=_geoAnchor.lng;}
   const dists=[];
   pts.forEach(pt=>{
@@ -4784,7 +4786,7 @@ function renderGeoDash(pts){
     dists.push(haversine(baseLat,baseLng,pt[0],pt[1]));
   });
   const total=pts.length;
-  // Donut SVG
+  // v4.6.0: Donut SVG — compact horizontal layout
   const donutEl=g('zone-donut');const legEl=g('zone-legend');
   if(donutEl&&legEl){
     let cumul=0;let paths='';let legHtml='';
@@ -4793,27 +4795,28 @@ function renderGeoDash(pts){
       const pct=count/total;
       const startAngle=cumul*360;
       const endAngle=(cumul+pct)*360;
-      paths+=donutArc(18,18,15.91549,startAngle,endAngle,ZONE_COLORS[zone]);
-      legHtml+='<div class="donut-legend-item"><div class="donut-legend-dot" style="background:'+ZONE_COLORS[zone]+'"></div>'+zone+' <span style="color:var(--mu);margin-left:auto">'+count+'</span></div>';
+      paths+=donutArc(18,18,14,startAngle,endAngle,ZONE_COLORS[zone]);
+      legHtml+='<div class="zone-legend-item"><div class="zone-legend-dot" style="background:'+ZONE_COLORS[zone]+'"></div>'+zone+'<span class="zone-legend-count">'+count+'</span></div>';
       cumul+=pct;
     });
-    // Center circle
-    donutEl.innerHTML=paths+'<circle cx="18" cy="18" r="10" fill="var(--bg)"/><text x="18" y="16.5" text-anchor="middle" dominant-baseline="central" style="font-size:6px;font-weight:800;fill:var(--tx)">'+total+'</text><text x="18" y="20.5" text-anchor="middle" dominant-baseline="central" style="font-size:2.5px;font-weight:600;fill:var(--mu);text-transform:uppercase;letter-spacing:.03em">clientes</text>';
+    donutEl.innerHTML=paths+'<circle cx="18" cy="18" r="9.5" fill="var(--bg)"/><text x="18" y="17" text-anchor="middle" dominant-baseline="central" style="font-size:6px;font-weight:800;fill:var(--tx)">'+total+'</text><text x="18" y="20.5" text-anchor="middle" dominant-baseline="central" style="font-size:2.2px;font-weight:600;fill:var(--mu);text-transform:uppercase;letter-spacing:.04em">clientes</text>';
     legEl.innerHTML=legHtml;
   }
-  // Stats
+  // v4.6.0: Stats — grid cards
   const maxDist=Math.max(...dists);
   const avgDist=dists.reduce((a,b)=>a+b,0)/dists.length;
-  // v4.4.1: Área corrigida — usar circle area baseado no raio máximo (mais preciso para rotas)
   const latMin=Math.min(...pts.map(p=>p[0])),latMax=Math.max(...pts.map(p=>p[0]));
   const lngMin=Math.min(...pts.map(p=>p[1])),lngMax=Math.max(...pts.map(p=>p[1]));
   const dLat=haversine(latMin,lngMin,latMax,lngMin);
   const dLng=haversine(latMin,lngMin,latMin,lngMax);
-  const areaKm2=dLat>0&&dLng>0?(dLat*dLng):(Math.PI*maxDist*maxDist);
-  const density=areaKm2>0.01?(total/areaKm2):0;
+  // v4.6.1: Fix density — use circle area as fallback, minimum 1km²
+  let areaKm2=dLat>0&&dLng>0?(dLat*dLng):(Math.PI*maxDist*maxDist);
+  if(areaKm2<1)areaKm2=Math.PI*maxDist*maxDist;
+  if(areaKm2<1)areaKm2=1;
+  const density=total/areaKm2;
   const rEl=g('geo-radius'),dEl=g('geo-density'),aEl=g('geo-avg-dist');
   if(rEl)rEl.textContent=maxDist.toFixed(1);
-  if(dEl)dEl.textContent=density.toFixed(1);
+  if(dEl)dEl.textContent=density>=0.1?density.toFixed(1):'\u2014';
   if(aEl)aEl.textContent=avgDist.toFixed(1);
 }
 function donutArc(cx,cy,r,startDeg,endDeg,color){
@@ -5364,15 +5367,8 @@ recalcRouteFromOrder=async function(){
   }
 };
 
-// ====== v4.5.1: HEATMAP REVENUE MODE ======
+// ====== v4.6.0: HEATMAP REVENUE MODE ======
 let _heatmapMode='concentration'; // 'concentration' or 'revenue'
-function toggleHeatmapMode(){
-  _heatmapMode=_heatmapMode==='concentration'?'revenue':'concentration';
-  document.querySelectorAll('.hm-mode-opt').forEach(el=>{
-    el.classList.toggle('active',el.dataset.mode===_heatmapMode);
-  });
-  rerenderHeatmap();
-}
 function rerenderHeatmap(){
   if(!hmMap)return;
   const hist=getHist();const allC=hist.flatMap(h=>h.clients);
@@ -5399,144 +5395,14 @@ function rerenderHeatmap(){
   }
 }
 
-// ====== v4.5.1: DAY GROUPING SUGGESTIONS ======
-function generateDayGroupings(){
-  const hist=getHist();const allC=hist.flatMap(h=>h.clients);
-  if(allC.length<4)return null;
-  // Cluster clients by proximity using simple grid-based clustering
-  const clusters={};
-  allC.forEach(c=>{
-    if(!c.lat||!c.lng)return;
-    // Grid cell ~5km
-    const gridKey=Math.round(c.lat*20)+','+Math.round(c.lng*20);
-    if(!clusters[gridKey])clusters[gridKey]={clients:[],lat:0,lng:0};
-    clusters[gridKey].clients.push(c);
-    clusters[gridKey].lat+=c.lat;clusters[gridKey].lng+=c.lng;
-  });
-  // Average positions
-  Object.values(clusters).forEach(cl=>{
-    cl.lat/=cl.clients.length;cl.lng/=cl.clients.length;
-  });
-  // Sort clusters by size, assign to days
-  const sorted=Object.values(clusters).filter(c=>c.clients.length>=2).sort((a,b)=>b.clients.length-a.clients.length);
-  const days=['Seg','Ter','Qua','Qui','Sex'];
-  return sorted.slice(0,5).map((cl,i)=>{
-    const bairros=[...new Set(cl.clients.map(c=>{
-      const parts=c.endereco.split('-');
-      return parts.length>1?parts[parts.length-1].trim():parts[0].trim();
-    }))].slice(0,3);
-    // Estimate savings: sequential visits vs spread across days
-    const savingMin=Math.round(cl.clients.length*8); // ~8min saved per grouped client
-    return {day:days[i%5],count:cl.clients.length,bairros:bairros.join(', '),savingMin};
-  });
-}
+// v4.6.1: generateDayGroupings removido
 
 // ====== v4.5.1: WHATSAPP NOTIFICATION ======
-function generateWppMessages(){
-  if(!order.length)return [];
-  const margin=cfg.wppMargin||120;
-  const template=cfg.wppTemplate||'Ol\xe1 {pronome} {nome}, {saudacao}! Previs\xe3o de chegada entre {inicio} e {fim}. Obrigado!';
-  const now=new Date();const hour=now.getHours();
-  const saudacao=hour<12?'bom dia':hour<18?'boa tarde':'boa noite';
-  return order.map(idx=>{
-    const c=clients[idx];
-    if(!c.estT)return null;
-    const estSec=ts(c.estT);
-    // Round down to nearest 30min for start
-    const startSec=Math.floor(estSec/1800)*1800;
-    const endSec=startSec+margin*60;
-    const inicio=st2(startSec);const fim=st2(endSec);
-    const pronome=c.pronome||'';
-    const nome=c.nome.split(' ')[0]; // First name
-    let msg=template.replace(/{nome}/g,nome).replace(/{pronome}/g,pronome)
-      .replace(/{saudacao}/g,saudacao).replace(/{inicio}/g,inicio).replace(/{fim}/g,fim)
-      .replace(/{tipo}/g,normalizeTipo(c.tipo).join('/')||'')
-      .replace(/{valor}/g,c.val?'R$ '+fmtBRL(c.val):'')
-      .replace(/{endereco}/g,c.endereco);
-    // Clean double spaces from empty pronome
-    msg=msg.replace(/\s+/g,' ').trim();
-    return {client:c,msg,tel:c.tel};
-  }).filter(Boolean);
-}
-function sendWppMessage(tel,msg){
-  const phone=tel.replace(/\D/g,'');
-  const fullPhone=phone.length<=11?'55'+phone:phone;
-  const url='https://wa.me/'+fullPhone+'?text='+encodeURIComponent(msg);
-  window.open(url,'_blank');
-}
-function sendAllWpp(){
-  const msgs=generateWppMessages();
-  if(!msgs.length){toast('Gere a rota primeiro','warn');return;}
-  msgs.forEach((m,i)=>{
-    setTimeout(()=>sendWppMessage(m.tel,m.msg),i*800);
-  });
-  toast(msgs.length+' mensagens enviadas','ok');
-}
+// v4.6.1: generateWppMessages, sendWppMessage, sendAllWpp removidos
 
-// ====== v4.5.1: POST-ROUTE REPORT ======
-function generatePostRouteReport(){
-  if(!order.length)return null;
-  const doneCount=order.filter(i=>clients[i]._motDone).length;
-  const totalStops=order.length;
-  const onTimeCount=order.filter(i=>{const c=clients[i];return c._motDone&&!c.conflict;}).length;
-  const conflictCount=order.filter(i=>clients[i].conflict).length;
-  // Revenue
-  const totalRevenue=order.reduce((s,i)=>{const v=parseFloat(clients[i].val)||0;return s+v;},0);
-  // Efficiency score (0-100)
-  const completionRate=totalStops>0?doneCount/totalStops:0;
-  const onTimeRate=doneCount>0?onTimeCount/doneCount:1;
-  const kmEfficiency=_routeTotalKm>0?Math.min(1,100/_routeTotalKm):1; // Lower km = better
-  const score=Math.round((completionRate*40+onTimeRate*40+kmEfficiency*20));
-  // Revenue per km
-  const revenuePerKm=_routeTotalKm>0?(totalRevenue/_routeTotalKm):0;
-  return {score,doneCount,totalStops,onTimeCount,conflictCount,totalRevenue,
-    revenuePerKm,totalKm:_routeTotalKm,totalMin:_routeTotalMin,
-    completionRate:Math.round(completionRate*100),onTimeRate:Math.round(onTimeRate*100)};
-}
-function renderPostRouteReport(){
-  const report=generatePostRouteReport();
-  if(!report)return '';
-  return '<div class="report-card">'
-    +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:12px">Relat\xf3rio da Rota</div>'
-    +'<div class="report-score">'+report.score+'</div>'
-    +'<div class="report-score-label">Score de efici\xeancia</div>'
-    +'<div class="report-grid">'
-    +'<div class="report-metric"><div class="report-metric-val">'+report.doneCount+'/'+report.totalStops+'</div><div class="report-metric-label">Conclu\xeddos</div></div>'
-    +'<div class="report-metric"><div class="report-metric-val">'+report.onTimeRate+'%</div><div class="report-metric-label">No hor\xe1rio</div></div>'
-    +'<div class="report-metric"><div class="report-metric-val">R$ '+fmtBRL(report.totalRevenue)+'</div><div class="report-metric-label">Receita total</div></div>'
-    +'<div class="report-metric"><div class="report-metric-val">R$ '+fmtBRL(report.revenuePerKm)+'</div><div class="report-metric-label">Receita/km</div></div>'
-    +'<div class="report-metric"><div class="report-metric-val">'+report.totalKm.toFixed(1)+'</div><div class="report-metric-label">Km total</div></div>'
-    +'<div class="report-metric"><div class="report-metric-val">'+fmtDuration(Math.round(report.totalMin))+'</div><div class="report-metric-label">Tempo total</div></div>'
-    +'</div></div>';
-}
+// v4.6.1: generatePostRouteReport, renderPostRouteReport removidos
 
-// ====== v4.5.1: ADD WHATSAPP + REPORT + GROUPING TO MAP SIDEBAR ======
-const _origUpdateMapSidebar=updateMapSidebar;
-updateMapSidebar=function(){
-  _origUpdateMapSidebar();
-  const sb=g('map-sidebar');if(!sb)return;
-  // Add WhatsApp section
-  const wppMsgs=generateWppMessages();
-  if(wppMsgs.length>0){
-    let wppHtml='<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bd)">'
-      +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:8px">Notificar Clientes</div>';
-    // Preview first message
-    const first=wppMsgs[0];
-    wppHtml+='<div class="wpp-preview">'+first.msg+'</div>';
-    wppHtml+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
-    wppMsgs.forEach((m,i)=>{
-      const firstName=m.client.nome.split(' ')[0];
-      wppHtml+='<button class="wpp-send-btn" onclick="sendWppMessage(\''+m.tel.replace(/'/g,"\\'")+'\',\''+m.msg.replace(/'/g,"\\'").replace(/\n/g,'\\n')+'\')"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492l4.632-1.467A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818c-2.168 0-4.194-.591-5.932-1.622l-.424-.253-2.748.87.89-2.65-.279-.443A9.772 9.772 0 012.182 12c0-5.414 4.404-9.818 9.818-9.818S21.818 6.586 21.818 12s-4.404 9.818-9.818 9.818z"/></svg> '+firstName+'</button>';
-    });
-    wppHtml+='</div></div>';
-    sb.insertAdjacentHTML('beforeend',wppHtml);
-  }
-  // Add learning badge
-  sb.insertAdjacentHTML('afterbegin','<div class="learn-badge" style="display:none;margin-bottom:8px"></div>');
-  // Add post-route report
-  const reportHtml=renderPostRouteReport();
-  if(reportHtml)sb.insertAdjacentHTML('beforeend',reportHtml);
-};
+// v4.6.1: WhatsApp notifications + post-route report removidos da sidebar
 </script>
 <script>
 (function(){
@@ -5552,6 +5418,6 @@ updateMapSidebar=function(){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.5.1</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.6.1</div>
 </body>
 </html>
