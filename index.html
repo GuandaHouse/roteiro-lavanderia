@@ -1496,6 +1496,8 @@ function saveCfg(){
   if(cfg.tempo<1){cfg.tempo=1;}
   if(cfg.al1&&cfg.al2&&cfg.al1>=cfg.al2){toast('Pausa almoço: início deve ser anterior ao fim','err');return;}
   localStorage.setItem('rota_cfg',JSON.stringify(cfg));
+  // v4.3.1: Resetar âncora de geocodificação quando muda endereço base
+  _geoAnchor=null;
   toastCenter();
   let warn='';
   if(!cfg.base)warn+='<div class="ab w" style="margin-top:8px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <strong>Endere\xE7o de partida</strong> n\xE3o preenchido. O sistema precisa dele para calcular os hor\xE1rios de chegada nos clientes.</div>';
@@ -1763,7 +1765,7 @@ async function importTC(){
     const res=await fetch('https://roteiro-lavanderia.nigel-guandalini.workers.dev/api/anthropic',{method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({apiKey:cfg.akey,body:{model:'claude-sonnet-4-20250514',max_tokens:600,
-        messages:[{role:'user',content:'Analise este card do Trello de uma lavanderia em Sao Paulo, SP. O titulo segue o formato "Cliente NOME (Tipo) Valor X". A descricao contem endereco, quantidade de tapetes e telefone.\n\nREGRAS DO ENDERECO:\n- Preserve o tipo de logradouro EXATAMENTE como esta na descricao (ex: se estiver "Avenida" mantenha "Avenida", NUNCA troque por "Rua")\n- CORRIJA apenas abreviacoes: "Av." ou "Av " -> "Avenida", "R." -> "Rua", "Al." -> "Alameda", "Dr." -> "Doutor"\n- COMPLETE nomes abreviados (ex: "Dr Altino" -> "Doutor Altino Arantes")\n- Formato obrigatorio: "Logradouro, Numero - Bairro" (ex: "Avenida Doutor Altino Arantes, 77 - Vila Clementino")\n- Se bairro nao estiver na desc, deduza pelo CEP ou pelo nome da rua conhecida de SP\n\nREGRAS DE JANELA DE HORARIO (MUITO IMPORTANTE):\nProcure NO TITULO E NA DESCRICAO qualquer indicacao de horario de atendimento do cliente. Exemplos:\n- "ate meio-dia", "ate 12h", "ate as 12", "manha" -> janela="manha", hi="", hf=""\n- "a tarde", "somente tarde", "apos 12h", "depois do almoco" -> janela="tarde", hi="", hf=""\n- "entre 14 e 16h", "das 14 as 16", "14h-16h", "entre 14:00 e 16:00" -> janela="custom", hi="14:00", hf="16:00"\n- "ate 15h", "antes das 15h", "ate as 15:00" -> janela="custom", hi="", hf="15:00"\n- "apos 14h", "depois das 14h", "a partir das 14" -> janela="custom", hi="14:00", hf=""\n- "10h", "as 10h", "por volta das 10" -> janela="custom", hi="09:30", hf="10:30"\n- Se NAO houver indicacao de horario -> janela="livre", hi="", hf=""\nSempre use formato HH:MM (24h). Extraia horarios mesmo se estiverem abreviados.\n\nRetorne APENAS JSON puro sem markdown:\n- "tipo": coleta/entrega/vazio\n- "endereco": "Logradouro, Numero - Bairro" em Title Case\n- "complemento": apto/bloco/andar\n- "telefone": DDD+numero com hifen\n- "qtd": tapetes (inteiro)\n- "valor": numerico (0 se Medir/Pago)\n- "valorTipo": medir/pago/normal\n- "janela": livre/manha/tarde/custom\n- "hi": horario inicio (HH:MM ou vazio)\n- "hf": horario fim (HH:MM ou vazio)\n- "obs": observacoes gerais\nJSON: {"endereco":"","telefone":"","tipo":"vazio","qtd":0,"valor":0,"valorTipo":"normal","janela":"livre","hi":"","hf":"","obs":""}\nTexto do card:\n'+text}]}})});
+        messages:[{role:'user',content:'Analise este card do Trello de uma lavanderia'+((_geoAnchor?.city)?(' em '+_geoAnchor.city+(_geoAnchor.state?', '+_geoAnchor.state:'')):', Brasil')+'. O titulo segue o formato "Cliente NOME (Tipo) Valor X". A descricao contem endereco, quantidade de tapetes e telefone.\n\nREGRAS DO ENDERECO:\n- Preserve o tipo de logradouro EXATAMENTE como esta na descricao (ex: se estiver "Avenida" mantenha "Avenida", NUNCA troque por "Rua")\n- CORRIJA apenas abreviacoes: "Av." ou "Av " -> "Avenida", "R." -> "Rua", "Al." -> "Alameda", "Dr." -> "Doutor"\n- COMPLETE nomes abreviados (ex: "Dr Altino" -> "Doutor Altino Arantes")\n- Formato obrigatorio: "Logradouro, Numero - Bairro" (ex: "Avenida Doutor Altino Arantes, 77 - Vila Clementino")\n- Se o endereco for em OUTRO MUNICIPIO (ex: Maua, Santo Andre, Sao Bernardo do Campo, Diadema, Cotia, Osasco, Guarulhos), inclua o nome do municipio no final: "Logradouro, Numero - Bairro, Municipio" (ex: "Rua Joao Pessoa, 259 - Centro, Sao Bernardo do Campo")\n- Se bairro nao estiver na desc, deduza pelo CEP ou pelo nome da rua conhecida de SP\n\nREGRAS DE JANELA DE HORARIO (MUITO IMPORTANTE):\nProcure NO TITULO E NA DESCRICAO qualquer indicacao de horario de atendimento do cliente. Exemplos:\n- "ate meio-dia", "ate 12h", "ate as 12", "manha" -> janela="manha", hi="", hf=""\n- "a tarde", "somente tarde", "apos 12h", "depois do almoco" -> janela="tarde", hi="", hf=""\n- "entre 14 e 16h", "das 14 as 16", "14h-16h", "entre 14:00 e 16:00" -> janela="custom", hi="14:00", hf="16:00"\n- "ate 15h", "antes das 15h", "ate as 15:00" -> janela="custom", hi="", hf="15:00"\n- "apos 14h", "depois das 14h", "a partir das 14" -> janela="custom", hi="14:00", hf=""\n- "10h", "as 10h", "por volta das 10" -> janela="custom", hi="09:30", hf="10:30"\n- Se NAO houver indicacao de horario -> janela="livre", hi="", hf=""\nSempre use formato HH:MM (24h). Extraia horarios mesmo se estiverem abreviados.\n\nRetorne APENAS JSON puro sem markdown:\n- "tipo": coleta/entrega/vazio\n- "endereco": "Logradouro, Numero - Bairro" em Title Case\n- "complemento": apto/bloco/andar\n- "telefone": DDD+numero com hifen\n- "qtd": tapetes (inteiro)\n- "valor": numerico (0 se Medir/Pago)\n- "valorTipo": medir/pago/normal\n- "janela": livre/manha/tarde/custom\n- "hi": horario inicio (HH:MM ou vazio)\n- "hf": horario fim (HH:MM ou vazio)\n- "obs": observacoes gerais\nJSON: {"endereco":"","telefone":"","tipo":"vazio","qtd":0,"valor":0,"valorTipo":"normal","janela":"livre","hi":"","hf":"","obs":""}\nTexto do card:\n'+text}]}})});
     const data=await res.json();
     let ext={};try{ext=JSON.parse((data.content?.[0]?.text||'{}').replace(/```json?|```/g,'').trim());}catch(e){}
     const dv=v('td')||new Date().toISOString().split('T')[0];
@@ -2239,7 +2241,11 @@ function updBtns(){const has=clients.length>0;g('route-btn').disabled=!has;g('pd
 let mapOriginalParent=null,mapOriginalNext=null,mapIsFullscreen=false;
 function fmtEnderecoComCidade(c){
   let addr=c.endereco+(c.complemento?' — '+c.complemento:'');
-  if(c._cidade&&c._cidade!=='São Paulo'&&c._cidade!=='S\xe3o Paulo')addr+=' ('+c._cidade+')';
+  // v4.3.1: Mostra município quando diferente da cidade-base do usuário
+  if(c._cidade){
+    const baseCidade=_geoAnchor?.city||'';
+    if(baseCidade&&c._cidade!==baseCidade)addr+=' ('+c._cidade+')';
+  }
   return addr;
 }
 let _activeInfoWindow=null;
@@ -2347,19 +2353,81 @@ function initGoogleMaps(){
 }
 function initLeafMap(){}
 const _geoCache={};
+// v4.3.1: Geocodificação dinâmica baseada no endereço de partida do usuário
+// Âncora = endereço base configurado. Bounds = raio de ~80km ao redor da âncora.
+let _geoAnchor=null; // {lat,lng,state,city} — resolvido a partir de cfg.base
+const _GEO_RADIUS=0.7; // ~80km em graus (latitude)
+
+async function _resolveGeoAnchor(){
+  if(_geoAnchor)return _geoAnchor;
+  const base=cfg.base;
+  if(!base)return null;
+  try{
+    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(base+', Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
+    if(d.status==='OK'&&d.results[0]){
+      const loc=d.results[0].geometry.location;
+      const comps=d.results[0].address_components;
+      const state=(comps.find(c=>c.types.includes('administrative_area_level_1'))||{}).short_name||'';
+      const city=(comps.find(c=>c.types.includes('administrative_area_level_2'))||comps.find(c=>c.types.includes('locality'))||{}).long_name||'';
+      _geoAnchor={lat:loc.lat,lng:loc.lng,state,city};
+      console.log('[GEO-ANCHOR] Base resolvida:',city+', '+state,'(',loc.lat.toFixed(4)+','+loc.lng.toFixed(4)+')');
+      return _geoAnchor;
+    }
+  }catch(e){console.warn('[GEO-ANCHOR] Falha ao resolver base:',e);}
+  return null;
+}
+function _isNearAnchor(lat,lng){
+  if(!_geoAnchor)return true; // Sem âncora, aceita qualquer resultado
+  return Math.abs(lat-_geoAnchor.lat)<=_GEO_RADIUS&&Math.abs(lng-_geoAnchor.lng)<=_GEO_RADIUS;
+}
+function _getAnchorBounds(){
+  if(!_geoAnchor)return '';
+  const lat=_geoAnchor.lat,lng=_geoAnchor.lng,r=_GEO_RADIUS;
+  return '&bounds='+(lat-r)+','+(lng-r)+'|'+(lat+r)+','+(lng+r);
+}
+function _getAnchorComponents(){
+  if(!_geoAnchor||!_geoAnchor.state)return '&components=country:BR';
+  return '&components=administrative_area:'+_geoAnchor.state+'|country:BR';
+}
+function _extractGeoResult(result){
+  const loc=result.geometry.location;
+  const comps=result.address_components;
+  const bairro=(comps.find(c=>c.types.includes('sublocality_level_1'))||comps.find(c=>c.types.includes('sublocality'))||comps.find(c=>c.types.includes('neighborhood'))||{}).long_name||'';
+  const cidade=(comps.find(c=>c.types.includes('administrative_area_level_2'))||comps.find(c=>c.types.includes('locality'))||{}).long_name||'';
+  return {lat:loc.lat,lng:loc.lng,display:result.formatted_address,bairro,cidade};
+}
 async function nominatim(addr){
   if(_geoCache[addr])return _geoCache[addr];
   const cached=localStorage.getItem('geo_'+addr);
   if(cached){const c=JSON.parse(cached);_geoCache[addr]=c;return c;}
+  // Resolver âncora se ainda não tiver
+  await _resolveGeoAnchor();
   try{
-    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+', São Paulo, SP, Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
-    if(d.status==='OK'&&d.results[0]){
-      const loc=d.results[0].geometry.location;
-      const comps=d.results[0].address_components;
-      const bairro=(comps.find(c=>c.types.includes('sublocality_level_1'))||comps.find(c=>c.types.includes('sublocality'))||comps.find(c=>c.types.includes('neighborhood'))||{}).long_name||'';
-      const cidade=(comps.find(c=>c.types.includes('administrative_area_level_2'))||comps.find(c=>c.types.includes('locality'))||{}).long_name||'';
-      const result={lat:loc.lat,lng:loc.lng,display:d.results[0].formatted_address,bairro,cidade};
+    // Montar sufixo de contexto geográfico baseado na âncora
+    const suffix=_geoAnchor?(_geoAnchor.state?', '+_geoAnchor.state+', Brasil':', Brasil'):', Brasil';
+    const url='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+suffix)+'&region=br&key='+GKEY+_getAnchorBounds()+_getAnchorComponents();
+    const d=await fetch(url).then(r=>r.json());
+    if(d.status==='OK'&&d.results.length){
+      // Preferir resultado mais próximo da âncora
+      const nearResult=d.results.find(r=>_isNearAnchor(r.geometry.location.lat,r.geometry.location.lng));
+      const best=nearResult||d.results[0];
+      const result=_extractGeoResult(best);
+      // Se caiu longe da âncora, tentar com cidade da âncora explícita
+      if(!_isNearAnchor(result.lat,result.lng)&&_geoAnchor?.city){
+        const url2='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+', '+_geoAnchor.city+', '+(_geoAnchor.state||'')+', Brasil')+'&region=br&key='+GKEY+_getAnchorBounds();
+        const d2=await fetch(url2).then(r=>r.json());
+        if(d2.status==='OK'&&d2.results.length){
+          const near2=d2.results.find(r=>_isNearAnchor(r.geometry.location.lat,r.geometry.location.lng));
+          if(near2){
+            const result2=_extractGeoResult(near2);
+            _geoCache[addr]=result2;try{localStorage.setItem('geo_'+addr,JSON.stringify(result2));}catch(e){}
+            console.log('[GEO] '+addr+' → '+result2.cidade+' (corrigido via âncora '+_geoAnchor.city+')');
+            return result2;
+          }
+        }
+      }
       _geoCache[addr]=result;try{localStorage.setItem('geo_'+addr,JSON.stringify(result));}catch(e){}
+      if(!_isNearAnchor(result.lat,result.lng))console.warn('[GEO] '+addr+' resolveu LONGE da âncora: '+result.display);
       return result;
     }
   }catch(e){console.warn('Geocoding falhou:',addr,e);}
