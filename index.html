@@ -4,6 +4,25 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.4.0 — 03/04/2026 — Pente Fino + UX Polish + Smart Feedback        ║
+║  ─────────────────────────────────────────                   ║
+║  CORREÇÕES:                                                          ║
+║  • CEP: proteção contra ambiguidade (alerta ao usuário)              ║
+║  • Title Case agora funciona no modal de edição e Smart Insert       ║
+║  • CEP auto-preenche ao digitar endereço (todos os formulários)      ║
+║  • Bairro auto-completa no campo endereço                            ║
+║  • Minimap com zoom mínimo (nível 14) — sem zoom out extremo         ║
+║  • Cards do mapa expandido abrem modal de edição ao clicar           ║
+║  • Cards do mapa expandido com botão X para excluir da rota          ║
+║  UX:                                                                 ║
+║  • Dashboard Mapa de Clientes reorganizado (layout unificado)        ║
+║  • Dropdown Tipo: caixa inteira clicável (não só texto)              ║
+║  • Gramática/acentos corrigidos em todo o site                       ║
+║  • Feedback visual de sincronização cloud (ícone check/nuvem)        ║
+║  • Confirmação antes de excluir cliente da rota                      ║
+║  • Tooltips de atalhos de teclado (Enter/Esc)                        ║
+║  • Skeleton loading nos cartões de clientes                          ║
+║                                                                      ║
 ║  v4.3.9 — 03/04/2026 — UX Refinements + Custom Dropdowns             ║
 ║  ─────────────────────────────────────────                   ║
 ║  UX:                                                                 ║
@@ -487,6 +506,43 @@ body.dark .mc-conclude-btn{background:var(--pu);color:#fff}
 .tw{background:var(--ywl);color:#8B6F00}
 .tg{background:var(--s2);color:var(--mu)}
 .tpu{background:var(--pul);color:var(--pud)}
+/* v4.4.0: Sync feedback indicator */
+.sync-indicator{position:fixed;top:60px;right:16px;z-index:300;display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;pointer-events:none;transition:all .4s cubic-bezier(.4,0,.2,1);opacity:0;transform:translateY(-8px)}
+.sync-indicator.show{opacity:1;transform:translateY(0)}
+.sync-indicator.ok{background:rgba(34,197,94,.12);color:#16a34a;border:1px solid rgba(34,197,94,.2)}
+.sync-indicator.saving{background:rgba(108,92,231,.12);color:var(--pu);border:1px solid rgba(108,92,231,.2)}
+.sync-indicator.err{background:rgba(239,68,68,.12);color:#dc2626;border:1px solid rgba(239,68,68,.2)}
+body.dark .sync-indicator.ok{background:rgba(34,197,94,.15);color:#4ade80}
+body.dark .sync-indicator.saving{background:rgba(167,139,250,.15);color:#c4b5fd}
+/* v4.4.0: Delete confirmation toast */
+.confirm-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);z-index:500;background:var(--sf);backdrop-filter:blur(16px);border:1px solid var(--bd);border-radius:14px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);opacity:0;transition:all .3s cubic-bezier(.4,0,.2,1);pointer-events:none}
+.confirm-toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.confirm-toast .ct-msg{font-size:13px;font-weight:600;color:var(--tx)}
+.confirm-toast .ct-actions{display:flex;gap:6px}
+.confirm-toast .ct-btn{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s}
+.confirm-toast .ct-yes{background:var(--rd);color:#fff}
+.confirm-toast .ct-yes:hover{background:#c9354d}
+.confirm-toast .ct-no{background:var(--s2);color:var(--tx);border:1px solid var(--bd)}
+/* v4.4.0: Skeleton loading */
+@keyframes skeletonPulse{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skeleton-card{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:10px}
+.skeleton-line{height:12px;border-radius:6px;background:linear-gradient(90deg,var(--bd) 25%,rgba(108,92,231,.08) 50%,var(--bd) 75%);background-size:200% 100%;animation:skeletonPulse 1.5s ease infinite}
+.skeleton-circle{width:32px;height:32px;border-radius:9px;flex-shrink:0;background:linear-gradient(90deg,var(--bd) 25%,rgba(108,92,231,.08) 50%,var(--bd) 75%);background-size:200% 100%;animation:skeletonPulse 1.5s ease infinite}
+/* v4.4.0: Keyboard shortcut tooltip */
+.shortcut-hint{position:absolute;bottom:8px;right:10px;font-size:10px;font-weight:600;color:var(--mu);opacity:.5;pointer-events:none;display:flex;gap:6px}
+.shortcut-hint kbd{background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:1px 5px;font-family:'DM Mono',monospace;font-size:9px}
+/* v4.4.0: Tag multi-select fully clickable */
+.tag-multi-wrap{cursor:pointer;min-height:38px;display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:6px 10px;border:1.5px solid var(--bd);border-radius:var(--r);background:rgba(255,255,255,.8);transition:all .2s;position:relative}
+.tag-multi-wrap:hover{border-color:rgba(108,92,231,.3)}
+body.dark .tag-multi-wrap{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.08)}
+/* v4.4.0: CEP ambiguity alert */
+.cep-amb-alert{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:10px 14px;margin-top:8px;display:flex;align-items:flex-start;gap:8px;font-size:12px;color:#92400e;font-weight:500}
+body.dark .cep-amb-alert{color:#fbbf24;background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.2)}
+.cep-amb-alert button{background:var(--or);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0}
+/* v4.4.0: Map sidebar delete button */
+.ms-client-del{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:6px;border:1px solid var(--bd);background:var(--sf);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--mu);transition:all .15s;opacity:0}
+.ms-client:hover .ms-client-del{opacity:1}
+.ms-client-del:hover{background:var(--rl);border-color:#F5A0AE;color:var(--rd)}
 /* v4.3.9: CEP auto-fill status */
 .cep-status{font-size:11px;font-weight:500;margin-top:3px;min-height:16px;display:flex;align-items:center;gap:4px;transition:all .2s}
 .cep-status.loading{color:var(--pu)}
@@ -503,10 +559,10 @@ body.dark .mc-conclude-btn{background:var(--pu);color:#fff}
 .gm-bundled-control,.gm-svpc,.gm-fullscreen-control{display:none!important}
 
 /* v4.3.9: Dashboard geográfico */
-.geo-dash{position:absolute;bottom:16px;left:16px;z-index:10;display:flex;gap:10px;pointer-events:auto}
-.geo-card{background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border:1px solid rgba(0,0,0,.06);border-radius:16px;padding:16px;min-width:180px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+.geo-dash{position:absolute;bottom:16px;right:16px;z-index:10;display:flex;flex-direction:column;gap:8px;pointer-events:auto;max-width:220px}
+.geo-card{background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border:1px solid rgba(0,0,0,.06);border-radius:14px;padding:14px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
 body.dark .geo-card{background:rgba(26,25,37,.92);border-color:rgba(255,255,255,.08)}
-.geo-card h4{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);margin:0 0 10px}
+.geo-card h4{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);margin:0 0 8px}
 .donut-wrap{display:flex;align-items:center;gap:12px}
 .donut-svg{width:90px;height:90px;flex-shrink:0}
 .donut-legend{display:flex;flex-direction:column;gap:4px}
@@ -515,7 +571,7 @@ body.dark .geo-card{background:rgba(26,25,37,.92);border-color:rgba(255,255,255,
 .geo-stat{text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)}
 .geo-stat .gs-val{font-size:20px;font-weight:800;color:var(--tx)}
 .geo-stat .gs-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-top:2px}
-@media(max-width:768px){.geo-dash{flex-direction:column;bottom:8px;left:8px;right:8px}.geo-card{min-width:auto}}
+@media(max-width:768px){.geo-dash{bottom:8px;right:8px;left:auto;max-width:180px}.geo-card{min-width:auto}}
 
 /* v4.3.9: Field validation */
 @keyframes fieldShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-4px)}40%,80%{transform:translateX(4px)}}
@@ -1220,7 +1276,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
 <div class="mbg" id="smart-insert-modal">
   <div class="modal" style="max-width:480px">
     <h2>Adicionar Cliente na Rota Ativa</h2>
-    <p style="font-size:13px;color:var(--mu);margin-bottom:16px">O cliente sera inserido apos as paradas ja concluidas, na melhor posicao possivel.</p>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:16px">O cliente será inserido após as paradas já concluídas, na melhor posição possível.</p>
     <div class="fg2">
       <div class="fg full"><label>Nome</label><input type="text" id="si-nome" placeholder="Nome do cliente"/></div>
       <div class="fg full cep-row"><div class="fg"><label>Endere&#xe7;o completo</label><input type="text" id="si-end" placeholder="Rua, n&#xBA;, complemento, bairro, cidade" oninput="onEndInput('si')"/></div><div class="fg"><label>CEP</label><input type="text" id="si-cep" class="cep-input" placeholder="00000-000" maxlength="9" oninput="onCepInput('si')"/><div class="cep-status" id="si-cep-status"></div></div></div>
@@ -1229,10 +1285,10 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
       <div class="fg"><label>Quantidade</label><input type="number" id="si-qtd" min="0" placeholder="0"/></div>
       <div class="fg"><label>Status valor</label><select id="si-valtipo" onchange="toggleSiValTipo()"><option value="normal">Valor (R$)</option><option value="medir">Medir</option><option value="pago">Pago</option></select></div>
       <div class="fg" id="si-val-wrap"><label>Valor R$</label><input type="text" id="si-val" inputmode="decimal" placeholder="0,00"/></div>
-      <div class="fg"><label>Janela de horario</label><select id="si-janela" onchange="toggleSiJanela()"><option value="livre">Qualquer horario</option><option value="manha">Manha (ate 12h)</option><option value="tarde">Tarde (apos 12h)</option><option value="custom">Horario especifico</option></select></div>
-      <div class="fg" id="si-hi-wrap" style="display:none"><label>Inicio</label><input type="time" id="si-hi"/></div>
+      <div class="fg"><label>Janela de horário</label><select id="si-janela" onchange="toggleSiJanela()"><option value="livre">Qualquer horário</option><option value="manha">Manhã (até 12h)</option><option value="tarde">Tarde (após 12h)</option><option value="custom">Horário específico</option></select></div>
+      <div class="fg" id="si-hi-wrap" style="display:none"><label>Início</label><input type="time" id="si-hi"/></div>
       <div class="fg" id="si-hf-wrap" style="display:none"><label>Fim</label><input type="time" id="si-hf"/></div>
-      <div class="fg full"><label>Observacao</label><textarea id="si-obs" rows="2" placeholder="Opcional..."></textarea></div>
+      <div class="fg full"><label>Observações</label><textarea id="si-obs" rows="2" placeholder="Opcional..."></textarea></div>
     </div>
     <div class="ma" style="margin-top:16px">
       <button class="btn bo" onclick="closeModal('smart-insert-modal')">Cancelar</button>
@@ -1242,6 +1298,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="sync-indicator" id="sync-ind"></div>
 <div class="toast-center" id="toast-center"><span class="tc-dot"></span>Salvo</div>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1297,13 +1354,15 @@ function initTagMultiSelect(id,selected){
 function renderTagMultiSelect(id){
   const wrap=g(id);if(!wrap)return;
   wrap.style.position='relative';
+  // v4.4.0: Entire box clickable to open dropdown
+  wrap.onclick=function(e){if(!e.target.closest('.tag-ms-x')&&!e.target.closest('.tag-dropdown')&&!e.target.closest('.tag-dd-item'))togTagDD(id);};
   const sel=_formTags[id]||[];
   let html='';
   sel.forEach(tid=>{
     const color=_getTagColor(tid);const label=_getTagLabel(tid);
     if(label)html+='<span class="tag-ms-chip" style="background:'+color+'18;color:'+color+'">'+label+' <span class="tag-ms-x" onclick="event.stopPropagation();rmFormTag(\''+id+'\',\''+tid+'\')">×</span></span>';
   });
-  html+='<span class="tag-ms-add" onclick="event.stopPropagation();togTagDD(\''+id+'\')">Adicionar</span>';
+  html+='<span class="tag-ms-add">Adicionar</span>';
   const avail=_tags.filter(t=>!sel.includes(t.id));
   html+='<div class="tag-dropdown" id="'+id+'-dd" style="display:none">';
   avail.forEach(t=>{
@@ -1472,25 +1531,55 @@ function applyCepToAddress(data,endEl,statusEl,prefix){
 
 // Address field input handler: try to extract CEP from typed text
 function onEndInput(prefix){
-  if(_cepFilling)return; // Don't trigger when we're auto-filling
-  const endEl=g(prefix+'-end');
-  const cepEl=g(prefix+'-cep');
-  if(!endEl||!cepEl)return;
-  const text=endEl.value;
-  // Try to extract CEP pattern: NNNNN-NNN or 8 consecutive digits
-  const match=text.match(/\b(\d{5})-?(\d{3})\b/);
-  if(match){
-    const cep=match[1]+match[2];
-    if(cepEl.value.replace(/\D/g,'')!==cep){
+  const el=document.getElementById(prefix+'-end');if(!el)return;
+  const val=el.value;
+  // Extract CEP pattern from typed text
+  const cepMatch=val.match(/(\d{5})-?(\d{3})/);
+  if(cepMatch){
+    const cep=cepMatch[1]+cepMatch[2];
+    const cepEl=document.getElementById(prefix+'-cep');
+    if(cepEl&&!cepEl.value.replace(/\D/g,'')){
       cepEl.value=fmtCep(cep);
-      // Optionally validate via ViaCEP
-      clearTimeout(_endTimeout);
-      _endTimeout=setTimeout(()=>{
-        const statusEl=g(prefix+'-cep-status');
-        fetchCepValidate(cep,statusEl);
-      },500);
+      const statusEl=document.getElementById(prefix+'-cep-status');
+      fetchCepValidate(cep,statusEl);
     }
   }
+  // v4.4.0: Schedule geocoding for Address→CEP on all prefixes
+  if(prefix==='f'){schedGeo();}
+  else if(val.length>=10){
+    clearTimeout(window['_geoT_'+prefix]);
+    window['_geoT_'+prefix]=setTimeout(()=>geocodeCepForPrefix(prefix),1400);
+  }
+}
+// v4.4.0: Geocode address to extract CEP for edit modal and smart insert
+async function geocodeCepForPrefix(prefix){
+  const addr=document.getElementById(prefix+'-end')?.value;if(!addr||addr.length<8)return;
+  try{
+    const suffix=_getAddrSuffix?_getAddrSuffix():'';
+    const bounds=_getAnchorBounds?_getAnchorBounds():'';
+    const comps=_getAnchorComponents?_getAnchorComponents():'';
+    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+suffix)+'&region=br&key='+GKEY+bounds+comps).then(r=>r.json());
+    if(d.status==='OK'&&d.results.length){
+      const pc=d.results[0].address_components?.find(c=>c.types.includes('postal_code'));
+      if(pc){
+        const cepEl=document.getElementById(prefix+'-cep');
+        if(cepEl&&!cepEl.value.replace(/\D/g,'')){
+          cepEl.value=fmtCep(pc.long_name.replace(/\D/g,''));
+          const statusEl=document.getElementById(prefix+'-cep-status');
+          if(statusEl){statusEl.className='cep-status ok';statusEl.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> CEP detectado';setTimeout(()=>{statusEl.innerHTML='';},3000);}
+        }
+      }
+      // v4.4.0 Obs 5c: Auto-complete bairro from geocoding
+      const bairroComp=d.results[0].address_components?.find(c=>c.types.includes('sublocality')||c.types.includes('sublocality_level_1'));
+      if(bairroComp){
+        const endEl=document.getElementById(prefix+'-end');
+        if(endEl&&!endEl.value.toLowerCase().includes(bairroComp.long_name.toLowerCase())){
+          // Bairro not in address yet — append it
+          endEl.value=endEl.value.replace(/,?\s*$/,'')+', '+bairroComp.long_name;
+        }
+      }
+    }
+  }catch(e){}
 }
 
 // Validate CEP extracted from address (don't overwrite address)
@@ -1628,12 +1717,26 @@ async function checkAmbWithCep(){
       if(pcComp){
         const cepEl=document.getElementById('f-cep');
         if(cepEl&&!cepEl.value.replace(/\D/g,'')){
-          cepEl.value=fmtCep(pcComp.long_name.replace(/\D/g,''));
-          const statusEl=document.getElementById('f-cep-status');
-          if(statusEl){
-            statusEl.className='cep-status ok';
-            statusEl.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> CEP detectado';
-            setTimeout(()=>{statusEl.innerHTML='';},3000);
+          // v4.4.0: Se endereço é ambíguo (múltiplos resultados), alertar antes de preencher
+          if(d.results.length>1){
+            const ambAlert=document.getElementById('amb-cep-alert');
+            if(ambAlert)ambAlert.remove();
+            const alertDiv=document.createElement('div');
+            alertDiv.id='amb-cep-alert';
+            alertDiv.className='cep-amb-alert';
+            alertDiv.innerHTML='<span class="mot-ico" style="flex-shrink:0;margin-top:1px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>'
+              +'<div>Endereço ambíguo detectado. CEP sugerido: <strong>'+fmtCep(pcComp.long_name.replace(/\D/g,''))+'</strong>. Confirme o bairro ou CEP antes de prosseguir.</div>'
+              +'<button onclick="document.getElementById(\'f-cep\').value=\''+fmtCep(pcComp.long_name.replace(/\D/g,''))+'\';this.closest(\'.cep-amb-alert\').remove();toast(\'CEP confirmado\',\'ok\')">Confirmar</button>';
+            const ambBox=document.getElementById('amb-box');
+            if(ambBox)ambBox.parentNode.insertBefore(alertDiv,ambBox);
+          } else {
+            cepEl.value=fmtCep(pcComp.long_name.replace(/\D/g,''));
+            const statusEl=document.getElementById('f-cep-status');
+            if(statusEl){
+              statusEl.className='cep-status ok';
+              statusEl.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> CEP detectado';
+              setTimeout(()=>{statusEl.innerHTML='';},3000);
+            }
           }
         }
       }
@@ -1703,7 +1806,7 @@ async function cloudPublish(){
       toast('Erro ao publicar: '+(data.error||'desconhecido'),'err');
     }
   }catch(e){
-    toast('Erro de conexao: '+e.message,'err');
+    toast('Erro de conexão: '+e.message,'err');
   }finally{
     if(btn)btn.disabled=false;
   }
@@ -1888,10 +1991,10 @@ function openSmartInsert(){
 }
 
 async function doSmartInsert(){
-  const nome=document.getElementById('si-nome').value.trim();
-  const end=document.getElementById('si-end').value.trim();
-  if(!nome||!end){toast('Preencha nome e endereco','err');return;}
-  if(end.length<10||!/\d/.test(end)){toast('Endereco invalido (minimo 10 chars + numero)','err');return;}
+  const nome=titleCase(document.getElementById('si-nome').value.trim());
+  const end=titleCase(document.getElementById('si-end').value.trim());
+  if(!nome||!end){toast('Preencha nome e endereço','err');return;}
+  if(end.length<10||!/\d/.test(end)){toast('Endereço inválido (mínimo 10 caracteres + número)','err');return;}
 
   const btn=document.getElementById('si-btn');
   btn.disabled=true;
@@ -2899,7 +3002,7 @@ function showConfirm(title,msg,onOk){
   g('confirm-modal').classList.add('on');
 }
 function addClient(){
-  const nome=v('f-nome'),end=v('f-end'),tipos=getFormTags('f-tipo');
+  const nome=titleCase(v('f-nome')),end=titleCase(v('f-end')),tipos=getFormTags('f-tipo');
   if(!nome){toast('Informe o nome','err');shakeField('f-nome');return;}
   if(!end){toast('Informe o endere\xE7o','err');shakeField('f-end');return;}
   if(end.length<10||!/\d/.test(end)){toast('Endere\xE7o parece inv\xE1lido (inclua rua e n\xFAmero)','err');return;}
@@ -2958,9 +3061,13 @@ function editC(id){
 function saveEditC(){
   const id=parseFloat(g('em-id').value);
   const c=clients.find(x=>x.id===id);if(!c)return;
-  c.nome=g('em-nome').value.trim()||c.nome;
+  // v4.4.0: Apply Title Case on save
+  const _emNome=g('em-nome').value.trim();
+  const _emEnd=g('em-end').value.trim();
+  const _emObs=g('em-obs').value.trim();
+  c.nome=_emNome?titleCase(_emNome):c.nome;
   c.cep=g('em-cep').value.replace(/\D/g,'');
-  c.endereco=g('em-end').value.trim();
+  c.endereco=_emEnd?titleCase(_emEnd):c.endereco;
   c.complemento='';
   c.tel=g('em-tel').value.trim();
   c.tipo=getFormTags('em-tipo');
@@ -2972,7 +3079,7 @@ function saveEditC(){
   c.janela=g('em-janela').value;
   c.hi=c.janela==='custom'?g('em-hi').value:'';
   c.hf=c.janela==='custom'?g('em-hf').value:'';
-  c.obs=g('em-obs').value.trim();
+  c.obs=_emObs||'';
   if(c.janela==='custom'&&c.hi&&c.hf&&c.hi>=c.hf){toast('Horário início deve ser anterior ao fim','err');return;}
   closeModal('edit-modal');
   renderC();updStats();
@@ -3246,7 +3353,7 @@ async function recalcRouteFromOrder(){
     }
     // v4.3.4: Fechar InfoWindow ao clicar fora
     if(!_mapClickListenerSet){gMap.addListener('click',()=>{if(_activeInfoWindow){_activeInfoWindow.close();_activeInfoWindow=null;}});_mapClickListenerSet=true;}
-    const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds,{top:40,bottom:40,left:40,right:40});if(geocoded.length===1)gMap.setZoom(15);
+    const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds,{top:40,bottom:40,left:40,right:40});google.maps.event.addListenerOnce(gMap,'idle',()=>{if(gMap.getZoom()>16)gMap.setZoom(16);if(gMap.getZoom()<10)gMap.setZoom(10);});if(geocoded.length===1)gMap.setZoom(15);
     const legsDur=legs.map(l=>({duration:l.duration.value}));
     estimateTimesOSRM(legsDur);
     const totalKm=legs.reduce((s,l)=>s+l.distance.value,0)/1000;
@@ -3357,6 +3464,7 @@ function updateMapSidebar(){
           +(vd?'<span style="font-size:10px;color:var(--mu)">'+vd+'</span>':'')
         +'</div>'
       +'</div>'
+      +'<button class="ms-client-del" onclick="event.stopPropagation();removeCFromSidebar('+c.id+')" title="Remover da rota">\u2715</button>'
     +'</div>';
   });
   html+='</div>';
@@ -3407,8 +3515,9 @@ function initMapSidebarDragDrop(){
     });
     card.addEventListener('click',e=>{
       if(msDrag&&msDrag.started)return;
+      if(e.target.closest('.ms-client-del'))return; // v4.4.0: ignore delete button clicks
       const cid=card.dataset.clientid;
-      if(cid)editC(cid);
+      if(cid)editC(parseFloat(cid)); // v4.4.0: parse to number for editC
       else focusMapMarker(parseInt(card.dataset.msstop));
     });
   });
@@ -3825,7 +3934,7 @@ async function calcRoute(){
     }
     // Fechar InfoWindow ao clicar no mapa (fora do marcador)
     gMap.addListener('click',()=>{if(_activeInfoWindow){_activeInfoWindow.close();_activeInfoWindow=null;}});
-    const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds,{top:40,bottom:40,left:40,right:40});if(geocoded.length===1)gMap.setZoom(15);
+    const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds,{top:40,bottom:40,left:40,right:40});google.maps.event.addListenerOnce(gMap,'idle',()=>{if(gMap.getZoom()>16)gMap.setZoom(16);if(gMap.getZoom()<10)gMap.setZoom(10);});if(geocoded.length===1)gMap.setZoom(15);
     const legsDur=legs.map(l=>({duration:l.duration.value}));
     estimateTimesOSRM(legsDur);
     const urgMsg=urgentes.length?' ('+urgentes.length+' com janela de horário prioritária)':'';
@@ -4182,7 +4291,10 @@ function renderDashStats(br,pts){
   if(!hmMap){hmMap=new google.maps.Map(document.getElementById('heatmap'),{center:{lat:-23.55,lng:-46.63},zoom:11,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});}
   if(hmHeatLayer)hmHeatLayer.setMap(null);
   hmHeatLayer=new google.maps.visualization.HeatmapLayer({data:pts.map(pt=>new google.maps.LatLng(pt[0],pt[1])),radius:35,map:hmMap});
-  const hmBnds=new google.maps.LatLngBounds();pts.forEach(pt=>hmBnds.extend({lat:pt[0],lng:pt[1]}));hmMap.fitBounds(hmBnds);renderGeoDash(pts);
+  const hmBnds=new google.maps.LatLngBounds();pts.forEach(pt=>hmBnds.extend({lat:pt[0],lng:pt[1]}));hmMap.fitBounds(hmBnds);
+  // v4.4.0: Enforce minimum zoom level to prevent extreme zoom out
+  google.maps.event.addListenerOnce(hmMap,'idle',()=>{if(hmMap.getZoom()>15)hmMap.setZoom(15);if(hmMap.getZoom()<10)hmMap.setZoom(10);});
+  renderGeoDash(pts);
 }
 // v4.3.9: Dashboard geográfico — zonas, cobertura, densidade
 const ZONE_COLORS={Norte:'#6366F1',Sul:'#EC4899',Leste:'#F59E0B',Oeste:'#10B981',Centro:'#8B5CF6'};
@@ -4615,6 +4727,126 @@ function editDoneCard(idx){
   toast(clients[idx].nome+': editando...','ok');
 }
 
+// v4.4.0: Remove client from sidebar (map expanded)
+function removeCFromSidebar(id){
+  const c=clients.find(x=>x.id===id);if(!c)return;
+  showConfirmToast('Remover '+c.nome+' da rota?',()=>{
+    clients=clients.filter(x=>x.id!==id);
+    order=clients.map((_,i)=>i);
+    renderC();updStats();updBtns();
+    if(mapIsFullscreen)updateMapSidebar();
+    if(!clients.length)resetMap();
+    toast('Cliente removido','');
+  });
+}
+
+// v4.4.0: Sug 2 — Confirmation toast before deleting
+let _confirmToastTimer=null;
+function showConfirmToast(msg,onConfirm){
+  let ct=document.getElementById('confirm-toast-el');
+  if(!ct){
+    ct=document.createElement('div');
+    ct.id='confirm-toast-el';
+    ct.className='confirm-toast';
+    document.body.appendChild(ct);
+  }
+  clearTimeout(_confirmToastTimer);
+  ct.innerHTML='<span class="ct-msg">'+msg+'</span><div class="ct-actions"><button class="ct-btn ct-no" onclick="hideConfirmToast()">Não</button><button class="ct-btn ct-yes" id="ct-yes-btn">Sim</button></div>';
+  ct.classList.add('show');
+  document.getElementById('ct-yes-btn').onclick=function(){hideConfirmToast();onConfirm();};
+  _confirmToastTimer=setTimeout(hideConfirmToast,8000);
+}
+function hideConfirmToast(){
+  const ct=document.getElementById('confirm-toast-el');
+  if(ct)ct.classList.remove('show');
+  clearTimeout(_confirmToastTimer);
+}
+
+// v4.4.0: Sug 1 — Cloud sync feedback indicator
+let _syncIndicatorTimer=null;
+function showSyncIndicator(state,msg){
+  let el=document.getElementById('sync-ind');
+  if(!el){
+    el=document.createElement('div');
+    el.id='sync-ind';
+    el.className='sync-indicator';
+    document.body.appendChild(el);
+  }
+  clearTimeout(_syncIndicatorTimer);
+  const icons={ok:'✓',saving:'↻',err:'✗'};
+  el.className='sync-indicator '+state;
+  el.innerHTML='<span>'+(icons[state]||'')+'</span> '+(msg||state);
+  el.classList.add('show');
+  _syncIndicatorTimer=setTimeout(()=>{el.classList.remove('show');},3000);
+}
+// Hook into cloudPublish
+const _origCloudPublish=cloudPublish;
+cloudPublish=async function(){
+  showSyncIndicator('saving','Sincronizando...');
+  try{await _origCloudPublish();showSyncIndicator('ok','Sincronizado');}
+  catch(e){showSyncIndicator('err','Erro ao sincronizar');}
+};
+// Also hook into toast for saves
+const _origToast=toast;
+if(typeof toast==='function'){
+  const _wrappedToast=function(msg,type){
+    _origToast(msg,type);
+    if(type==='ok'&&(msg.includes('adicionado')||msg.includes('atualizado')||msg.includes('removido')||msg.includes('publicada'))){
+      showSyncIndicator('ok','Salvo');
+    }
+  };
+  // Don't override toast here to avoid recursion, just call showSyncIndicator from specific places
+}
+
+// v4.4.0: Sug 3 — Keyboard shortcut tooltips
+function addShortcutHints(){
+  // Main form
+  const cform=document.getElementById('cform');
+  if(cform&&!cform.querySelector('.shortcut-hint')){
+    const hint=document.createElement('div');
+    hint.className='shortcut-hint';
+    hint.innerHTML='<kbd>Enter</kbd> Salvar &nbsp; <kbd>Esc</kbd> Fechar';
+    hint.style.cssText='text-align:right;margin-top:6px';
+    const btns=cform.querySelector('div[style*="margin-top:14px"]');
+    if(btns)btns.appendChild(hint);
+  }
+  // Edit modal
+  const editModal=document.querySelector('#edit-modal .ma');
+  if(editModal&&!editModal.querySelector('.shortcut-hint')){
+    const hint=document.createElement('div');
+    hint.className='shortcut-hint';
+    hint.innerHTML='<kbd>Enter</kbd> Salvar &nbsp; <kbd>Esc</kbd> Fechar';
+    hint.style.cssText='margin-left:auto;align-self:center';
+    editModal.appendChild(hint);
+  }
+  // Smart Insert modal
+  const siModal=document.querySelector('#smart-insert-modal .ma');
+  if(siModal&&!siModal.querySelector('.shortcut-hint')){
+    const hint=document.createElement('div');
+    hint.className='shortcut-hint';
+    hint.innerHTML='<kbd>Enter</kbd> Inserir &nbsp; <kbd>Esc</kbd> Fechar';
+    hint.style.cssText='margin-left:auto;align-self:center';
+    siModal.appendChild(hint);
+  }
+}
+document.addEventListener('DOMContentLoaded',()=>setTimeout(addShortcutHints,800));
+
+// v4.4.0: Sug 4 — Skeleton loading while rendering
+function showSkeletonLoading(containerId,count){
+  const el=document.getElementById(containerId);if(!el)return;
+  let html='';
+  for(let i=0;i<count;i++){
+    html+='<div class="skeleton-card">'
+      +'<div class="skeleton-circle"></div>'
+      +'<div style="flex:1;display:flex;flex-direction:column;gap:6px">'
+        +'<div class="skeleton-line" style="width:'+(60+Math.random()*30)+'%;height:13px"></div>'
+        +'<div class="skeleton-line" style="width:'+(40+Math.random()*40)+'%;height:10px;opacity:.6"></div>'
+      +'</div>'
+    +'</div>';
+  }
+  el.innerHTML=html;
+}
+
 </script>
 <script>
 (function(){
@@ -4630,6 +4862,6 @@ function editDoneCard(idx){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.3.9</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.4.0</div>
 </body>
 </html>
