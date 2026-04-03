@@ -4,6 +4,18 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.6.3 — 03/04/2026 — Stability + Auto-Save + Audit Fixes            ║
+║  ─────────────────────────────────────────                   ║
+║  CRÍTICO:                                                              ║
+║  • Auto-save: rota ativa persiste no localStorage (F5 não perde dados) ║
+║  • backdrop-filter removido dos cards (fix tela branca 14+ clientes)   ║
+║  ALTO:                                                                 ║
+║  • Autocomplete não sobrescreve endereço digitado pelo usuário         ║
+║  MÉDIO:                                                                ║
+║  • Banner "Endereço ambíguo" limpo ao clicar Limpar                    ║
+║  • Aba principal persiste após F5 (localStorage rota_active_tab)       ║
+║  • showConfirm suporta callback de cancelamento                        ║
+║                                                                      ║
 ║  v4.6.2 — 03/04/2026 — History Search + Undo Fix + Cleanup             ║
 ║  ─────────────────────────────────────────                   ║
 ║  REMOÇÕES:                                                             ║
@@ -639,7 +651,7 @@ body.dark .hm-mode-opt:hover:not(.active){background:rgba(255,255,255,.06)}
 .hist-card .hc-tag{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:20px;line-height:1.6;flex-shrink:0}
 /* v4.4.1: Bairro hover highlight (styles in drawer section above) */
 /* v4.4.0: Sync feedback indicator */
-.sync-indicator{position:fixed;top:60px;right:16px;z-index:300;display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;pointer-events:none;transition:all .4s cubic-bezier(.4,0,.2,1);opacity:0;transform:translateY(-8px)}
+.sync-indicator{position:fixed;top:100px;right:16px;z-index:300;display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;pointer-events:none;transition:all .4s cubic-bezier(.4,0,.2,1);opacity:0;transform:translateY(-8px)} /* v4.6.3: top ajustado para não sobrepor navbar */
 .sync-indicator.show{opacity:1;transform:translateY(0)}
 .sync-indicator.ok{background:rgba(34,197,94,.12);color:#16a34a;border:1px solid rgba(34,197,94,.2)}
 .sync-indicator.saving{background:rgba(108,92,231,.12);color:var(--pu);border:1px solid rgba(108,92,231,.2)}
@@ -738,7 +750,7 @@ body.dark .dash-drawer-toggle{background:rgba(13,11,20,.82);border-color:rgba(25
 .ai-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--gnd);background:var(--gnl);border:1px solid #86EFAC;padding:3px 9px;border-radius:20px}
 
 /* CLIENT CARD */
-.cc{background:var(--sf);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--bd);border-left:3px solid var(--bd);border-radius:12px;padding:12px 14px 12px 13px;display:flex;align-items:center;gap:10px;margin-bottom:8px;cursor:pointer;transition:transform .2s cubic-bezier(.4,0,.2,1),box-shadow .2s ease,background .2s ease,border-color .2s ease;font-size:13px;position:relative;user-select:none;-webkit-user-select:none}
+.cc{background:var(--sf);border:1px solid var(--bd);border-left:3px solid var(--bd);border-radius:12px;padding:12px 14px 12px 13px;display:flex;align-items:center;gap:10px;margin-bottom:8px;cursor:pointer;transition:transform .2s cubic-bezier(.4,0,.2,1),box-shadow .2s ease,background .2s ease,border-color .2s ease;font-size:13px;position:relative;user-select:none;-webkit-user-select:none} /* v4.6.3: backdrop-filter removido — causava tela branca com muitos cards */
 .cc.dragging{opacity:.4;transform:scale(.97);box-shadow:none!important}
 .cc.drag-over-top{box-shadow:0 -2px 0 0 var(--pu),0 -6px 12px -4px rgba(108,92,231,.25)}
 .cc.drag-over-bottom{box-shadow:0 2px 0 0 var(--pu),0 6px 12px -4px rgba(108,92,231,.25)}
@@ -2464,6 +2476,16 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('td').value=now.toISOString().split('T')[0];
   document.getElementById('f-data').value=now.toISOString().split('T')[0];
   loadCfg();renderHist();loadTrelloSelection();
+  // v4.6.3: Restore active route if saved
+  if(clients.length===0)restoreActiveRoute();
+  // v4.6.3: Restore active tab from previous session
+  const savedTab=localStorage.getItem('rota_active_tab');
+  if(savedTab&&savedTab!=='rota'){
+    const tabMap={hist:1,dash:2,motor:3,cfg:4};
+    const tabIdx=tabMap[savedTab];
+    const ntabs=document.querySelectorAll('.ntab');
+    if(tabIdx!==undefined&&ntabs[tabIdx]){goPage(savedTab,ntabs[tabIdx]);}
+  }
   // v4.3.9: Pre-load bairros data in background
   setTimeout(()=>{preloadDashData();},2000);
   // v4.3.3: Inicializar tags configur\xe1veis e atualizar selects
@@ -2492,6 +2514,36 @@ document.addEventListener('DOMContentLoaded',()=>{
 /* Theme toggle */
 function toggleTheme(){document.body.classList.toggle('dark');localStorage.setItem('rota_theme',document.body.classList.contains('dark')?'dark':'light');}
 (function(){if(localStorage.getItem('rota_theme')==='dark')document.body.classList.add('dark');})();
+
+// v4.6.3: AUTO-SAVE — persist active route to localStorage on every change
+let _autoSaveTimer=null;
+function autoSaveRoute(){
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer=setTimeout(()=>{
+    if(clients.length>0){
+      localStorage.setItem('rota_ativa',JSON.stringify({clients:clients,order:order,savedAt:new Date().toISOString()}));
+    } else {
+      localStorage.removeItem('rota_ativa');
+    }
+  },300);
+}
+function restoreActiveRoute(){
+  const saved=localStorage.getItem('rota_ativa');
+  if(!saved)return false;
+  try{
+    const data=JSON.parse(saved);
+    if(!data.clients||!data.clients.length)return false;
+    const savedDate=data.savedAt?new Date(data.savedAt):null;
+    const label=savedDate?savedDate.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' '+savedDate.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
+    showConfirm('Restaurar rota?','Voc\u00ea tem uma rota salva com '+data.clients.length+' cliente(s)'+(label?' de '+label:'')+'. Deseja restaurar?',()=>{
+      clients=data.clients;order=data.order||clients.map((_,i)=>i);
+      renderC();updStats();updBtns();toast('Rota restaurada!','ok');
+    },()=>{
+      localStorage.removeItem('rota_ativa');
+    });
+    return true;
+  }catch(e){return false;}
+}
 
 /* Modo Motorista Isolado — ?modo=motorista */
 const _isMotoristaMode=new URLSearchParams(window.location.search).get('modo')==='motorista';
@@ -2630,6 +2682,8 @@ function goPage(p,el){if(_isMotoristaMode)return;window.scrollTo(0,0);window.scr
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(x=>x.classList.remove('on'));
   g('page-'+p).classList.add('on');el.classList.add('on');
+  // v4.6.3: Persist active tab
+  localStorage.setItem('rota_active_tab',p);
   // v4.3.7: Botão salvar só visível na aba Configurações
   const saveBar=g('cfg-save-bar');if(saveBar)saveBar.style.display=p==='cfg'?'flex':'none';
   // v4.5.1: Ao retornar para aba Rota, re-trigger resize + fitBounds no minimap
@@ -2721,7 +2775,9 @@ function resetForm(){
   
   initTagMultiSelect('f-tipo',[]);g('f-janela').value='livre';if(g('f-valtipo')){g('f-valtipo').value='normal';toggleFValTipo();}
   g('f-data').value=new Date().toISOString().split('T')[0];
-  g('ai-badge').style.display='none';g('amb-box').style.display='none';
+  g('ai-badge').style.display='none';g('amb-box').style.display='none';g('amb-box').innerHTML='';
+  // v4.6.3: Also remove standalone CEP ambiguity alert
+  const ambCepAlert=document.getElementById('amb-cep-alert');if(ambCepAlert)ambCepAlert.remove();
   toggleJanela();
 }
 
@@ -3159,15 +3215,19 @@ async function checkAmb(){
 function selAmb(i){
   document.querySelectorAll('.ao').forEach(a=>a.classList.remove('sel'));
   g('ao-'+i)?.classList.add('sel');ambSel=i;
-  if(ambRes[i]){g('f-end').value=ambRes[i].display_name;g('amb-box').style.display='none';toast('Endere\xE7o confirmado!','ok');}
+  // v4.6.3: Preserve user's original address — only use Google result to resolve ambiguity (lat/lng/CEP), not to overwrite the address text
+  if(ambRes[i]){g('amb-box').style.display='none';toast('Endere\xE7o confirmado!','ok');}
 }
-function confirmAmb(){if(ambSel>=0&&ambRes[ambSel])g('f-end').value=ambRes[ambSel].display_name;closeModal('amb-modal');ambRes=[];ambSel=-1;}
+function confirmAmb(){closeModal('amb-modal');ambRes=[];ambSel=-1;} // v4.6.3: don't overwrite address
 
 
-function showConfirm(title,msg,onOk){
+function showConfirm(title,msg,onOk,onCancel){
   g('confirm-title').textContent=title;
   g('confirm-msg').innerHTML=msg;
   g('confirm-ok').onclick=()=>{closeModal('confirm-modal');onOk();};
+  // v4.6.3: optional cancel callback
+  const cancelBtn=g('confirm-cancel');
+  if(cancelBtn)cancelBtn.onclick=()=>{closeModal('confirm-modal');if(onCancel)onCancel();};
   g('confirm-modal').classList.add('on');
 }
 function addClient(){
@@ -3308,6 +3368,7 @@ function renderC(){
   const searchBox=g('client-search-box');
   if(searchBox)searchBox.style.display=clients.length>=5?'block':'none';
   initDragAndDrop();
+  autoSaveRoute(); // v4.6.3: auto-save on every render
 }
 // v4.3.2: Filtro de clientes por nome/endereço
 function filterClients(query){
@@ -5414,6 +5475,6 @@ function rerenderHeatmap(){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.6.2</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.6.3</div>
 </body>
 </html>
