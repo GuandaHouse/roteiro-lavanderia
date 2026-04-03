@@ -4,6 +4,17 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.6.2 — 03/04/2026 — History Search + Undo Fix + Cleanup             ║
+║  ─────────────────────────────────────────                   ║
+║  REMOÇÕES:                                                             ║
+║  • Card "Cobertura" do drawer do Mapa de Clientes                      ║
+║  • "Prioridade da rota" das Configurações (select + config)            ║
+║  CORREÇÕES:                                                            ║
+║  • Botão "Desfazer" no mapa expandido agora funciona (pushRouteState)  ║
+║  • Bolinha numerada nos cartões do Histórico centralizada              ║
+║  • Busca no Histórico: filtra por nome de cliente e telefone           ║
+║  • CEP auto-preenchido ao abrir modal de edição (geocode fallback)     ║
+║                                                                      ║
 ║  v4.6.1 — 03/04/2026 — Cleanup + UX Polish                             ║
 ║  ─────────────────────────────────────────                   ║
 ║  REMOÇÕES:                                                             ║
@@ -618,7 +629,7 @@ body.dark .hm-mode-opt:hover:not(.active){background:rgba(255,255,255,.06)}
 .hist-filters input{flex:1;min-width:120px}
 .hist-filters select{min-width:100px}
 /* v4.5.0: History card redesign (match Rota do Dia) */
-.hist-card{border:1.5px solid var(--bd);border-radius:var(--r);padding:10px 13px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start;background:var(--sf);transition:all .15s}
+.hist-card{border:1.5px solid var(--bd);border-radius:var(--r);padding:10px 13px;margin-bottom:8px;display:flex;gap:10px;align-items:center;background:var(--sf);transition:all .15s}
 .hist-card:hover{border-color:var(--pu);background:var(--pul)}
 .hist-card .hc-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
 .hist-card .hc-info{flex:1;min-width:0}
@@ -695,12 +706,7 @@ body.dark .dash-drawer-card{background:rgba(13,11,20,.82);border-color:rgba(255,
 .zone-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .zone-legend-count{margin-left:auto;font-family:'DM Mono',monospace;color:var(--mu);font-size:11px}
 /* Coverage stats — grid cards */
-.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.stat-item{background:rgba(108,92,231,.04);border-radius:8px;padding:12px;text-align:center}
-body.dark .stat-item{background:rgba(108,92,231,.08)}
-.stat-value{font-size:20px;font-weight:800;letter-spacing:-.02em;color:var(--tx);font-family:'DM Mono',monospace;line-height:1}
-.stat-unit{font-size:10px;font-weight:500;color:var(--mu);margin-top:4px}
-.stat-full{grid-column:1/-1}
+/* v4.6.2: .stats-grid, .stat-item, .stat-value, .stat-unit, .stat-full CSS removido (card Cobertura removido) */
 /* Drawer toggle button */
 .dash-drawer-toggle{position:absolute;right:16px;bottom:80px;z-index:11;width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(0,0,0,.06);box-shadow:0 4px 24px rgba(0,0,0,.06);display:none;align-items:center;justify-content:center;cursor:pointer;color:var(--mu);transition:all .2s}
 body.dark .dash-drawer-toggle{background:rgba(13,11,20,.82);border-color:rgba(255,255,255,.06);box-shadow:0 4px 24px rgba(0,0,0,.3)}
@@ -1217,14 +1223,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
           <div class="zone-legend" id="zone-legend"></div>
         </div>
       </div>
-      <div class="dash-drawer-card" id="geo-stats-card" style="display:none">
-        <div class="dash-drawer-title">Cobertura</div>
-        <div class="stats-grid">
-          <div class="stat-item"><div class="stat-value" id="geo-radius">&#x2014;</div><div class="stat-unit">Raio m&#xE1;ximo (km)</div></div>
-          <div class="stat-item"><div class="stat-value" id="geo-density">&#x2014;</div><div class="stat-unit">Clientes/km&#xB2;</div></div>
-          <div class="stat-item stat-full"><div class="stat-value" id="geo-avg-dist">&#x2014;</div><div class="stat-unit">Dist&#xE2;ncia m&#xE9;dia (km)</div></div>
-        </div>
-      </div>
+      <!-- v4.6.2: Card "Cobertura" removido -->
     </div>
     <!-- Drawer toggle button -->
     <div class="dash-drawer-toggle" id="dash-drawer-toggle" onclick="toggleDashDrawer()">
@@ -1283,7 +1282,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
         <div class="fg"><label>Hor&#xE1;rio de sa&#xED;da</label><input type="time" id="cfg-saida" value="10:00"/></div>
         <div class="fg"><label>Limite de retorno</label><input type="time" id="cfg-ret" value="17:00"/></div>
         <div class="fg"><label>Tempo/parada (min)</label><input type="number" id="cfg-tempo" value="10" min="1" max="240"/></div>
-        <div class="fg"><label>Prioridade da rota</label><select id="cfg-route-priority"><option value="time">Tempo (mais r\xe1pida)</option><option value="distance">Quilometragem (mais curta)</option></select></div>
+        <!-- v4.6.2: "Prioridade da rota" removido -->
         <!-- v4.6.1: cfg-wpp-margin removido -->
         <div class="fg"><label>Pausa almoço — início</label><input type="time" id="cfg-al1"/></div>
         <div class="fg full"><label>Pausa almo&#xE7;o &#x2014; fim</label><input type="time" id="cfg-al2"/></div>
@@ -2555,12 +2554,12 @@ function toggleEye(fid,btn){
 function loadCfg(){
   cfg=JSON.parse(localStorage.getItem('rota_cfg')||'{}');
   ['saida','ret','tempo','base','retaddr','al1','al2','tkey','ttoken','akey','gkey'].forEach(k=>{if(cfg[k]&&g('cfg-'+k))g('cfg-'+k).value=cfg[k];});
-  if(cfg.routePriority&&g('cfg-route-priority'))g('cfg-route-priority').value=cfg.routePriority;
+  // v4.6.2: routePriority config load removido
 }
 function saveCfg(){
   cfg={saida:v('cfg-saida'),ret:v('cfg-ret'),tempo:parseInt(v('cfg-tempo'))||10,
     base:v('cfg-base'),retaddr:v('cfg-retaddr'),
-    routePriority:v('cfg-route-priority')||'time',
+    // v4.6.2: routePriority removido das config
     al1:v('cfg-al1'),al2:v('cfg-al2'),
     tkey:v('cfg-tkey'),ttoken:v('cfg-ttoken'),
     akey:v('cfg-akey'),gkey:v('cfg-gkey')};
@@ -3228,6 +3227,10 @@ function editC(id){
   toggleEmValTipo();
   toggleEmJanela();
   g('edit-modal').classList.add('on');
+  // v4.6.2: Auto-fill CEP when client has address but empty CEP
+  if(!c.cep&&c.endereco&&c.endereco.length>=8){
+    geocodeCepForPrefix('em');
+  }
 }
 function saveEditC(){
   const id=parseFloat(g('em-id').value);
@@ -3478,10 +3481,11 @@ function onDragEnd(e){
     if(dragState.overHalf==='bottom')to++;
     if(to>from)to--;
     if(to!==from&&to>=0&&to<order.length){
+      pushRouteState(); // v4.6.2: save state before reorder for undo
       const item=order.splice(from,1)[0];
       order.splice(to,0,item);
       renderC();
-      recalcRouteFromOrder();
+      recalcRouteFromOrder();updateUndoBtn();
       toast('Ordem da rota atualizada','ok');
     }
   }
@@ -3504,7 +3508,7 @@ function undoRoute(){
   order=[...prev.order];
   prev.clients.forEach((saved,i)=>{if(clients[i]){clients[i].estT=saved.estT;clients[i].conflict=saved.conflict;clients[i].cmsg=saved.cmsg;}});
   animateRouteTransition();
-  pushRouteState();renderC();recalcRouteFromOrder();updateMapSidebar();updateUndoBtn();
+  renderC();recalcRouteFromOrder();updateMapSidebar();updateUndoBtn(); // v4.6.2: removed pushRouteState after undo (was causing double entries)
   toast('Altera\xe7\xe3o desfeita','ok');
 }
 function updateUndoBtn(){
@@ -3521,7 +3525,7 @@ document.addEventListener('keydown',e=>{
 // --- Route Mode (time vs distance) ---
 let _routeMode='time'; // 'time' or 'distance'
 let _routeResults={time:null,distance:null}; // cached results from optimizer
-function getRouteMode(){return cfg.routePriority||_routeMode||'time';}
+function getRouteMode(){return _routeMode||'time';} // v4.6.2: cfg.routePriority removido
 function toggleRouteMode(){
   setRouteMode(_routeMode==='time'?'distance':'time');
   // Update visual toggle
@@ -4000,9 +4004,10 @@ function initMapSidebarDragDrop(){
       if(msDrag.overHalf==='bottom')to++;
       if(to>msDrag.stop)to--;
       if(to!==msDrag.stop&&to>=0&&to<order.length){
+        pushRouteState(); // v4.6.2: save state before reorder for undo
         const item=order.splice(msDrag.stop,1)[0];
         order.splice(to,0,item);
-        renderC();recalcRouteFromOrder();updateMapSidebar();
+        renderC();recalcRouteFromOrder();updateMapSidebar();updateUndoBtn();
         toast('Ordem da rota atualizada','ok');
       }
     }
@@ -4556,19 +4561,25 @@ function renderHist(){
   if(!hist.length){el.innerHTML='<div class="empty"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span><p>Nenhuma rota salva ainda</p></div>';return;}
   // v4.5.0: Date filter for history list
   const filterEl=document.getElementById('hist-date-filter');
-  el.innerHTML='<div class="hist-filters" style="margin-bottom:14px"><input type="text" id="hist-search" placeholder="Buscar por data..." oninput="filterHistList(this.value)"></div>';
+  el.innerHTML='<div class="hist-filters" style="margin-bottom:14px"><input type="text" id="hist-search" placeholder="Buscar por data, nome ou telefone..." oninput="filterHistList(this.value)"></div>';
   el.innerHTML+=hist.map((h,i)=>{
     const d=new Date(h.date+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
     const col=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}).length,ent=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');}).length;
-    return '<div class="hi" onclick="openHist('+i+')"><div style="width:42px;height:42px;background:var(--pul);border-radius:var(--rl2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0"><span class="mot-ico" style="width:20px;height:20px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span></div><div><div style="font-weight:700;font-size:14px">'+d.charAt(0).toUpperCase()+d.slice(1)+'</div><div class="hm">'+h.clients.length+' clientes · '+col+' coleta'+(col!==1?'s':'')+' / '+ent+' entrega'+(ent!==1?'s':'')+'</div></div></div>';
+    const clientNames=h.clients.map(c=>(c.nome||'').toLowerCase()).join('|');
+    const clientTels=h.clients.map(c=>(c.tel||'')).join('|');
+    return '<div class="hi" onclick="openHist('+i+')" data-clients="'+clientNames.replace(/"/g,'&quot;')+'" data-tels="'+clientTels.replace(/"/g,'&quot;')+'"><div style="width:42px;height:42px;background:var(--pul);border-radius:var(--rl2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0"><span class="mot-ico" style="width:20px;height:20px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span></div><div><div style="font-weight:700;font-size:14px">'+d.charAt(0).toUpperCase()+d.slice(1)+'</div><div class="hm">'+h.clients.length+' clientes · '+col+' coleta'+(col!==1?'s':'')+' / '+ent+' entrega'+(ent!==1?'s':'')+'</div></div></div>';
   }).join('');
 }
-// v4.5.0: Filter history list by date text
+// v4.6.2: Filter history list by date, client name, or phone
 function filterHistList(query){
   const q=query.toLowerCase().trim();
+  const qDigits=q.replace(/\D/g,'');
   document.querySelectorAll('#hlist .hi').forEach(item=>{
     const text=item.textContent.toLowerCase();
-    item.style.display=(!q||text.includes(q))?'':'none';
+    const clientNames=item.dataset.clients||'';
+    const clientTels=(item.dataset.tels||'').replace(/\D/g,'');
+    const match=!q||text.includes(q)||clientNames.includes(q)||(qDigits.length>=3&&clientTels.includes(qDigits));
+    item.style.display=match?'':'none';
   });
 }
 function openHist(i){
@@ -4771,9 +4782,9 @@ function haversine(lat1,lng1,lat2,lng2){
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 function renderGeoDash(pts){
-  const zoneCard=g('geo-zone-card');const statsCard=g('geo-stats-card');
-  if(!pts||pts.length<2){if(zoneCard)zoneCard.style.display='none';if(statsCard)statsCard.style.display='none';return;}
-  if(zoneCard)zoneCard.style.display='block';if(statsCard)statsCard.style.display='block';
+  const zoneCard=g('geo-zone-card');
+  if(!pts||pts.length<2){if(zoneCard)zoneCard.style.display='none';return;}
+  if(zoneCard)zoneCard.style.display='block';
   // Classificar zonas
   const zones={Norte:0,Sul:0,Leste:0,Oeste:0,Centro:0};
   const cLat=-23.5505,cLng=-46.6333;
@@ -4802,22 +4813,7 @@ function renderGeoDash(pts){
     donutEl.innerHTML=paths+'<circle cx="18" cy="18" r="9.5" fill="var(--bg)"/><text x="18" y="17" text-anchor="middle" dominant-baseline="central" style="font-size:6px;font-weight:800;fill:var(--tx)">'+total+'</text><text x="18" y="20.5" text-anchor="middle" dominant-baseline="central" style="font-size:2.2px;font-weight:600;fill:var(--mu);text-transform:uppercase;letter-spacing:.04em">clientes</text>';
     legEl.innerHTML=legHtml;
   }
-  // v4.6.0: Stats — grid cards
-  const maxDist=Math.max(...dists);
-  const avgDist=dists.reduce((a,b)=>a+b,0)/dists.length;
-  const latMin=Math.min(...pts.map(p=>p[0])),latMax=Math.max(...pts.map(p=>p[0]));
-  const lngMin=Math.min(...pts.map(p=>p[1])),lngMax=Math.max(...pts.map(p=>p[1]));
-  const dLat=haversine(latMin,lngMin,latMax,lngMin);
-  const dLng=haversine(latMin,lngMin,latMin,lngMax);
-  // v4.6.1: Fix density — use circle area as fallback, minimum 1km²
-  let areaKm2=dLat>0&&dLng>0?(dLat*dLng):(Math.PI*maxDist*maxDist);
-  if(areaKm2<1)areaKm2=Math.PI*maxDist*maxDist;
-  if(areaKm2<1)areaKm2=1;
-  const density=total/areaKm2;
-  const rEl=g('geo-radius'),dEl=g('geo-density'),aEl=g('geo-avg-dist');
-  if(rEl)rEl.textContent=maxDist.toFixed(1);
-  if(dEl)dEl.textContent=density>=0.1?density.toFixed(1):'\u2014';
-  if(aEl)aEl.textContent=avgDist.toFixed(1);
+  // v4.6.2: Card Cobertura removido — stats calculation removido
 }
 function donutArc(cx,cy,r,startDeg,endDeg,color){
   if(endDeg-startDeg>=359.99)return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="4"/>';
@@ -5418,6 +5414,6 @@ function rerenderHeatmap(){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.6.1</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.6.2</div>
 </body>
 </html>
