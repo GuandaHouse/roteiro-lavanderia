@@ -2363,20 +2363,23 @@ function renderC(){
   el.innerHTML=order.map((idx,stop)=>{
     const c=clients[idx];
     const tipos=normalizeTipo(c.tipo);
+    const primaryColor=tipos.length?_getTagColor(tipos[0]):'rgba(108,92,231,.18)';
+    const tagColor=primaryColor;
+    const isCol=tipos.includes('coleta');
     const jl={livre:'',manha:'At\xe9 12h',tarde:'Ap\xf3s 12h',custom:c.hi+'\u2013'+c.hf}[c.janela]||'';
     const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';
-    // v4.3.5: Multi-tags com renderTagBorder
-    const primaryColor=tipos.length?_getTagColor(tipos[0]):'rgba(108,92,231,.18)';
+    // v4.3.5: Multi-tags — borda listrada lado a lado (3px por tag)
     const bw=tagBorderWidth(tipos);
+    const borderStyle=tipos.length<=1?'border-left:'+bw+'px solid '+tagColor:'border-left:none';
     const tagChips=renderTagChips(tipos);
-    return '<div class="cc'+(c.conflict&&tipos.includes('coleta')?' cfl':'')+(c.conflict&&!tipos.includes('coleta')?' cwn':'')+'" data-stop="'+stop+'" style="position:relative;padding-left:'+(13+bw)+'px" onclick="editC('+c.id+')">'
-      +renderTagBorder(tipos)
-      +'<div class="sn" style="background:'+primaryColor+'20;color:'+primaryColor+'">'+(stop+1)+'</div>'
+    return '<div class="cc'+(c.conflict&&isCol?' cfl':'')+(c.conflict&&!isCol?' cwn':'')+'" data-stop="'+stop+'" style="'+borderStyle+';position:relative;'+(tipos.length>1?'padding-left:'+(13+bw)+'px':'')+'" onclick="editC('+c.id+')">'
+      +(tipos.length>1?renderTagBorder(tipos):'')
+      +'<div class="sn" style="background:'+tagColor+'20;color:'+tagColor+'">'+(stop+1)+'</div>'
       +'<div class="ci">'
         +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
           +'<span class="cn">'+c.nome+'</span>'
+          +(tagChips?'<div style="display:flex;gap:3px;flex-wrap:wrap;flex-shrink:0">'+tagChips+'</div>':'')
         +'</div>'
-        +(tagChips?'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;font-size:10px">'+tagChips+'</div>':'')
         +(c.endereco?'<div class="ca">'+fmtEnderecoComCidade(c)+'</div>':'')
         +'<div class="cm">'
           +(c.tel?'<span>\u260E '+c.tel+'</span>':'')
@@ -2712,14 +2715,15 @@ function updateMapSidebar(){
     const bw=tagBorderWidth(tipos);
     const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';
     const tagChips=renderTagChips(tipos);
-    html+='<div class="ms-client'+(isDone?' done':'')+'" data-msstop="'+stop+'" data-clientid="'+c.id+'" style="display:flex;align-items:center;gap:8px;cursor:grab;position:relative;padding-left:'+(13+bw)+'px">'
-      +renderTagBorder(tipos)
+    const borderStyle=tipos.length<=1?'border-left:3px solid '+primaryColor:'border-left:none';
+    html+='<div class="ms-client'+(isDone?' done':'')+'" data-msstop="'+stop+'" data-clientid="'+c.id+'" style="'+borderStyle+';display:flex;align-items:center;gap:8px;cursor:grab;position:relative;'+(tipos.length>1?'padding-left:'+(12+bw)+'px;overflow:hidden':'')+'">'
+      +(tipos.length>1?renderTagBorder(tipos):'')
       +'<span class="ms-client-num" style="background:'+primaryColor+'">'+(stop+1)+'</span>'
       +'<div style="flex:1;min-width:0">'
         +'<div style="display:flex;align-items:center;justify-content:space-between;gap:4px">'
           +'<div style="font-weight:600;font-size:13px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.nome+'</div>'
+          +(tagChips?'<div style="display:flex;gap:2px;flex-wrap:wrap;flex-shrink:0">'+tagChips+'</div>':'')
         +'</div>'
-        +(tagChips?'<div style="display:flex;gap:2px;flex-wrap:wrap;font-size:9px">'+tagChips+'</div>':'')
         +'<div style="font-size:11px;color:var(--mu);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.endereco+(c.complemento?' \u2014 '+c.complemento:'')+'</div>'
         +'<div style="display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap">'
           +(c.estT?'<span style="font-size:10px;color:var(--pu);font-weight:600">Chegada: '+c.estT+'</span>':'')
