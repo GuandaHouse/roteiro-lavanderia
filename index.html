@@ -4,7 +4,7 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  v4.3.4 — 03/04/2026 — Marcadores Partida + Drag Pro + Delays    ║
+║  v4.3.5 — 03/04/2026 — Multi-tags + Pastel Colors + Markers Redesign ║
 ║  ─────────────────────────────────────────                   ║
 ║  TAGS CONFIGURÁVEIS:                                             ║
 ║  • Sistema de tags com cores personalizáveis (estilo Trello)     ║
@@ -452,7 +452,7 @@ body.dark .mc-conclude-btn{background:var(--pu);color:#fff}
 .ai-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--gnd);background:var(--gnl);border:1px solid #86EFAC;padding:3px 9px;border-radius:20px}
 
 /* CLIENT CARD */
-.cc{background:var(--sf);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--bd);border-left:3px solid var(--bd);border-radius:12px;padding:12px 14px 12px 13px;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;cursor:pointer;transition:transform .2s cubic-bezier(.4,0,.2,1),box-shadow .2s ease,background .2s ease,border-color .2s ease;font-size:13px;position:relative;user-select:none;-webkit-user-select:none}
+.cc{background:var(--sf);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--bd);border-radius:12px;padding:12px 14px 12px 13px;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;cursor:pointer;transition:transform .2s cubic-bezier(.4,0,.2,1),box-shadow .2s ease,background .2s ease,border-color .2s ease;font-size:13px;position:relative;user-select:none;-webkit-user-select:none}
 .cc.dragging{opacity:.4;transform:scale(.97);box-shadow:none!important}
 .cc.drag-over-top{box-shadow:0 -2px 0 0 var(--pu),0 -6px 12px -4px rgba(108,92,231,.25)}
 .cc.drag-over-bottom{box-shadow:0 2px 0 0 var(--pu),0 6px 12px -4px rgba(108,92,231,.25)}
@@ -462,9 +462,18 @@ body.dark .mc-conclude-btn{background:var(--pu);color:#fff}
 .drop-indicator::after{right:-4px}
 .drop-indicator.visible{opacity:1}
 .drag-ghost{position:fixed;pointer-events:none;z-index:10001;opacity:.92;transform:rotate(1.5deg);box-shadow:0 12px 40px rgba(108,92,231,.18),0 2px 8px rgba(0,0,0,.08);border-radius:12px;transition:none}
-.tag-color-opt{display:inline-block;width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s}
-.tag-color-opt:hover{transform:scale(1.15);border-color:rgba(0,0,0,.2)}
-.tag-color-opt.sel{border-color:#1e1b4b;transform:scale(1.2);box-shadow:0 0 0 2px rgba(108,92,231,.3)}
+.tag-color-opt{display:inline-block;width:28px;height:28px;border-radius:8px;cursor:pointer;border:2px solid transparent;transition:all .15s}
+.tag-color-opt:hover{transform:scale(1.1);border-color:rgba(0,0,0,.15)}
+.tag-color-opt.sel{border-color:#1e1b4b;transform:scale(1.12);box-shadow:0 0 0 3px rgba(108,92,231,.2)}
+.tag-multi-wrap{display:flex;gap:4px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--bd);border-radius:var(--r);background:var(--sf);min-height:36px;align-items:center;cursor:pointer;position:relative}
+.tag-ms-chip{display:flex;align-items:center;gap:3px;padding:2px 8px;border-radius:16px;font-size:11px;font-weight:600;white-space:nowrap}
+.tag-ms-x{font-size:12px;opacity:.5;cursor:pointer;margin-left:2px}
+.tag-ms-x:hover{opacity:1}
+.tag-ms-add{font-size:12px;color:var(--mu);cursor:pointer;font-weight:500}
+.tag-ms-add:hover{color:var(--pu)}
+.tag-dropdown{position:absolute;background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:100;max-height:180px;overflow-y:auto;margin-top:4px;width:100%;top:calc(100% + 2px);left:0}
+.tag-dd-item{padding:6px 10px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:500}
+.tag-dd-item:hover{background:var(--pul)}
 .cc:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(108,92,231,.08);background:rgba(255,255,255,.85);border-color:rgba(108,92,231,.12)}
 body.dark .cc:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.1);box-shadow:0 4px 16px rgba(0,0,0,.2)}
 .cc.col{border-left-color:var(--gn)}.cc.ent{border-left-color:var(--bl)}
@@ -516,12 +525,14 @@ body.dark .map-expand-btn{background:rgba(30,27,50,.85);color:#e4e4e7;box-shadow
 .map-sidebar .ms-stat{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;text-align:center}
 .map-sidebar .ms-stat-val{font-size:18px;font-weight:800;color:var(--tx)}
 .map-sidebar .ms-stat-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-top:2px}
-.map-sidebar .ms-client{border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:13px;background:var(--sf);cursor:grab;transition:all .15s}
+.map-sidebar .ms-client{border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:13px;background:var(--sf);cursor:grab;transition:all .15s;user-select:none;-webkit-user-select:none}
 .map-sidebar .ms-client:hover{border-color:var(--pu);background:var(--pul)}
 .map-sidebar .ms-client.done{opacity:.5}
 .map-sidebar .ms-client.drag-over-top{border-top:2px solid var(--pu)}
 .map-sidebar .ms-client.drag-over-bottom{border-bottom:2px solid var(--pu)}
 .map-sidebar .ms-client-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+body.map-fs nav{position:fixed;top:0;left:0;right:0;z-index:10003}
+body.map-fs .map-fullscreen{top:56px!important;height:calc(100vh - 56px)!important}
 @media(max-width:768px){.map-sidebar{width:100%;height:40vh;border-right:none;border-top:1px solid var(--bd);order:1}.map-fullscreen{flex-direction:column!important}.map-fullscreen #map{height:60vh!important}}
 #map{position:absolute;inset:0;display:block}
 .mph{text-align:center;color:var(--mu);font-size:13px;padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%}
@@ -758,11 +769,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
         <div class="fg full"><label>Endere&#xE7;o completo *</label><input type="text" id="f-end" placeholder="Rua, n&#xFA;mero, bairro, cidade" oninput="schedGeo()"/></div>
         <div class="fg"><label>Complemento</label><input type="text" id="f-compl" placeholder="Apto, bloco, andar..."/></div>
         <div class="fg"><label>Tipo *</label>
-          <select id="f-tipo">
-            <option value="">Selecione...</option>
-            <option value="coleta">Coleta</option>
-            <option value="entrega">Entrega</option>
-          </select>
+          <div id="f-tipo" class="tag-multi-wrap"></div>
         </div>
         <div class="fg"><label>Quantidade</label><input type="number" id="f-qtd" placeholder="0" min="1"/></div>
         <div class="fg"><label>Status valor</label><select id="f-valtipo" onchange="toggleFValTipo()"><option value="normal">Valor (R$)</option><option value="medir">Medir</option><option value="pago"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> Pago</option></select></div>
@@ -1006,7 +1013,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
     <div class="edit-field"><label>Complemento</label><input type="text" id="em-compl" placeholder="Apto, bloco, andar..."/></div>
     <div class="edit-row">
       <div class="edit-field"><label>Telefone</label><input type="text" id="em-tel"/></div>
-      <div class="edit-field"><label>Tipo</label><select id="em-tipo"><option value="coleta">Coleta</option><option value="entrega">Entrega</option></select></div>
+      <div class="edit-field"><label>Tipo</label><div id="em-tipo" class="tag-multi-wrap"></div></div>
     </div>
     <div class="edit-row">
       <div class="edit-field"><label>Quantidade</label><input type="number" id="em-qtd" min="0"/></div>
@@ -1064,7 +1071,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
       <div class="fg full"><label>Endereco</label><input type="text" id="si-end" placeholder="Rua, numero, bairro"/></div>
       <div class="fg"><label>Complemento</label><input type="text" id="si-compl" placeholder="Apto, bloco, andar..."/></div>
       <div class="fg"><label>Telefone</label><input type="text" id="si-tel" placeholder="(11) 99999-9999"/></div>
-      <div class="fg"><label>Tipo</label><select id="si-tipo"><option value="coleta">Coleta</option><option value="entrega">Entrega</option></select></div>
+      <div class="fg"><label>Tipo</label><div id="si-tipo" class="tag-multi-wrap"></div></div>
       <div class="fg"><label>Quantidade</label><input type="number" id="si-qtd" min="0" value="0"/></div>
       <div class="fg"><label>Status valor</label><select id="si-valtipo" onchange="toggleSiValTipo()"><option value="normal">Valor (R$)</option><option value="medir">Medir</option><option value="pago">Pago</option></select></div>
       <div class="fg" id="si-val-wrap"><label>Valor R$</label><input type="text" id="si-val" inputmode="decimal" placeholder="0,00"/></div>
@@ -1096,19 +1103,66 @@ let selBoard=null,selList=null,_tboardsHtml='',_tlistsHtml='';
    Usu\xe1rio pode personalizar cores e r\xf3tulos por tipo de servi\xe7o.
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
-const TAG_PALETTE=['#00C875','#0098F7','#6C5CE7','#FF6B35','#E2445C','#FDAB3D','#00D2D3','#9B59B6','#2D3436','#E17055','#00B894','#636E72'];
+const TAG_PALETTE=['#6B9E8A','#6B8DB5','#B89B7A','#9B8EC4','#C27878','#8EA86B','#6B8E9E','#B5859B','#787878','#9E8B78','#6B9E9E','#8E889E'];
 const DEFAULT_TAGS=[
-  {id:'coleta',label:'Coleta',color:'#00C875'},
-  {id:'entrega',label:'Entrega',color:'#0098F7'},
-  {id:'devolucao',label:'Devolu\xe7\xe3o',color:'#FDAB3D'},
-  {id:'retirada',label:'Retirada',color:'#9B59B6'}
+  {id:'coleta',label:'Coleta',color:'#6B9E8A'},
+  {id:'entrega',label:'Entrega',color:'#6B8DB5'},
+  {id:'devolucao',label:'Devolu\xe7\xe3o',color:'#B89B7A'},
+  {id:'retirada',label:'Retirada',color:'#9B8EC4'}
 ];
 let _tags=JSON.parse(localStorage.getItem('rota_tags')||'null')||DEFAULT_TAGS.map(t=>({...t}));
 function _saveTags(){localStorage.setItem('rota_tags',JSON.stringify(_tags));}
-function _getTagColor(tipo){const t=_tags.find(t=>t.id===tipo);return t?t.color:(tipo==='coleta'?'#00C875':'#0098F7');}
-function _getTagLabel(tipo){const t=_tags.find(t=>t.id===tipo);return t?t.label:(tipo==='coleta'?'Coleta':'Entrega');}
+function _getTagColor(tipo){if(!tipo)return 'rgba(108,92,231,.18)';const t=_tags.find(t=>t.id===tipo);return t?t.color:'rgba(108,92,231,.18)';}
+function _getTagLabel(tipo){if(!tipo)return '';const t=_tags.find(t=>t.id===tipo);return t?t.label:'';}
+function normalizeTipo(t){return Array.isArray(t)?t:t?[t]:[];}
 function _getTagById(id){return _tags.find(t=>t.id===id);}
 function _getActiveTagIds(){return _tags.map(t=>t.id);}
+
+// v4.3.5: Helper functions for multi-tag rendering
+function renderTagBorder(tipos){
+  if(!tipos||!tipos.length)return '<div style="position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:12px 0 0 12px;background:rgba(108,92,231,.12)"></div>';
+  const stripes=tipos.map(t=>'<div style="width:3px;background:'+_getTagColor(t)+'"></div>').join('');
+  return '<div style="position:absolute;left:0;top:0;bottom:0;display:flex;border-radius:12px 0 0 12px;overflow:hidden">'+stripes+'</div>';
+}
+function tagBorderWidth(tipos){return Math.max(1,tipos?tipos.length:0)*3;}
+function renderTagChips(tipos){
+  if(!tipos||!tipos.length)return '';
+  return tipos.map(t=>{
+    const color=_getTagColor(t);
+    const label=_getTagLabel(t);
+    return '<span style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:20px;line-height:1.6;background:'+color+'18;color:'+color+'">'+label+'</span>';
+  }).join('');
+}
+
+// v4.3.5: Multi-select tag state for forms
+let _formTags={};
+function initTagMultiSelect(id,selected){
+  _formTags[id]=selected||[];
+  renderTagMultiSelect(id);
+}
+function renderTagMultiSelect(id){
+  const wrap=g(id);if(!wrap)return;
+  wrap.style.position='relative';
+  const sel=_formTags[id]||[];
+  let html='';
+  sel.forEach(tid=>{
+    const color=_getTagColor(tid);const label=_getTagLabel(tid);
+    if(label)html+='<span class="tag-ms-chip" style="background:'+color+'18;color:'+color+'">'+label+' <span class="tag-ms-x" onclick="event.stopPropagation();rmFormTag(\''+id+'\',\''+tid+'\')">×</span></span>';
+  });
+  html+='<span class="tag-ms-add" onclick="event.stopPropagation();togTagDD(\''+id+'\')">+ adicionar</span>';
+  const avail=_tags.filter(t=>!sel.includes(t.id));
+  html+='<div class="tag-dropdown" id="'+id+'-dd" style="display:none">';
+  avail.forEach(t=>{
+    html+='<div class="tag-dd-item" style="border-left:3px solid '+t.color+'" onclick="event.stopPropagation();addFormTag(\''+id+'\',\''+t.id+'\')"><span style="width:10px;height:10px;border-radius:4px;background:'+t.color+';flex-shrink:0"></span> '+t.label+'</div>';
+  });
+  if(!avail.length)html+='<div style="padding:8px 10px;font-size:11px;color:var(--mu)">Todas as tags atribu\xeddas</div>';
+  html+='</div>';
+  wrap.innerHTML=html;
+}
+function addFormTag(id,tid){_formTags[id]=_formTags[id]||[];if(!_formTags[id].includes(tid))_formTags[id].push(tid);renderTagMultiSelect(id);g(id+'-dd').style.display='none';}
+function rmFormTag(id,tid){_formTags[id]=(_formTags[id]||[]).filter(t=>t!==tid);renderTagMultiSelect(id);}
+function togTagDD(id){const dd=g(id+'-dd');dd.style.display=dd.style.display==='none'?'block':'none';}
+function getFormTags(id){return _formTags[id]||[];}
 
 /* ══════════════════════════════════════════════════════════════
    CLOUD SYNC — Cloudflare Worker + KV
@@ -1341,7 +1395,7 @@ function openSmartInsert(){
   if(!clients.length){toast('Monte uma rota primeiro','err');return;}
   ['si-nome','si-end','si-compl','si-tel','si-obs','si-val','si-hi','si-hf'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('si-qtd').value='0';
-  document.getElementById('si-tipo').value='coleta';
+  initTagMultiSelect('si-tipo',[]);
   document.getElementById('si-valtipo').value='normal';
   document.getElementById('si-janela').value='livre';
   toggleSiValTipo();toggleSiJanela();
@@ -1364,7 +1418,7 @@ async function doSmartInsert(){
     id:Date.now(),nome,endereco:end,
     complemento:normalizeComplemento(document.getElementById('si-compl').value),
     tel:document.getElementById('si-tel').value.trim(),
-    tipo:document.getElementById('si-tipo').value,
+    tipo:getFormTags('si-tipo'),
     qtd:parseInt(document.getElementById('si-qtd').value)||0,
     val:siValTipo==='normal'?(parseFloat((document.getElementById('si-val').value||'0').replace(',','.'))||0):0,
     valTipo:siValTipo,janela:siJanela,
@@ -1592,6 +1646,15 @@ document.addEventListener('DOMContentLoaded',()=>{
   upl.addEventListener('dragover',e=>{e.preventDefault();upl.classList.add('drag');});
   upl.addEventListener('dragleave',()=>upl.classList.remove('drag'));
   upl.addEventListener('drop',e=>{e.preventDefault();upl.classList.remove('drag');if(e.dataTransfer.files[0])processFile(e.dataTransfer.files[0]);});
+  // v4.3.5: Close tag dropdowns when clicking outside
+  document.addEventListener('click',e=>{
+    const dropdowns=document.querySelectorAll('.tag-dropdown[style*="display: block"]');
+    dropdowns.forEach(dd=>{
+      if(!dd.closest('.tag-multi-wrap')?.contains(e.target)){
+        dd.style.display='none';
+      }
+    });
+  });
 });
 
 /* Theme toggle */
@@ -1702,11 +1765,11 @@ function renderTagsConfig(){
 function setTagColor(idx,color){_tags[idx].color=color;_saveTags();renderTagsConfig();renderC();}
 function setTagLabel(idx,label){_tags[idx].label=label.trim()||_tags[idx].label;_saveTags();updateTagSelects();renderC();}
 function removeTag(idx){
-  if(_tags.length<=1){toast('M\xednimo de 1 tag','warn');return;}
+  if(_tags.length<=0){toast('Nenhuma tag dispon\xedvel','warn');return;}
   const removedId=_tags[idx].id;
   _tags.splice(idx,1);_saveTags();
-  // Migrar clientes com a tag removida para a primeira tag
-  clients.forEach(c=>{if(c.tipo===removedId)c.tipo=_tags[0].id;});
+  // Migrar clientes com a tag removida para array vazio
+  clients.forEach(c=>{if(Array.isArray(c.tipo))c.tipo=c.tipo.filter(t=>t!==removedId);else if(c.tipo===removedId)c.tipo=[];});
   renderTagsConfig();updateTagSelects();renderC();
 }
 function addNewTag(){
@@ -1718,12 +1781,9 @@ function addNewTag(){
   _saveTags();renderTagsConfig();updateTagSelects();
 }
 function updateTagSelects(){
-  // Atualizar todos os selects de tipo no sistema
+  // Atualizar todos os multi-selects de tipo no sistema
   ['f-tipo','em-tipo','si-tipo'].forEach(selId=>{
-    const sel=g(selId);if(!sel)return;
-    const curVal=sel.value;
-    sel.innerHTML=_tags.map(t=>'<option value="'+t.id+'">'+t.label+'</option>').join('');
-    if(_tags.find(t=>t.id===curVal))sel.value=curVal;
+    renderTagMultiSelect(selId);
   });
 }
 
@@ -1765,7 +1825,7 @@ function toggleSiJanela(){
 }
 function resetForm(){
   ['f-nome','f-tel','f-end','f-compl','f-qtd','f-val','f-obs','f-hi','f-hf'].forEach(id=>g(id).value='');
-  g('f-tipo').value='';g('f-janela').value='livre';if(g('f-valtipo')){g('f-valtipo').value='normal';toggleFValTipo();}
+  initTagMultiSelect('f-tipo',[]);g('f-janela').value='livre';if(g('f-valtipo')){g('f-valtipo').value='normal';toggleFValTipo();}
   g('f-data').value=new Date().toISOString().split('T')[0];
   g('ai-badge').style.display='none';g('amb-box').style.display='none';
   toggleJanela();
@@ -1797,7 +1857,7 @@ async function extractImg(){
     if(ext.telefone)g('f-tel').value=ext.telefone;
     if(ext.endereco)g('f-end').value=ext.endereco;
     if(ext.complemento)g('f-compl').value=normalizeComplemento(ext.complemento);
-    if(ext.tipo)g('f-tipo').value=ext.tipo;
+    if(ext.tipo)initTagMultiSelect('f-tipo',normalizeTipo(ext.tipo));
     if(ext.qtd)g('f-qtd').value=ext.qtd;
     if(ext.valor)g('f-val').value=ext.valor;
     if(ext.obs)g('f-obs').value=ext.obs;
@@ -2216,11 +2276,11 @@ function showConfirm(title,msg,onOk){
   g('confirm-modal').classList.add('on');
 }
 function addClient(){
-  const nome=v('f-nome'),end=v('f-end'),tipo=v('f-tipo');
+  const nome=v('f-nome'),end=v('f-end'),tipos=getFormTags('f-tipo');
   if(!nome){toast('Informe o nome','err');return;}
   if(!end){toast('Informe o endere\xE7o','err');return;}
   if(end.length<10||!/\d/.test(end)){toast('Endere\xE7o parece inv\xE1lido (inclua rua e n\xFAmero)','err');return;}
-  if(!tipo){toast('Selecione Coleta ou Entrega','err');return;}
+  if(!tipos.length){toast('Selecione pelo menos uma tag','err');return;}
   const qtd=parseInt(v('f-qtd'))||0;
   if(qtd<0){toast('Quantidade n\xe3o pode ser negativa','err');return;}
   const valTipo=g('f-valtipo')?.value||'normal';
@@ -2231,7 +2291,7 @@ function addClient(){
     const hi=v('f-hi'),hf=v('f-hf');
     if(hi&&hf&&hi>=hf){toast('Horário início deve ser anterior ao fim','err');return;}
   }
-  clients.push({id:Date.now()+Math.random(),nome,endereco:end,complemento:normalizeComplemento(v('f-compl')),tel:v('f-tel'),tipo,qtd,val,valTipo,data:v('f-data')||new Date().toISOString().split('T')[0],janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null});
+  clients.push({id:Date.now()+Math.random(),nome,endereco:end,complemento:normalizeComplemento(v('f-compl')),tel:v('f-tel'),tipo:tipos,qtd,val,valTipo,data:v('f-data')||new Date().toISOString().split('T')[0],janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null});
   order=clients.map((_,i)=>i);
   resetForm();clearImg();renderC();updStats();updBtns();
   toast(nome+' adicionado!','ok');
@@ -2259,7 +2319,7 @@ function editC(id){
   g('em-end').value=c.endereco||'';
   g('em-compl').value=c.complemento||'';
   g('em-tel').value=c.tel||'';
-  g('em-tipo').value=c.tipo||'coleta';
+  initTagMultiSelect('em-tipo',normalizeTipo(c.tipo));
   g('em-qtd').value=c.qtd||0;
   g('em-valtipo').value=c.valTipo||'normal';
   g('em-val').value=c.val||0;
@@ -2278,7 +2338,7 @@ function saveEditC(){
   c.endereco=g('em-end').value.trim();
   c.complemento=normalizeComplemento(g('em-compl').value);
   c.tel=g('em-tel').value.trim();
-  c.tipo=g('em-tipo').value;
+  c.tipo=getFormTags('em-tipo');
   c.qtd=parseInt(g('em-qtd').value)||0;
   c.valTipo=g('em-valtipo').value;
   c.val=c.valTipo==='normal'?parseFloat((g('em-val').value||'').replace(',','.'))||0:0;
@@ -2298,22 +2358,25 @@ function renderC(){
   const el=g('clist');
   if(!clients.length){el.innerHTML='<div class="empty"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span><p>Nenhum cliente ainda</p></div>';g('cc-count').textContent='';g('cfl-banner').innerHTML='';return;}
   const cfls=clients.filter(c=>c.conflict);
-  g('cfl-banner').innerHTML=cfls.length?'<div class="ab w" style="margin-bottom:12px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <div><strong>'+cfls.length+' conflito(s) de hor\xE1rio.</strong> '+cfls.filter(c=>c.tipo==='coleta').length+' coleta(s) em risco.</div></div>':'';
+  const coletasRisco=cfls.filter(c=>{const tipos=normalizeTipo(c.tipo);return tipos.length&&tipos.includes('coleta');}).length;
+  g('cfl-banner').innerHTML=cfls.length?'<div class="ab w" style="margin-bottom:12px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <div><strong>'+cfls.length+' conflito(s) de hor\xE1rio.</strong> '+coletasRisco+' coleta(s) em risco.</div></div>':'';
   el.innerHTML=order.map((idx,stop)=>{
     const c=clients[idx];
+    const tipos=normalizeTipo(c.tipo);
     const jl={livre:'',manha:'At\xe9 12h',tarde:'Ap\xf3s 12h',custom:c.hi+'\u2013'+c.hf}[c.janela]||'';
     const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';
-    // v4.3.3: Tags din\xe2micas com cores configur\xe1veis
-    const tagColor=_getTagColor(c.tipo);
-    const tagLabel=_getTagLabel(c.tipo);
-    const isCol=c.tipo==='coleta';
-    return '<div class="cc'+(c.conflict?(isCol?' cfl':' cwn'):'')+'" data-stop="'+stop+'" style="border-left:3px solid '+(c.conflict?'':tagColor)+'" onclick="editC('+c.id+')">'
-      +'<div class="sn" style="background:'+tagColor+'20;color:'+tagColor+'">'+(stop+1)+'</div>'
+    // v4.3.5: Multi-tags com renderTagBorder
+    const primaryColor=tipos.length?_getTagColor(tipos[0]):'rgba(108,92,231,.18)';
+    const bw=tagBorderWidth(tipos);
+    const tagChips=renderTagChips(tipos);
+    return '<div class="cc'+(c.conflict&&tipos.includes('coleta')?' cfl':'')+(c.conflict&&!tipos.includes('coleta')?' cwn':'')+'" data-stop="'+stop+'" style="position:relative;padding-left:'+(13+bw)+'px" onclick="editC('+c.id+')">'
+      +renderTagBorder(tipos)
+      +'<div class="sn" style="background:'+primaryColor+'20;color:'+primaryColor+'">'+(stop+1)+'</div>'
       +'<div class="ci">'
         +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
           +'<span class="cn">'+c.nome+'</span>'
-          +'<span class="cc-type" style="color:'+tagColor+'">'+tagLabel+'</span>'
         +'</div>'
+        +(tagChips?'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;font-size:10px">'+tagChips+'</div>':'')
         +(c.endereco?'<div class="ca">'+fmtEnderecoComCidade(c)+'</div>':'')
         +'<div class="cm">'
           +(c.tel?'<span>\u260E '+c.tel+'</span>':'')
@@ -2534,19 +2597,20 @@ async function recalcRouteFromOrder(){
     // Markers na nova ordem (AdvancedMarkerElement)
     geocoded.forEach((c,pos)=>{
       if(legs[pos]&&legs[pos].end_location){c.lat=legs[pos].end_location.lat();c.lng=legs[pos].end_location.lng();}
-      const mk=createAdvMarker({position:{lat:c.lat,lng:c.lng},map:gMap,label:String(pos+1),fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',onClick:()=>{openMarkerInfoWindow(mk,c,pos);}});
+      const tipos=normalizeTipo(c.tipo);const fillColor=tipos.length?_getTagColor(tipos[0]):'#787878';
+      const mk=createAdvMarker({position:{lat:c.lat,lng:c.lng},map:gMap,label:String(pos+1),fillColor,onClick:()=>{openMarkerInfoWindow(mk,c,pos);}});
       gMarkers.push(mk);
     });
-    // v4.3.4: Marcadores de partida e retorno
+    // v4.3.5: Marcadores de partida e retorno
     const origin=legs[0].start_location;
     const destination=legs[legs.length-1].end_location;
     if(origin&&destination){
       if(origin.lat()===destination.lat()&&origin.lng()===destination.lng()){
-        const mkBase=createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida / Retorno'});
+        const mkBase=createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida / Retorno',type:'ambos'});
         gBaseMarkers.push(mkBase);
       } else {
-        const mkStart=createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida'});
-        const mkEnd=createBaseMarker({position:{lat:destination.lat(),lng:destination.lng()},map:gMap,title:'Retorno'});
+        const mkStart=createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida',type:'partida'});
+        const mkEnd=createBaseMarker({position:{lat:destination.lat(),lng:destination.lng()},map:gMap,title:'Retorno',type:'retorno'});
         gBaseMarkers.push(mkStart,mkEnd);
       }
     }
@@ -2563,7 +2627,7 @@ async function recalcRouteFromOrder(){
 }
 
 function updStats(){
-  const col=clients.filter(c=>c.tipo==='coleta'),ent=clients.filter(c=>c.tipo==='entrega');
+  const col=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}),ent=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');});
   g('s-cli').textContent=clients.length;
   g('s-sub').textContent=col.length+' coleta'+(col.length!==1?'s':'')+' / '+ent.length+' entrega'+(ent.length!==1?'s':'');
   g('s-ret').textContent=col.reduce((s,c)=>s+(c.qtd||0),0);
@@ -2596,9 +2660,11 @@ function toggleMapFullscreen(){
     mapOriginalNext=wrap.nextSibling;
     document.body.appendChild(wrap);
     wrap.classList.add('map-fullscreen');
+    document.body.classList.add('map-fs');
     updateMapSidebar();
   } else {
     wrap.classList.remove('map-fullscreen');
+    document.body.classList.remove('map-fs');
     if(mapOriginalNext)mapOriginalParent.insertBefore(wrap,mapOriginalNext);
     else mapOriginalParent.appendChild(wrap);
     g('map-sidebar').innerHTML='';
@@ -2636,20 +2702,24 @@ function updateMapSidebar(){
     +'</div>';
   }
   html+='<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:8px">Paradas</div>';
-  // v4.3.3: Cart\xf5es com identidade visual preservada (tags coloridas) + drag and drop
+  // v4.3.5: Cart\xf5es com multi-tags + drag and drop
   html+='<div id="ms-client-list">';
   order.forEach((idx,stop)=>{
     const c=clients[idx];
     const isDone=!!c._motDone;
-    const tagColor=_getTagColor(c.tipo);
+    const tipos=normalizeTipo(c.tipo);
+    const primaryColor=tipos.length?_getTagColor(tipos[0]):'rgba(108,92,231,.18)';
+    const bw=tagBorderWidth(tipos);
     const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';
-    html+='<div class="ms-client'+(isDone?' done':'')+'" data-msstop="'+stop+'" style="border-left:3px solid '+tagColor+';display:flex;align-items:center;gap:8px;cursor:grab">'
-      +'<span class="ms-client-num" style="background:'+tagColor+'">'+(stop+1)+'</span>'
+    const tagChips=renderTagChips(tipos);
+    html+='<div class="ms-client'+(isDone?' done':'')+'" data-msstop="'+stop+'" data-clientid="'+c.id+'" style="display:flex;align-items:center;gap:8px;cursor:grab;position:relative;padding-left:'+(13+bw)+'px">'
+      +renderTagBorder(tipos)
+      +'<span class="ms-client-num" style="background:'+primaryColor+'">'+(stop+1)+'</span>'
       +'<div style="flex:1;min-width:0">'
         +'<div style="display:flex;align-items:center;justify-content:space-between;gap:4px">'
           +'<div style="font-weight:600;font-size:13px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.nome+'</div>'
-          +'<span style="font-size:9px;font-weight:700;color:'+tagColor+';text-transform:uppercase;letter-spacing:.04em;flex-shrink:0">'+_getTagLabel(c.tipo)+'</span>'
         +'</div>'
+        +(tagChips?'<div style="display:flex;gap:2px;flex-wrap:wrap;font-size:9px">'+tagChips+'</div>':'')
         +'<div style="font-size:11px;color:var(--mu);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.endereco+(c.complemento?' \u2014 '+c.complemento:'')+'</div>'
         +'<div style="display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap">'
           +(c.estT?'<span style="font-size:10px;color:var(--pu);font-weight:600">Chegada: '+c.estT+'</span>':'')
@@ -2679,7 +2749,9 @@ function initMapSidebarDragDrop(){
     });
     card.addEventListener('click',e=>{
       if(msDrag&&msDrag.started)return;
-      focusMapMarker(parseInt(card.dataset.msstop));
+      const cid=card.dataset.clientid;
+      if(cid)editC(cid);
+      else focusMapMarker(parseInt(card.dataset.msstop));
     });
   });
   function msMove(e){
@@ -2805,14 +2877,20 @@ function createAdvMarker({position,map,label,fillColor,strokeColor,strokeWeight,
   if(onClick)mk.addListener('gmp-click',onClick);
   return mk;
 }
-// v4.3.4: Criar marcador de partida/retorno com ícone de prédio
-function createBaseMarker({position,map,label,title}){
+// v4.3.5: Criar marcador de partida/retorno com ícone de prédio/casa
+function createBaseMarker({position,map,title,type}){
   const el=document.createElement('div');
-  el.style.cssText='width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#6C5CE7;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3);';
-  // SVG building icon (white)
-  const svg=`<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="white" stroke-width="2" style="display:block"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M8 10h.01M16 10h.01M12 10h.01M8 14h.01M16 14h.01M12 14h.01"/></svg>`;
-  el.innerHTML=svg;
-  const mk=new google.maps.marker.AdvancedMarkerElement({position,map,content:el,title});
+  const buildingSvg='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><circle cx="9" cy="7" r=".5" fill="#555"/><circle cx="15" cy="7" r=".5" fill="#555"/><circle cx="9" cy="11" r=".5" fill="#555"/><circle cx="15" cy="11" r=".5" fill="#555"/></svg>';
+  const houseSvg='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>';
+  if(type==='ambos'){
+    el.style.cssText='width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:1px;cursor:pointer;background:#fff;border:2px solid rgba(0,0,0,.2);box-shadow:0 2px 6px rgba(0,0,0,.15)';
+    el.innerHTML=buildingSvg.replace('width="14"','width="11"').replace('height="14"','height="11"')+houseSvg.replace('width="14"','width="11"').replace('height="14"','height="11"');
+  } else {
+    el.style.cssText='width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#fff;border:2px solid rgba(0,0,0,.2);box-shadow:0 2px 6px rgba(0,0,0,.15)';
+    el.innerHTML=type==='partida'?buildingSvg:houseSvg;
+  }
+  el.title=title||'';
+  const mk=new google.maps.marker.AdvancedMarkerElement({position,map,content:el});
   return mk;
 }
 function initGoogleMaps(){
@@ -3064,22 +3142,23 @@ async function calcRoute(){
     });
     // v4.3.1: Salvar estatísticas da rota
     _routeTotalKm=totalDistKm;_routeTotalMin=totalDurMin;
-    // Markers (AdvancedMarkerElement) — v4.3.1: InfoWindow com dados completos + fechar ao clicar fora
+    // Markers (AdvancedMarkerElement) — v4.3.5: InfoWindow com dados completos + fechar ao clicar fora
     finalWpOrder.forEach((gi,pos)=>{const c=geocoded[gi];
       const isUrg=pos<urgentes.length&&urgentes.length>0;
-      const mk=createAdvMarker({position:{lat:c.lat,lng:c.lng},map:gMap,label:String(pos+1),fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',strokeColor:isUrg?'#FF6B35':'#fff',strokeWeight:isUrg?3:2,onClick:()=>{openMarkerInfoWindow(mk,c,pos);}});
+      const tipos=normalizeTipo(c.tipo);const fillColor=tipos.length?_getTagColor(tipos[0]):'#787878';
+      const mk=createAdvMarker({position:{lat:c.lat,lng:c.lng},map:gMap,label:String(pos+1),fillColor,strokeColor:isUrg?'#FF6B35':'#fff',strokeWeight:isUrg?3:2,onClick:()=>{openMarkerInfoWindow(mk,c,pos);}});
       gMarkers.push(mk);
     });
-    // v4.3.4: Marcadores de partida e retorno com ícone de prédio
+    // v4.3.5: Marcadores de partida e retorno com ícone de prédio
     const origin=legs[0].start_location;
     const destination=legs[legs.length-1].end_location;
     if(origin&&destination){
       if(origin.lat()===destination.lat()&&origin.lng()===destination.lng()){
-        const mkBase=createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida / Retorno'});
+        const mkBase=createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida / Retorno',type:'ambos'});
         gBaseMarkers.push(mkBase);
       } else {
-        const mkStart=createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida'});
-        const mkEnd=createBaseMarker({position:{lat:destination.lat(),lng:destination.lng()},map:gMap,title:'Retorno'});
+        const mkStart=createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida',type:'partida'});
+        const mkEnd=createBaseMarker({position:{lat:destination.lat(),lng:destination.lng()},map:gMap,title:'Retorno',type:'retorno'});
         gBaseMarkers.push(mkStart,mkEnd);
       }
     }
@@ -3162,14 +3241,14 @@ async function genImage(){
   if(!clients.length)return;
   const btn=g('pdf-btn');btn.disabled=true;btn.innerHTML='<span class="spin"></span> Gerando...';
   toast('Gerando imagem...','');
-  const col=clients.filter(c=>c.tipo==='coleta'),ent=clients.filter(c=>c.tipo==='entrega');
+  const col=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}),ent=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');});
   const tapR=col.reduce((s,c)=>s+(c.qtd||0),0),tapE=ent.reduce((s,c)=>s+(c.qtd||0),0);
   const d=clients[0]?.data?new Date(clients[0].data+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   const wrap=document.createElement('div');
   wrap.style.cssText='width:520px;background:#F6F7FB;padding:16px;font-family:Figtree,Arial,sans-serif;position:fixed;top:-99999px;left:-99999px;z-index:-1';
   const cards=order.map((idx,stop)=>{
     const c=clients[idx];
-    const isCol=c.tipo==='coleta';
+    const tipos=normalizeTipo(c.tipo);const isCol=tipos.includes('coleta');
     const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';
     const det=[c.tel?'☎ '+c.tel:'',c.qtd?c.qtd+' '+(cfg._itemLabel||'item')+(c.qtd>1?'s':''):'',vd].filter(Boolean).join(' · ');
     return `<div style="background:#fff;border:1px solid #E2E4F0;border-left:3.5px solid ${isCol?'#00C875':'#0098F7'};border-radius:8px;padding:11px 12px;margin-bottom:7px;display:flex;gap:10px;align-items:flex-start">
@@ -3227,7 +3306,7 @@ function genPDF_unused(){
   doc.text(d.charAt(0).toUpperCase()+d.slice(1),W-M,16,{align:'right'});
   y=36;
   // Summary bar
-  const col=clients.filter(c=>c.tipo==='coleta'),ent=clients.filter(c=>c.tipo==='entrega');
+  const col=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}),ent=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');});
   const tapR=col.reduce((s,c)=>s+(c.qtd||0),0),tapE=ent.reduce((s,c)=>s+(c.qtd||0),0);
   doc.setFillColor(246,247,251);doc.setDrawColor(226,228,240);doc.rect(M,y,CW,10,'FD');
   doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(107,111,142);
@@ -3243,7 +3322,7 @@ function genPDF_unused(){
     const hasExtra=c.tel||c.qtd||c.val||c.valTipo!=='normal'&&c.valTipo||c.estT;
     const h=10+(lines.length*4.5)+(hasExtra?5:0)+(c.obs?5:0)+(c.conflict?5:0)+4;
     // Card background
-    const isCol=c.tipo==='coleta';
+    const tipos=normalizeTipo(c.tipo);const isCol=tipos.includes('coleta');
     doc.setFillColor(isCol?230:230,isCol?251:245,isCol?243:255);
     doc.setDrawColor(isCol?200:200,isCol?235:230,isCol?220:245);
     doc.rect(M,y,CW,h,'FD');
@@ -3313,7 +3392,7 @@ function renderHist(){
   if(!hist.length){el.innerHTML='<div class="empty"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span><p>Nenhuma rota salva ainda</p></div>';return;}
   el.innerHTML=hist.map((h,i)=>{
     const d=new Date(h.date+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
-    const col=h.clients.filter(c=>c.tipo==='coleta').length,ent=h.clients.filter(c=>c.tipo==='entrega').length;
+    const col=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}).length,ent=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');}).length;
     return '<div class="hi" onclick="openHist('+i+')"><div style="width:42px;height:42px;background:var(--pul);border-radius:var(--rl2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0"><span class="mot-ico" style="width:20px;height:20px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span></div><div><div style="font-weight:700;font-size:14px">'+d.charAt(0).toUpperCase()+d.slice(1)+'</div><div class="hm">'+h.clients.length+' clientes · '+col+' coleta'+(col!==1?'s':'')+' / '+ent+' entrega'+(ent!==1?'s':'')+'</div></div></div>';
   }).join('');
 }
@@ -3321,12 +3400,12 @@ function openHist(i){
   histIdx=i;const h=getHist()[i];
   const d=new Date(h.date+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   g('hm-title').textContent=d.charAt(0).toUpperCase()+d.slice(1);
-  const col=h.clients.filter(c=>c.tipo==='coleta'),ent=h.clients.filter(c=>c.tipo==='entrega');
+  const col=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}),ent=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');});
   let html='<div class="ab ok">'+h.clients.length+' clientes — '+col.length+' coleta'+(col.length!==1?'s':'')+' / '+ent.length+' entrega'+(ent.length!==1?'s':'')+'</div>';
   // Gráficos donut no histórico (se houver dados de status/pagamento)
   const hasMotorData=h.order.some(idx=>{const c=h.clients[idx]||h.clients[0];return c&&(c._motStatus||c._motPay);});
   if(hasMotorData)html+=buildChartsHTML(h.clients,h.order);
-  h.order.forEach((idx,stop)=>{const c=h.clients[idx]||h.clients[stop];if(!c)return;html+='<div style="border:1.5px solid var(--bd);border-radius:var(--r);padding:10px 13px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start"><div style="width:26px;height:26px;background:'+(c.tipo==='coleta'?'var(--gn)':'var(--bl)')+';color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+(stop+1)+'</div><div><div style="font-weight:600;font-size:13px">'+c.nome+'</div><div style="font-size:12px;color:var(--mu)">'+c.endereco+'</div><div style="margin-top:5px"><span class="tag '+(c.tipo==='coleta'?'tc':'te')+'">'+(c.tipo==='coleta'?'Coleta':'Entrega')+'</span>'+(c._motStatus?'<span class="tag" style="background:var(--pul);color:var(--pud);margin-left:4px">'+c._motStatus+'</span>':'')+(c._motPay?'<span class="tag" style="background:rgba(30,27,75,.06);color:var(--tx);margin-left:4px">'+c._motPay+'</span>':'')+'</div></div></div>';});
+  h.order.forEach((idx,stop)=>{const c=h.clients[idx]||h.clients[stop];if(!c)return;const tipos=normalizeTipo(c.tipo);const isCol=tipos.includes('coleta');html+='<div style="border:1.5px solid var(--bd);border-radius:var(--r);padding:10px 13px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start"><div style="width:26px;height:26px;background:'+(isCol?'var(--gn)':'var(--bl)')+';color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+(stop+1)+'</div><div><div style="font-weight:600;font-size:13px">'+c.nome+'</div><div style="font-size:12px;color:var(--mu)">'+c.endereco+'</div><div style="margin-top:5px"><span class="tag '+(isCol?'tc':'te')+'">'+(isCol?'Coleta':'Entrega')+'</span>'+(c._motStatus?'<span class="tag" style="background:var(--pul);color:var(--pud);margin-left:4px">'+c._motStatus+'</span>':'')+(c._motPay?'<span class="tag" style="background:rgba(30,27,75,.06);color:var(--tx);margin-left:4px">'+c._motPay+'</span>':'')+'</div></div></div>';});
   g('hm-body').innerHTML=html;g('hist-modal').classList.add('on');
 }
 function loadHist(){
@@ -3549,8 +3628,8 @@ function renderMotor(){
   const _gestorReadonly=!_isMotoristaMode&&_currentRouteId&&_cloudVersion>0;
   const d=clients[0]?.data?new Date(clients[0].data+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
   dateEl.textContent=d;
-  const tapR=clients.filter(c=>c.tipo==='coleta').reduce((s,c)=>s+(c.qtd||0),0);
-  const tapE=clients.filter(c=>c.tipo==='entrega').reduce((s,c)=>s+(c.qtd||0),0);
+  const tapR=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}).reduce((s,c)=>s+(c.qtd||0),0);
+  const tapE=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');}).reduce((s,c)=>s+(c.qtd||0),0);
   const doneCount=order.filter(i=>clients[i]._motDone).length;
   // Resumo
   let html='<div class="mot-summary">'
@@ -3578,7 +3657,7 @@ function renderMotor(){
     const c=clients[idx];
     const isDone=!!c._motDone;
     const isActive=!isDone&&stop===order.findIndex(i=>!clients[i]._motDone);
-    const isCol=c.tipo==='coleta';
+    const tipos=normalizeTipo(c.tipo);const isCol=tipos.includes('coleta');
     const statusLabel=isCol?'Coletado':'Entregue';
     const statusClass=isCol?'s-coletado':'s-entregue';
     const navAddr=encodeURIComponent(c.endereco+', S\xe3o Paulo, SP');
@@ -3762,6 +3841,6 @@ function editDoneCard(idx){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v4.3.4</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.55;letter-spacing:.03em;position:relative;z-index:1">v4.3.5</div>
 </body>
 </html>
