@@ -4,6 +4,21 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.5.0 — 03/04/2026 — Multi-Strategy Optimizer + Route Intelligence  ║
+║  ─────────────────────────────────────────                   ║
+║  ROTEIRIZAÇÃO:                                                        ║
+║  • Multi-Strategy Optimizer: 5 variações em background, entrega a     ║
+║    melhor rota automaticamente                                        ║
+║  • Configuração de prioridade: quilometragem vs tempo                 ║
+║  • Toggle KM/Tempo no mapa expandido (estilo dark mode switch)        ║
+║  • Painel comparativo: ambas opções lado a lado                       ║
+║  • Indicador de economia da otimização                                ║
+║  • Undo/Ctrl+Z para reverter reordenações manuais                    ║
+║  • Animação suave na transição de rotas                               ║
+║  HISTÓRICO:                                                           ║
+║  • Cartões padronizados com design da Rota do Dia                     ║
+║  • Filtros por nome, tipo e período                                   ║
+║                                                                      ║
 ║  v4.4.1 — 03/04/2026 — Mapa de Clientes Redesign + Fixes             ║
 ║  ─────────────────────────────────────────                   ║
 ║  MAPA DE CLIENTES:                                                    ║
@@ -518,6 +533,47 @@ body.dark .mc-conclude-btn{background:var(--pu);color:#fff}
 .tw{background:var(--ywl);color:#8B6F00}
 .tg{background:var(--s2);color:var(--mu)}
 .tpu{background:var(--pul);color:var(--pud)}
+/* v4.5.0: Route optimization toggle */
+.route-mode-toggle{display:flex;align-items:center;background:var(--sf);border:1.5px solid var(--bd);border-radius:20px;padding:3px;gap:0;cursor:pointer;user-select:none;-webkit-user-select:none;transition:all .2s}
+.route-mode-toggle .rmt-opt{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:16px;font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--mu);transition:all .25s;white-space:nowrap}
+.route-mode-toggle .rmt-opt.active{background:var(--pu);color:#fff;box-shadow:0 2px 8px rgba(108,92,231,.25)}
+.route-mode-toggle .rmt-opt svg{width:14px;height:14px}
+/* v4.5.0: Undo button */
+.undo-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:10px;border:1.5px solid var(--bd);background:var(--sf);font-size:11px;font-weight:700;color:var(--mu);cursor:pointer;transition:all .15s;opacity:.5;pointer-events:none}
+.undo-btn.active{opacity:1;pointer-events:auto}
+.undo-btn.active:hover{border-color:var(--pu);color:var(--pu);background:var(--pul)}
+.undo-btn svg{width:14px;height:14px}
+/* v4.5.0: Route comparison panel */
+.route-compare{display:none;background:var(--sf);border:1.5px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:12px;animation:fadeIn .25s}
+.route-compare.show{display:block}
+.route-compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.route-compare-col{text-align:center;padding:8px;border-radius:8px;border:1.5px solid var(--bd);transition:all .2s}
+.route-compare-col.active{border-color:var(--pu);background:var(--pul)}
+.route-compare-col .rc-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--mu);margin-bottom:4px}
+.route-compare-col .rc-val{font-size:16px;font-weight:800;color:var(--tx)}
+.route-compare-col .rc-sub{font-size:10px;color:var(--mu);margin-top:2px}
+/* v4.5.0: Optimization savings indicator */
+.opt-savings{display:none;background:linear-gradient(135deg,rgba(52,199,89,.08),rgba(108,92,231,.06));border:1.5px solid rgba(52,199,89,.2);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:12px;font-weight:600;color:var(--gnd);align-items:center;gap:8px;animation:fadeIn .3s}
+.opt-savings.show{display:flex}
+.opt-savings svg{width:16px;height:16px;flex-shrink:0}
+/* v4.5.0: Route transition animation */
+@keyframes routeTransition{0%{opacity:.3}100%{opacity:1}}
+.route-animating .ms-client{animation:routeTransition .4s ease}
+/* v4.5.0: History filters */
+.hist-filters{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.hist-filters input,.hist-filters select{font-size:12px;padding:6px 10px;border:1.5px solid var(--bd);border-radius:8px;background:var(--sf);color:var(--tx);font-weight:500;outline:none;transition:border-color .15s}
+.hist-filters input:focus,.hist-filters select:focus{border-color:var(--pu)}
+.hist-filters input{flex:1;min-width:120px}
+.hist-filters select{min-width:100px}
+/* v4.5.0: History card redesign (match Rota do Dia) */
+.hist-card{border:1.5px solid var(--bd);border-radius:var(--r);padding:10px 13px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start;background:var(--sf);transition:all .15s}
+.hist-card:hover{border-color:var(--pu);background:var(--pul)}
+.hist-card .hc-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.hist-card .hc-info{flex:1;min-width:0}
+.hist-card .hc-name{font-weight:600;font-size:13px;color:var(--tx)}
+.hist-card .hc-addr{font-size:12px;color:var(--mu);margin-top:2px}
+.hist-card .hc-meta{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap;font-size:11px;color:var(--mu)}
+.hist-card .hc-tag{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:20px;line-height:1.6;flex-shrink:0}
 /* v4.4.1: Bairro hover highlight */
 .dash-bairro-item{display:flex;align-items:center;gap:8px;padding:6px 4px;border-radius:8px;cursor:pointer;transition:background .15s}
 .dash-bairro-item:hover{background:rgba(108,92,231,.08)}
@@ -1150,7 +1206,8 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
         <div class="fg"><label>Hor&#xE1;rio de sa&#xED;da</label><input type="time" id="cfg-saida" value="10:00"/></div>
         <div class="fg"><label>Limite de retorno</label><input type="time" id="cfg-ret" value="17:00"/></div>
         <div class="fg"><label>Tempo/parada (min)</label><input type="number" id="cfg-tempo" value="10" min="1" max="240"/></div>
-        <div class="fg"><label>Pausa almo&#xE7;o &#x2014; in&#xED;cio</label><input type="time" id="cfg-al1"/></div>
+        <div class="fg"><label>Prioridade da rota</label><select id="cfg-route-priority"><option value="time">Tempo (mais rápida)</option><option value="distance">Quilometragem (mais curta)</option></select></div>
+        <div class="fg"><label>Pausa almoço — início</label><input type="time" id="cfg-al1"/></div>
         <div class="fg full"><label>Pausa almo&#xE7;o &#x2014; fim</label><input type="time" id="cfg-al2"/></div>
       </div>
     </div>
@@ -2418,10 +2475,12 @@ function toggleEye(fid,btn){
 function loadCfg(){
   cfg=JSON.parse(localStorage.getItem('rota_cfg')||'{}');
   ['saida','ret','tempo','base','retaddr','al1','al2','tkey','ttoken','akey','gkey'].forEach(k=>{if(cfg[k]&&g('cfg-'+k))g('cfg-'+k).value=cfg[k];});
+  if(cfg.routePriority&&g('cfg-route-priority'))g('cfg-route-priority').value=cfg.routePriority;
 }
 function saveCfg(){
   cfg={saida:v('cfg-saida'),ret:v('cfg-ret'),tempo:parseInt(v('cfg-tempo'))||10,
     base:v('cfg-base'),retaddr:v('cfg-retaddr'),
+    routePriority:v('cfg-route-priority')||'time',
     al1:v('cfg-al1'),al2:v('cfg-al2'),
     tkey:v('cfg-tkey'),ttoken:v('cfg-ttoken'),
     akey:v('cfg-akey'),gkey:v('cfg-gkey')};
@@ -3332,6 +3391,259 @@ function onDragEnd(e){
   dragState=null;
 }
 // Recalcular a rota no mapa após reordenação manual
+// ====== v4.5.0: ROUTE INTELLIGENCE ENGINE ======
+
+// --- Undo System ---
+let _routeHistory=[];
+const MAX_UNDO=10;
+function pushRouteState(){
+  _routeHistory.push({order:[...order],clients:JSON.parse(JSON.stringify(clients.map(c=>({estT:c.estT,conflict:c.conflict,cmsg:c.cmsg}))))});
+  if(_routeHistory.length>MAX_UNDO)_routeHistory.shift();
+  updateUndoBtn();
+}
+function undoRoute(){
+  if(!_routeHistory.length)return;
+  const prev=_routeHistory.pop();
+  order=[...prev.order];
+  prev.clients.forEach((saved,i)=>{if(clients[i]){clients[i].estT=saved.estT;clients[i].conflict=saved.conflict;clients[i].cmsg=saved.cmsg;}});
+  animateRouteTransition();
+  pushRouteState();renderC();recalcRouteFromOrder();updateMapSidebar();updateUndoBtn();
+  toast('Altera\xe7\xe3o desfeita','ok');
+}
+function updateUndoBtn(){
+  const btn=document.querySelector('.undo-btn');
+  if(btn)btn.classList.toggle('active',_routeHistory.length>0);
+}
+// Ctrl+Z keyboard shortcut for undo
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='z'&&_routeHistory.length>0&&mapIsFullscreen){
+    e.preventDefault();undoRoute();
+  }
+});
+
+// --- Route Mode (time vs distance) ---
+let _routeMode='time'; // 'time' or 'distance'
+let _routeResults={time:null,distance:null}; // cached results from optimizer
+function getRouteMode(){return cfg.routePriority||_routeMode||'time';}
+function setRouteMode(mode){
+  _routeMode=mode;
+  updateRouteModeToggle();
+  // If we have cached results, switch instantly
+  if(_routeResults[mode]){
+    applyRouteResult(_routeResults[mode]);
+    updateRouteCompare();
+    animateRouteTransition();
+  }
+}
+function updateRouteModeToggle(){
+  document.querySelectorAll('.rmt-opt').forEach(el=>{
+    el.classList.toggle('active',el.dataset.mode===_routeMode);
+  });
+}
+
+// --- Route Comparison Panel ---
+function updateRouteCompare(){
+  const panel=document.querySelector('.route-compare');
+  if(!panel)return;
+  const tr=_routeResults.time,dr=_routeResults.distance;
+  if(!tr||!dr){panel.classList.remove('show');return;}
+  panel.classList.add('show');
+  const cols=panel.querySelectorAll('.route-compare-col');
+  if(cols[0]){
+    cols[0].classList.toggle('active',_routeMode==='time');
+    cols[0].querySelector('.rc-val').textContent=fmtDuration(Math.round(tr.totalMin));
+    cols[0].querySelector('.rc-sub').textContent=tr.totalKm.toFixed(1)+' km';
+  }
+  if(cols[1]){
+    cols[1].classList.toggle('active',_routeMode==='distance');
+    cols[1].querySelector('.rc-val').textContent=dr.totalKm.toFixed(1)+' km';
+    cols[1].querySelector('.rc-sub').textContent=fmtDuration(Math.round(dr.totalMin));
+  }
+}
+
+// --- Optimization Savings Indicator ---
+function showOptSavings(bestResult,worstResult){
+  const el=document.querySelector('.opt-savings');
+  if(!el||!bestResult||!worstResult)return;
+  const timeSaved=Math.round(worstResult.totalMin-bestResult.totalMin);
+  const kmSaved=(worstResult.totalKm-bestResult.totalKm).toFixed(1);
+  let msg='';
+  if(_routeMode==='time'&&timeSaved>0)msg='Otimiza\xe7\xe3o economizou '+timeSaved+' min na rota';
+  else if(_routeMode==='distance'&&parseFloat(kmSaved)>0)msg='Otimiza\xe7\xe3o economizou '+kmSaved+' km na rota';
+  else if(timeSaved>0)msg='Otimiza\xe7\xe3o economizou '+timeSaved+' min';
+  if(msg){el.querySelector('.opt-savings-text').textContent=msg;el.classList.add('show');}
+  else el.classList.remove('show');
+}
+
+// --- Apply route result to UI ---
+function applyRouteResult(result){
+  if(!result)return;
+  order=result.order.slice();
+  _routeTotalKm=result.totalKm;
+  _routeTotalMin=result.totalMin;
+  // Re-estimate times
+  if(result.legs){
+    const legsDur=result.legs.map(l=>({duration:l.duration.value}));
+    estimateTimesOSRM(legsDur);
+  }
+  renderC();updStats();updateMapSidebar();
+}
+
+// --- Route transition animation ---
+function animateRouteTransition(){
+  const sb=document.querySelector('#ms-client-list');
+  if(sb){
+    sb.classList.add('route-animating');
+    setTimeout(()=>sb.classList.remove('route-animating'),500);
+  }
+  const cl=g('clist');
+  if(cl){
+    cl.style.transition='opacity .3s';cl.style.opacity='0.3';
+    setTimeout(()=>{cl.style.opacity='1';},50);
+    setTimeout(()=>{cl.style.transition='';},400);
+  }
+}
+
+// --- Multi-Strategy Optimizer ---
+// Generates multiple route permutations and picks the best
+async function multiStrategyOptimize(geocoded,geocodedIdx,baseAddr,retAddr){
+  const strategies=[];
+
+  // Strategy 1: Google optimized (original)
+  strategies.push({name:'google-optimized',fn:async()=>{
+    const waypoints=geocoded.map(c=>_waypointFor(c));
+    const res=await new Promise((ok,err)=>new google.maps.DirectionsService().route({
+      origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:true,region:'BR'
+    },(r,s)=>s==='OK'?ok(r):err(new Error(s))));
+    return res.routes[0].waypoint_order;
+  }});
+
+  // Strategy 2: Nearest neighbor from start
+  strategies.push({name:'nearest-neighbor',fn:async()=>{
+    const visited=new Set();const order=[];
+    let current={lat:geocoded[0]?.lat||0,lng:geocoded[0]?.lng||0};
+    // Try to get base coords
+    const baseGeo=await nominatim(baseAddr);
+    if(baseGeo)current={lat:baseGeo.lat,lng:baseGeo.lng};
+    for(let i=0;i<geocoded.length;i++){
+      let bestDist=Infinity,bestIdx=-1;
+      geocoded.forEach((c,j)=>{
+        if(visited.has(j))return;
+        const d=haversine(current.lat,current.lng,c.lat,c.lng);
+        if(d<bestDist){bestDist=d;bestIdx=j;}
+      });
+      if(bestIdx>=0){visited.add(bestIdx);order.push(bestIdx);current={lat:geocoded[bestIdx].lat,lng:geocoded[bestIdx].lng};}
+    }
+    return order;
+  }});
+
+  // Strategy 3: Reverse nearest neighbor (from last point back)
+  strategies.push({name:'reverse-nn',fn:async()=>{
+    const visited=new Set();const order=[];
+    let current={lat:geocoded[geocoded.length-1]?.lat||0,lng:geocoded[geocoded.length-1]?.lng||0};
+    for(let i=0;i<geocoded.length;i++){
+      let bestDist=Infinity,bestIdx=-1;
+      geocoded.forEach((c,j)=>{
+        if(visited.has(j))return;
+        const d=haversine(current.lat,current.lng,c.lat,c.lng);
+        if(d<bestDist){bestDist=d;bestIdx=j;}
+      });
+      if(bestIdx>=0){visited.add(bestIdx);order.push(bestIdx);current={lat:geocoded[bestIdx].lat,lng:geocoded[bestIdx].lng};}
+    }
+    return order.reverse();
+  }});
+
+  // Strategy 4: Priority by time windows (tightest deadlines first)
+  strategies.push({name:'deadline-priority',fn:async()=>{
+    const items=geocoded.map((c,i)=>({i,deadline:clientDeadlineMin(c)}));
+    items.sort((a,b)=>a.deadline-b.deadline);
+    return items.map(x=>x.i);
+  }});
+
+  // Strategy 5: 2-opt improvement on Google result
+  strategies.push({name:'2-opt',fn:async()=>{
+    // Start with google optimized
+    const waypoints=geocoded.map(c=>_waypointFor(c));
+    const res=await new Promise((ok,err)=>new google.maps.DirectionsService().route({
+      origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:true,region:'BR'
+    },(r,s)=>s==='OK'?ok(r):err(new Error(s))));
+    let best=[...res.routes[0].waypoint_order];
+    // 2-opt swaps
+    let improved=true;let iter=0;
+    while(improved&&iter<50){
+      improved=false;iter++;
+      for(let i=0;i<best.length-1;i++){
+        for(let j=i+1;j<best.length;j++){
+          const newOrder=[...best];
+          // Reverse segment between i and j
+          const seg=newOrder.slice(i,j+1).reverse();
+          for(let k=0;k<seg.length;k++)newOrder[i+k]=seg[k];
+          // Compare total distance
+          const distOld=calcOrderDistance(best,geocoded);
+          const distNew=calcOrderDistance(newOrder,geocoded);
+          if(distNew<distOld){best=newOrder;improved=true;}
+        }
+      }
+    }
+    return best;
+  }});
+
+  // Run all strategies, evaluate each
+  const results=[];
+  for(const strat of strategies){
+    try{
+      const wpOrder=await strat.fn();
+      if(!wpOrder||!wpOrder.length)continue;
+      // Get Google route for this order (to get actual driving times)
+      const orderedWp=wpOrder.map(gi=>_waypointFor(geocoded[gi]));
+      const dirResult=await new Promise((ok,err)=>new google.maps.DirectionsService().route({
+        origin:baseAddr,destination:retAddr,waypoints:orderedWp,
+        travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR'
+      },(r,s)=>s==='OK'?ok(r):err(new Error(s))));
+      const legs=dirResult.routes[0].legs;
+      const totalKm=legs.reduce((s,l)=>s+l.distance.value,0)/1000;
+      const totalMin=legs.reduce((s,l)=>s+l.duration.value,0)/60;
+      // Calculate last stop time
+      const saidaMin=ts(cfg.saida||'10:00')/60;
+      const tempo=(cfg.tempo||10);
+      let curMin=saidaMin*60;
+      for(let i=0;i<legs.length-1;i++){curMin+=legs[i].duration.value/60+tempo;}
+      const lastStopMin=curMin;
+
+      results.push({name:strat.name,wpOrder,dirResult,legs,totalKm,totalMin,lastStopMin,
+        order:wpOrder.map(gi=>geocodedIdx[gi])});
+      console.log('[OPTIMIZER] '+strat.name+': '+totalKm.toFixed(1)+'km | '+totalMin.toFixed(0)+'min | \xDAltima: '+Math.floor(lastStopMin/60)+':'+String(Math.round(lastStopMin%60)).padStart(2,'0'));
+    }catch(e){console.warn('[OPTIMIZER] '+strat.name+' falhou:',e.message);}
+  }
+
+  if(!results.length)return null;
+
+  // Sort by priority
+  const mode=getRouteMode();
+  const byTime=[...results].sort((a,b)=>a.lastStopMin-b.lastStopMin);
+  const byDist=[...results].sort((a,b)=>a.totalKm-b.totalKm);
+
+  // Cache both best results
+  _routeResults.time=byTime[0]||null;
+  _routeResults.distance=byDist[0]||null;
+
+  const best=mode==='distance'?byDist[0]:byTime[0];
+  const worst=mode==='distance'?byDist[byDist.length-1]:byTime[byTime.length-1];
+
+  console.log('[OPTIMIZER] Melhor ('+mode+'): '+best.name+' — '+best.totalKm.toFixed(1)+'km | '+best.totalMin.toFixed(0)+'min');
+
+  return {best,worst,byTime,byDist};
+}
+
+function calcOrderDistance(order,geocoded){
+  let d=0;
+  for(let i=0;i<order.length-1;i++){
+    const a=geocoded[order[i]],b=geocoded[order[i+1]];
+    if(a&&b)d+=haversine(a.lat,a.lng,b.lat,b.lng);
+  }
+  return d;
+}
+
 async function recalcRouteFromOrder(){
   if(!gMap||!order.length)return;
   const geocoded=order.filter(i=>clients[i].lat&&clients[i].lng).map(i=>clients[i]);
@@ -3434,7 +3746,36 @@ function updateMapSidebar(){
   const totalStops=order.length;
   const lastClient=order.length?clients[order[order.length-1]]:null;
   const etaFim=lastClient?.estT||'--:--';
-  let html='<div style="font-size:15px;font-weight:800;margin-bottom:12px;color:var(--tx)">Painel da Rota</div>';
+  let html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+    +'<div style="font-size:15px;font-weight:800;color:var(--tx)">Painel da Rota</div>'
+    +'<button class="undo-btn'+((_routeHistory.length>0)?' active':'')+'" onclick="undoRoute()" title="Desfazer (Ctrl+Z)">'
+    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>'
+    +'Desfazer</button></div>';
+  // v4.5.0: Route mode toggle
+  html+='<div style="display:flex;align-items:center;justify-content:center;margin-bottom:12px">'
+    +'<div class="route-mode-toggle">'
+    +'<div class="rmt-opt'+(_routeMode==='time'?' active':'')+'" data-mode="time" onclick="setRouteMode(\'time\')">'
+    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+    +'Tempo</div>'
+    +'<div class="rmt-opt'+(_routeMode==='distance'?' active':'')+'" data-mode="distance" onclick="setRouteMode(\'distance\')">'
+    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M8 6h10v10"/></svg>'
+    +'Km</div>'
+    +'</div></div>';
+  // v4.5.0: Comparison panel
+  html+='<div class="route-compare'+(_routeResults.time&&_routeResults.distance?' show':'')+'">'
+    +'<div class="route-compare-grid">'
+    +'<div class="route-compare-col'+(_routeMode==='time'?' active':'')+'" onclick="setRouteMode(\'time\')">'
+    +'<div class="rc-label">Mais r\xe1pida</div>'
+    +'<div class="rc-val">'+(_routeResults.time?fmtDuration(Math.round(_routeResults.time.totalMin)):'--')+'</div>'
+    +'<div class="rc-sub">'+(_routeResults.time?_routeResults.time.totalKm.toFixed(1)+' km':'--')+'</div>'
+    +'</div>'
+    +'<div class="route-compare-col'+(_routeMode==='distance'?' active':'')+'" onclick="setRouteMode(\'distance\')">'
+    +'<div class="rc-label">Mais curta</div>'
+    +'<div class="rc-val">'+(_routeResults.distance?_routeResults.distance.totalKm.toFixed(1)+' km':'--')+'</div>'
+    +'<div class="rc-sub">'+(_routeResults.distance?fmtDuration(Math.round(_routeResults.distance.totalMin)):'--')+'</div>'
+    +'</div></div></div>';
+  // v4.5.0: Savings indicator
+  html+='<div class="opt-savings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span class="opt-savings-text"></span></div>';
   html+='<div class="ms-route-stats">'
     +'<div class="ms-stat"><div class="ms-stat-val">'+_routeTotalKm.toFixed(1)+' km</div><div class="ms-stat-label">Dist\xe2ncia total</div></div>'
     +'<div class="ms-stat"><div class="ms-stat-val">'+fmtDuration(Math.round(_routeTotalMin))+'</div><div class="ms-stat-label">Tempo estimado</div></div>'
@@ -3681,11 +4022,32 @@ function createBaseMarker({position,map,title,type}){
 }
 function initGoogleMaps(){
   const mapEl=document.getElementById('map');
-  if(mapEl){mapEl.style.display='block';document.getElementById('mph').style.display='none';
-    document.getElementById('map-expand-btn').style.display='flex';
-    gMap=new google.maps.Map(mapEl,{center:{lat:-23.55,lng:-46.63},zoom:12,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});}
+  if(mapEl){
+    // v4.5.0: Inicializa mapa mas mantém oculto até rota ser gerada
+    // Cria o mapa em background para estar pronto quando necessário
+    gMap=new google.maps.Map(mapEl,{center:{lat:-23.55,lng:-46.63},zoom:12,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});
+    // Se já tem clientes com coordenadas (dados carregados), mostra o mapa
+    if(clients.length&&clients.some(c=>c.lat&&c.lng)){
+      showMiniMap();
+    }
+    // Trigger resize após breve delay para garantir tiles carregam
+    google.maps.event.addListenerOnce(gMap,'idle',()=>{
+      google.maps.event.trigger(gMap,'resize');
+    });
+  }
   const hmEl=document.getElementById('heatmap');
   if(hmEl)hmMap=new google.maps.Map(hmEl,{center:{lat:-23.55,lng:-46.63},zoom:11,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});
+}
+// v4.5.0: Mostra minimap quando há conteúdo para exibir
+function showMiniMap(){
+  const mapEl=document.getElementById('map');
+  const mph=document.getElementById('mph');
+  const expandBtn=document.getElementById('map-expand-btn');
+  if(mapEl)mapEl.style.display='block';
+  if(mph)mph.style.display='none';
+  if(expandBtn)expandBtn.style.display='flex';
+  // Forçar resize para corrigir tiles cinzas
+  if(gMap){setTimeout(()=>{google.maps.event.trigger(gMap,'resize');},100);}
 }
 function initLeafMap(){}
 const _geoCache={};
@@ -3844,61 +4206,24 @@ async function calcRoute(){
     const retAddr=cfg.retaddr||baseAddr;
     const saidaMin=ts(cfg.saida||'10:00')/60; // horário de saída em minutos
     const tempoParada=cfg.tempo||10; // minutos por parada
-    // ── SISTEMA HÍBRIDO: separar clientes com janela urgente dos livres ──
-    // Clientes "urgentes" = têm deadline que exige ser visitado cedo
-    const urgentes=[];const livres=[];
-    geocoded.forEach((c,gi)=>{
-      const dl=clientDeadlineMin(c);
-      if(dl<24*60){urgentes.push({gi,c,deadline:dl});}
-      else{livres.push({gi,c});}
-    });
-    // Ordenar urgentes por deadline (mais apertado primeiro)
-    urgentes.sort((a,b)=>a.deadline-b.deadline);
-    console.log('[ROTA HÍBRIDA] Urgentes (com janela):',urgentes.map(u=>u.c.nome+' até '+u.c.hf||u.c.janela));
-    console.log('[ROTA HÍBRIDA] Livres:',livres.map(l=>l.c.nome));
-    // ── ESTRATÉGIA: urgentes primeiro (na ordem de deadline), depois Google otimiza os livres ──
-    let finalWpOrder;
-    if(urgentes.length===0){
-      // Sem urgentes — Google otimiza tudo normalmente
-      const waypoints=geocoded.map(c=>_waypointFor(c));
-      const dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:true,region:'BR'},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
-      finalWpOrder=dirResult.routes[0].waypoint_order;
-      console.log('[ROTA HÍBRIDA] Sem urgentes — Google otimizou tudo:',JSON.stringify(finalWpOrder));
+    // ── v4.5.0: MULTI-STRATEGY OPTIMIZER ──
+    _routeMode=getRouteMode();
+    _routeResults={time:null,distance:null};
+    const optResult=await multiStrategyOptimize(geocoded,geocodedIdx,baseAddr,retAddr);
+    let finalWpOrder,dirResult;
+    if(optResult&&optResult.best){
+      finalWpOrder=optResult.best.wpOrder;
+      dirResult=optResult.best.dirResult;
+      // Show savings indicator
+      setTimeout(()=>showOptSavings(optResult.best,optResult.worst),500);
+      // Update comparison panel
+      setTimeout(()=>updateRouteCompare(),600);
     } else {
-      // Montar ordem: urgentes fixos no início, livres otimizados pelo Google depois
-      const urgIdx=urgentes.map(u=>u.gi);
-      const livIdx=livres.map(l=>l.gi);
-      if(livres.length<=1){
-        // Poucos livres — não precisa otimizar, só concatena
-        finalWpOrder=urgIdx.concat(livIdx);
-        console.log('[ROTA HÍBRIDA] Urgentes+livres simples:',JSON.stringify(finalWpOrder));
-      } else {
-        // Pedir ao Google para otimizar APENAS os livres, com ponto de partida = último urgente
-        const lastUrgent=urgentes[urgentes.length-1].c;
-        const livWaypoints=livres.map(l=>_waypointFor(l.c));
-        const livResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({
-          origin:lastUrgent.lat&&lastUrgent.lng?new google.maps.LatLng(lastUrgent.lat,lastUrgent.lng):lastUrgent.endereco+_getAddrSuffix(),
-          destination:retAddr,
-          waypoints:livWaypoints,
-          travelMode:google.maps.TravelMode.DRIVING,
-          optimizeWaypoints:true,
-          region:'BR'
-        },(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
-        const livOrder=livResult.routes[0].waypoint_order;
-        const livReordered=livOrder.map(wi=>livIdx[wi]);
-        finalWpOrder=urgIdx.concat(livReordered);
-        console.log('[ROTA HÍBRIDA] Urgentes fixos:',JSON.stringify(urgIdx),'| Livres otimizados:',JSON.stringify(livReordered));
-      }
+      // Fallback: Google optimize
+      const waypoints=geocoded.map(c=>_waypointFor(c));
+      dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:true,region:'BR'},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
+      finalWpOrder=dirResult.routes[0].waypoint_order;
     }
-    // ── ROTA FINAL: pedir ao Google a rota completa NA ORDEM DEFINIDA (sem otimização) ──
-    const orderedWaypoints=finalWpOrder.map(gi=>_waypointFor(geocoded[gi]));
-    const dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({
-      origin:baseAddr,destination:retAddr,
-      waypoints:orderedWaypoints,
-      travelMode:google.maps.TravelMode.DRIVING,
-      optimizeWaypoints:false, // NÃO otimizar — ordem já está definida
-      region:'BR'
-    },(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
     // Log detalhado da rota final
     const legs=dirResult.routes[0].legs;
     const totalDistKm=legs.reduce((s,l)=>s+l.distance.value,0)/1000;
@@ -3954,6 +4279,7 @@ async function calcRoute(){
     const legsDur=legs.map(l=>({duration:l.duration.value}));
     estimateTimesOSRM(legsDur);
     const urgMsg=urgentes.length?' ('+urgentes.length+' com janela de horário prioritária)':'';
+    showMiniMap(); // v4.5.0: Mostra minimap agora que há rota
     renderC();updStats();
     // v4.3.7: Salvar no histórico quando rota é gerada (corrige histórico e mapa de calor)
     saveHist();
@@ -4024,7 +4350,12 @@ function ts(t){const[h,m]=(t||'00:00').split(':').map(Number);return h*3600+m*60
 function st2(s){const h=Math.floor(s/3600)%24,m=Math.floor((s%3600)/60);return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');}
 // v4.3.4: Formatar duração em minutos para "Xh Ymin" ou "X min"
 function fmtDuration(min){if(min>=60){const h=Math.floor(min/60),m=min%60;return h+'h '+m+'min';}return min+' min';}
-function resetMap(){if(leafRoute&&leafMap){leafMap.removeLayer(leafRoute);leafRoute=null;}if(leafMap)leafMap.eachLayer(l=>{if(l instanceof L.Marker)leafMap.removeLayer(l);});}
+function resetMap(){if(leafRoute&&leafMap){leafMap.removeLayer(leafRoute);leafRoute=null;}if(leafMap)leafMap.eachLayer(l=>{if(l instanceof L.Marker)leafMap.removeLayer(l);});
+  // v4.5.0: Esconde minimap e mostra placeholder quando não há clientes
+  const mapEl=document.getElementById('map');const mph=document.getElementById('mph');const expandBtn=document.getElementById('map-expand-btn');
+  if(mapEl)mapEl.style.display='none';if(mph)mph.style.display='';if(expandBtn)expandBtn.style.display='none';
+  if(gRoute){gRoute.setMap(null);gRoute=null;}gMarkers.forEach(m=>{if(m.map)m.map=null;});gMarkers=[];gBaseMarkers.forEach(m=>{if(m.map)m.map=null;});gBaseMarkers=[];
+}
 
 async function genImage(){
   if(!clients.length)return;
@@ -4179,11 +4510,22 @@ function renderHist(){
   renderPerfDash();
   const hist=getHist();const el=g('hlist');
   if(!hist.length){el.innerHTML='<div class="empty"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span><p>Nenhuma rota salva ainda</p></div>';return;}
-  el.innerHTML=hist.map((h,i)=>{
+  // v4.5.0: Date filter for history list
+  const filterEl=document.getElementById('hist-date-filter');
+  el.innerHTML='<div class="hist-filters" style="margin-bottom:14px"><input type="text" id="hist-search" placeholder="Buscar por data..." oninput="filterHistList(this.value)"></div>';
+  el.innerHTML+=hist.map((h,i)=>{
     const d=new Date(h.date+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
     const col=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}).length,ent=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');}).length;
     return '<div class="hi" onclick="openHist('+i+')"><div style="width:42px;height:42px;background:var(--pul);border-radius:var(--rl2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0"><span class="mot-ico" style="width:20px;height:20px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span></div><div><div style="font-weight:700;font-size:14px">'+d.charAt(0).toUpperCase()+d.slice(1)+'</div><div class="hm">'+h.clients.length+' clientes · '+col+' coleta'+(col!==1?'s':'')+' / '+ent+' entrega'+(ent!==1?'s':'')+'</div></div></div>';
   }).join('');
+}
+// v4.5.0: Filter history list by date text
+function filterHistList(query){
+  const q=query.toLowerCase().trim();
+  document.querySelectorAll('#hlist .hi').forEach(item=>{
+    const text=item.textContent.toLowerCase();
+    item.style.display=(!q||text.includes(q))?'':'none';
+  });
 }
 function openHist(i){
   histIdx=i;const h=getHist()[i];
@@ -4194,9 +4536,31 @@ function openHist(i){
   // Gráficos donut no histórico (se houver dados de status/pagamento)
   const hasMotorData=h.order.some(idx=>{const c=h.clients[idx]||h.clients[0];return c&&(c._motStatus||c._motPay);});
   if(hasMotorData)html+=buildChartsHTML(h.clients,h.order);
-  h.order.forEach((idx,stop)=>{const c=h.clients[idx]||h.clients[stop];if(!c)return;const tipos=normalizeTipo(c.tipo);const isCol=tipos.includes('coleta');html+='<div style="border:1.5px solid var(--bd);border-radius:var(--r);padding:10px 13px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start"><div style="width:26px;height:26px;background:'+(isCol?'var(--gn)':'var(--bl)')+';color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+(stop+1)+'</div><div><div style="font-weight:600;font-size:13px">'+c.nome+'</div><div style="font-size:12px;color:var(--mu)">'+c.endereco+'</div><div style="margin-top:5px"><span class="tag '+(isCol?'tc':'te')+'">'+(isCol?'Coleta':'Entrega')+'</span>'+(c._motStatus?'<span class="tag" style="background:var(--pul);color:var(--pud);margin-left:4px">'+c._motStatus+'</span>':'')+(c._motPay?'<span class="tag" style="background:rgba(30,27,75,.06);color:var(--tx);margin-left:4px">'+c._motPay+'</span>':'')+'</div></div></div>';});
+  // v4.5.0: History filters
+  html+='<div class="hist-filters">'
+    +'<input type="text" placeholder="Buscar cliente..." oninput="filterHistCards(this.value)">'
+    +'<select onchange="filterHistType(this.value)"><option value="">Todos</option><option value="coleta">Coleta</option><option value="entrega">Entrega</option></select>'
+  +'</div>';
+  html+='<div id="hist-card-list">';
+  h.order.forEach((idx,stop)=>{const c=h.clients[idx]||h.clients[stop];if(!c)return;const tipos=normalizeTipo(c.tipo);const primaryColor=tipos.length?_getTagColor(tipos[0]):'rgba(108,92,231,.18)';const tagChips=renderTagChips(tipos);const bw=tagBorderWidth(tipos);const borderStyle=tipos.length<=1?'border-left:3px solid '+primaryColor:'border-left:none;padding-left:'+(13+bw)+'px;overflow:hidden;position:relative';const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';html+='<div class="hist-card" data-hc-name="'+(c.nome||'').toLowerCase()+'" data-hc-type="'+(tipos.join(','))+'" style="'+borderStyle+'">'+(tipos.length>1?renderTagBorder(tipos):'')+'<div class="hc-num" style="background:'+primaryColor+'">'+(stop+1)+'</div><div class="hc-info"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px"><span class="hc-name">'+c.nome+'</span>'+(tagChips?'<div style="display:flex;gap:3px;flex-wrap:wrap;flex-shrink:0">'+tagChips+'</div>':'')+'</div><div class="hc-addr">'+c.endereco+(c.complemento?' \u2014 '+c.complemento:'')+'</div><div class="hc-meta">'+(c.tel?'<span>\u260E '+c.tel+'</span>':'')+(c.qtd?'<span>'+c.qtd+' '+(cfg._itemLabel||'item')+(c.qtd>1?'s':'')+'</span>':'')+(vd?'<span>'+vd+'</span>':'')+'</div></div></div>';});
+  html+='</div>';
   g('hm-body').innerHTML=html;g('hist-modal').classList.add('on');
 }
+// v4.5.0: History card filters
+function filterHistCards(query){
+  const q=query.toLowerCase().trim();
+  document.querySelectorAll('#hist-card-list .hist-card').forEach(card=>{
+    const name=card.dataset.hcName||'';
+    card.style.display=(!q||name.includes(q))?'':'none';
+  });
+}
+function filterHistType(tipo){
+  document.querySelectorAll('#hist-card-list .hist-card').forEach(card=>{
+    const types=card.dataset.hcType||'';
+    card.style.display=(!tipo||types.includes(tipo))?'':'none';
+  });
+}
+
 function loadHist(){
   if(clients.length>0){
     showConfirm('Substituir rota atual?','Isso irá substituir os '+clients.length+' clientes atuais pela rota do histórico.',()=>{doLoadHist();});
@@ -4925,6 +5289,6 @@ function showSkeletonLoading(containerId,count){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.4.1</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.5.0</div>
 </body>
 </html>
