@@ -492,6 +492,14 @@ body.dark .mc-conclude-btn{background:var(--pu);color:#fff}
 .cep-status.loading{color:var(--pu)}
 .cep-status.ok{color:var(--gnd)}
 .cep-status.err{color:var(--rd)}
+/* v4.3.8: Separate CEP field */
+.cep-row{display:flex!important;flex-direction:row!important;gap:10px;align-items:start}
+.cep-row>.fg,.cep-row>.edit-field{margin-bottom:0}
+.cep-row>.fg:first-child,.cep-row>.edit-field:first-child{flex:1 1 0%;min-width:0}
+.cep-row>.fg:last-child,.cep-row>.edit-field:last-child{flex:0 0 130px}
+.cep-row input[type="text"]{width:100%;box-sizing:border-box}
+.cep-input{font-variant-numeric:tabular-nums;letter-spacing:.5px}
+
 
 /* v4.3.8: Smooth tab transitions */
 .tp{transition:opacity .18s ease;opacity:0}
@@ -858,8 +866,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
       <div class="fg2">
         <div class="fg"><label>Nome *</label><input type="text" id="f-nome" placeholder="Nome completo"/></div>
         <div class="fg"><label>Telefone</label><input type="tel" id="f-tel" placeholder="(11) 99999-9999"/></div>
-        <div class="fg full"><label>Endere&#xE7;o completo *</label><input type="text" id="f-end" placeholder="CEP ou endere&#xE7;o completo" oninput="schedGeo();detectCEP(this)"/><div class="cep-status" id="f-end-cep"></div></div>
-        <div class="fg"><label>Complemento</label><input type="text" id="f-compl" placeholder="Apto, bloco, andar..."/></div>
+        <div class="fg full cep-row"><div class="fg"><label>Endere&#xE7;o completo *</label><input type="text" id="f-end" placeholder="Rua, n&#xBA;, complemento, bairro, cidade" oninput="schedGeo();onEndInput('f')"/></div><div class="fg"><label>CEP</label><input type="text" id="f-cep" class="cep-input" placeholder="00000-000" maxlength="9" oninput="onCepInput('f')"/><div class="cep-status" id="f-cep-status"></div></div></div>
         <div class="fg"><label>Tipo *</label>
           <div id="f-tipo" class="tag-multi-wrap"></div>
         </div>
@@ -1115,8 +1122,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
     <div class="edit-row">
       <div class="edit-field" style="grid-column:1/-1"><label>Nome</label><input type="text" id="em-nome"/></div>
     </div>
-    <div class="edit-field"><label>Endere&#xe7;o</label><input type="text" id="em-end" placeholder="CEP ou endere&#xe7;o" oninput="detectCEP(this)"/><div class="cep-status" id="em-end-cep"></div></div>
-    <div class="edit-field"><label>Complemento</label><input type="text" id="em-compl" placeholder="Apto, bloco, andar..."/></div>
+    <div class="edit-field" style="grid-column:1/-1"><div class="cep-row"><div class="edit-field"><label>Endere&#xe7;o completo</label><input type="text" id="em-end" placeholder="Rua, n&#xBA;, complemento, bairro, cidade" oninput="onEndInput('em')"/></div><div class="edit-field"><label>CEP</label><input type="text" id="em-cep" class="cep-input" placeholder="00000-000" maxlength="9" oninput="onCepInput('em')"/><div class="cep-status" id="em-cep-status"></div></div></div></div>
     <div class="edit-row">
       <div class="edit-field"><label>Telefone</label><input type="text" id="em-tel"/></div>
       <div class="edit-field"><label>Tipo</label><div id="em-tipo" class="tag-multi-wrap"></div></div>
@@ -1174,8 +1180,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
     <p style="font-size:13px;color:var(--mu);margin-bottom:16px">O cliente sera inserido apos as paradas ja concluidas, na melhor posicao possivel.</p>
     <div class="fg2">
       <div class="fg full"><label>Nome</label><input type="text" id="si-nome" placeholder="Nome do cliente"/></div>
-      <div class="fg full"><label>Endereco</label><input type="text" id="si-end" placeholder="CEP ou endere&#xe7;o completo" oninput="detectCEP(this)"/><div class="cep-status" id="si-end-cep"></div></div>
-      <div class="fg"><label>Complemento</label><input type="text" id="si-compl" placeholder="Apto, bloco, andar..."/></div>
+      <div class="fg full cep-row"><div class="fg"><label>Endere&#xe7;o completo</label><input type="text" id="si-end" placeholder="Rua, n&#xBA;, complemento, bairro, cidade" oninput="onEndInput('si')"/></div><div class="fg"><label>CEP</label><input type="text" id="si-cep" class="cep-input" placeholder="00000-000" maxlength="9" oninput="onCepInput('si')"/><div class="cep-status" id="si-cep-status"></div></div></div>
       <div class="fg"><label>Telefone</label><input type="text" id="si-tel" placeholder="(11) 99999-9999"/></div>
       <div class="fg"><label>Tipo</label><div id="si-tipo" class="tag-multi-wrap"></div></div>
       <div class="fg"><label>Quantidade</label><input type="number" id="si-qtd" min="0" placeholder=""/></div>
@@ -1334,70 +1339,142 @@ function confirmInlineTag(id){
 }
 
 /* ══════════════════════════════════════════════════════════════
-   v4.3.8: BUSCA AUTOM\xc1TICA DE ENDERE\xc7O POR CEP (ViaCEP)
-   Detecta CEP no campo de endere\xe7o e preenche automaticamente.
-   Funciona em todos os formul\xe1rios (principal, edi\xe7\xe3o, smart insert).
+   v4.3.8: CEP ↔ ENDEREÇO BIDIRECIONAL (ViaCEP)
+   Campo CEP separado. CEP preenche endereço, endereço preenche CEP.
+   Funciona em todos os formulários (principal, edição, smart insert).
+   Prefixos: 'f' (main), 'em' (edit modal), 'si' (smart insert)
    ══════════════════════════════════════════════════════════════ */
 let _cepCache={};
 let _cepTimeout=null;
-function detectCEP(input){
-  const raw=input.value.replace(/\D/g,'');
-  const statusEl=g(input.id+'-cep');
-  // Limpar status se n\xe3o tem 8 d\xedgitos
-  if(raw.length!==8){
+let _endTimeout=null;
+let _cepFilling=false; // guard against infinite loops
+
+// Format CEP as NNNNN-NNN
+function fmtCep(v){
+  const d=v.replace(/\D/g,'');
+  if(d.length<=5)return d;
+  return d.slice(0,5)+'-'+d.slice(5,8);
+}
+
+// CEP field input handler
+function onCepInput(prefix){
+  const cepEl=g(prefix+'-cep');
+  if(!cepEl)return;
+  // Auto-format
+  const raw=cepEl.value.replace(/\D/g,'');
+  cepEl.value=fmtCep(cepEl.value);
+  const statusEl=g(prefix+'-cep-status');
+  if(raw.length<8){
     if(statusEl)statusEl.innerHTML='';
     return;
   }
-  // CEP brasileiro: 8 d\xedgitos
-  const cep=raw;
-  // Debounce
-  clearTimeout(_cepTimeout);
-  _cepTimeout=setTimeout(()=>fetchCEP(cep,input,statusEl),300);
+  if(raw.length===8){
+    clearTimeout(_cepTimeout);
+    _cepTimeout=setTimeout(()=>fetchCepAndFill(raw,prefix),300);
+  }
 }
-async function fetchCEP(cep,input,statusEl){
+
+// Fetch CEP and fill address field
+async function fetchCepAndFill(cep,prefix){
+  const statusEl=g(prefix+'-cep-status');
+  const endEl=g(prefix+'-end');
   // Check cache
   if(_cepCache[cep]){
-    applyCEP(_cepCache[cep],input,statusEl);
+    applyCepToAddress(_cepCache[cep],endEl,statusEl,prefix);
     return;
   }
-  if(statusEl){statusEl.className='cep-status loading';statusEl.innerHTML='<span class="spin"></span> Buscando CEP...';}
+  if(statusEl){statusEl.className='cep-status loading';statusEl.innerHTML='<span class="spin"></span> Buscando...';}
   try{
     const res=await fetch('https://viacep.com.br/ws/'+cep+'/json/');
     const data=await res.json();
     if(data.erro){
-      if(statusEl){statusEl.className='cep-status err';statusEl.textContent='CEP n\xe3o encontrado';}
+      if(statusEl){statusEl.className='cep-status err';statusEl.textContent='CEP n\u00e3o encontrado';}
       setTimeout(()=>{if(statusEl)statusEl.innerHTML='';},3000);
       return;
     }
     _cepCache[cep]=data;
-    applyCEP(data,input,statusEl);
+    applyCepToAddress(data,endEl,statusEl,prefix);
   }catch(e){
     if(statusEl){statusEl.className='cep-status err';statusEl.textContent='Erro na busca';}
     setTimeout(()=>{if(statusEl)statusEl.innerHTML='';},3000);
   }
 }
-function applyCEP(data,input,statusEl){
-  // Montar endere\xe7o: "Rua X, Bairro, Cidade"
+
+function applyCepToAddress(data,endEl,statusEl,prefix){
   const parts=[];
   if(data.logradouro)parts.push(data.logradouro);
   if(data.bairro)parts.push(data.bairro);
   const cidade=data.localidade?(data.localidade+(data.uf?', '+data.uf:'')):'';
   if(cidade)parts.push(cidade);
   const addr=parts.join(', ');
-  if(addr){
-    input.value=addr;
-    // Disparar eventos para que geocodifica\xe7\xe3o funcione
-    input.dispatchEvent(new Event('input',{bubbles:true}));
+  if(addr&&endEl){
+    _cepFilling=true;
+    endEl.value=addr;
+    endEl.dispatchEvent(new Event('input',{bubbles:true}));
+    _cepFilling=false;
     if(statusEl){
       statusEl.className='cep-status ok';
-      statusEl.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> '+data.logradouro+' \u2014 '+data.bairro+', '+(data.localidade||'');
+      statusEl.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> '+(data.logradouro||'')+' \u2014 '+(data.bairro||'')+', '+(data.localidade||'');
       setTimeout(()=>{if(statusEl)statusEl.innerHTML='';},5000);
     }
-    // Focar no pr\xf3ximo campo l\xf3gico (complemento ou n\xfamero)
-    // O usu\xe1rio precisa adicionar o n\xfamero
-    toast('Endere\xe7o preenchido via CEP. Adicione o n\xfamero.','ok');
+    toast('Endere\u00e7o preenchido via CEP. Adicione o n\u00famero.','ok');
+    // Focus address field so user can add number
+    endEl.focus();
+    // Place cursor at beginning so user can prepend number or at end
+    endEl.setSelectionRange(endEl.value.length,endEl.value.length);
   }
 }
+
+// Address field input handler: try to extract CEP from typed text
+function onEndInput(prefix){
+  if(_cepFilling)return; // Don't trigger when we're auto-filling
+  const endEl=g(prefix+'-end');
+  const cepEl=g(prefix+'-cep');
+  if(!endEl||!cepEl)return;
+  const text=endEl.value;
+  // Try to extract CEP pattern: NNNNN-NNN or 8 consecutive digits
+  const match=text.match(/\b(\d{5})-?(\d{3})\b/);
+  if(match){
+    const cep=match[1]+match[2];
+    if(cepEl.value.replace(/\D/g,'')!==cep){
+      cepEl.value=fmtCep(cep);
+      // Optionally validate via ViaCEP
+      clearTimeout(_endTimeout);
+      _endTimeout=setTimeout(()=>{
+        const statusEl=g(prefix+'-cep-status');
+        fetchCepValidate(cep,statusEl);
+      },500);
+    }
+  }
+}
+
+// Validate CEP extracted from address (don't overwrite address)
+async function fetchCepValidate(cep,statusEl){
+  if(_cepCache[cep]){
+    if(statusEl){
+      const d=_cepCache[cep];
+      statusEl.className='cep-status ok';
+      statusEl.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> CEP v\u00e1lido';
+      setTimeout(()=>{if(statusEl)statusEl.innerHTML='';},3000);
+    }
+    return;
+  }
+  try{
+    const res=await fetch('https://viacep.com.br/ws/'+cep+'/json/');
+    const data=await res.json();
+    if(!data.erro){
+      _cepCache[cep]=data;
+      if(statusEl){
+        statusEl.className='cep-status ok';
+        statusEl.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> CEP v\u00e1lido';
+        setTimeout(()=>{if(statusEl)statusEl.innerHTML='';},3000);
+      }
+    }
+  }catch(e){}
+}
+
+// Legacy compatibility: detectCEP redirects to new system
+function detectCEP(input){onCepInput(input.id.split('-')[0]);}
 
 /* ══════════════════════════════════════════════════════════════
    CLOUD SYNC — Cloudflare Worker + KV
@@ -1628,7 +1705,7 @@ function startGestorPolling(){
    ══════════════════════════════════════════════════════════════ */
 function openSmartInsert(){
   if(!clients.length){toast('Monte uma rota primeiro','err');return;}
-  ['si-nome','si-end','si-compl','si-tel','si-obs','si-val','si-hi','si-hf'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['si-nome','si-cep','si-end','si-tel','si-obs','si-val','si-hi','si-hf'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('si-qtd').value='';
   initTagMultiSelect('si-tipo',[]);
   document.getElementById('si-valtipo').value='normal';
@@ -1649,9 +1726,10 @@ async function doSmartInsert(){
 
   const siValTipo=document.getElementById('si-valtipo').value||'normal';
   const siJanela=document.getElementById('si-janela').value||'livre';
+  const siCep=document.getElementById('si-cep').value.replace(/\D/g,'');
   const newClient={
-    id:Date.now(),nome,endereco:end,
-    complemento:normalizeComplemento(document.getElementById('si-compl').value),
+    id:Date.now(),nome,endereco:end,cep:siCep,
+    complemento:'',
     tel:document.getElementById('si-tel').value.trim(),
     tipo:getFormTags('si-tipo'),
     qtd:parseInt(document.getElementById('si-qtd').value)||0,
@@ -2195,7 +2273,7 @@ function toggleSiJanela(){
   if(hw)hw.style.display=c?'':'none';if(fw)fw.style.display=c?'':'none';
 }
 function resetForm(){
-  ['f-nome','f-tel','f-end','f-compl','f-qtd','f-val','f-obs','f-hi','f-hf'].forEach(id=>g(id).value='');
+  ['f-nome','f-tel','f-cep','f-end','f-qtd','f-val','f-obs','f-hi','f-hf'].forEach(id=>g(id).value='');
   initTagMultiSelect('f-tipo',[]);g('f-janela').value='livre';if(g('f-valtipo')){g('f-valtipo').value='normal';toggleFValTipo();}
   g('f-data').value=new Date().toISOString().split('T')[0];
   g('ai-badge').style.display='none';g('amb-box').style.display='none';
@@ -2220,14 +2298,15 @@ async function extractImg(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({apiKey:cfg.akey,body:{model:'claude-sonnet-4-20250514',max_tokens:600,messages:[{role:'user',content:[
         {type:'image',source:{type:'base64',media_type:mt,data:b64}},
-        {type:'text',text:'Analise esta imagem de conversa de WhatsApp sobre servico de lavanderia. Retorne APENAS JSON puro sem markdown.\nRegras:\n- "nome": nome completo do cliente (sem prefixo "Cliente")\n- "endereco": endereco em Title Case (1a letra de cada palavra maiuscula), corrija erros de digitacao obvios. CEP (formato NNNNN-NNN, 8 digitos) inclua junto ao endereco, NUNCA use como telefone\n- "telefone": apenas numero de telefone/celular com DDD (10-11 digitos). Se parecer CEP deixe vazio\n- "tipo": "coleta" se mencionar buscar/retirar/coleta; "entrega" se mencionar entregar/devolver; senao "vazio"\n- "qtd": quantidade de tapetes (inteiro, 0 se nao informado)\n- "valor": valor em reais\n- "janela": "livre","manha","tarde" ou "custom"\n- "hi"/"hf": horario inicio/fim se janela=custom (formato HH:MM)\n- "obs": observacoes relevantes apenas (nao inclua medidas de tapetes aqui)\nJSON: {"nome":"","endereco":"","telefone":"","tipo":"vazio","qtd":0,"valor":0,"janela":"livre","hi":"","hf":"","obs":""}'}
+        {type:'text',text:'Analise esta imagem de conversa de WhatsApp sobre servico de lavanderia. Retorne APENAS JSON puro sem markdown.\nRegras:\n- "nome": nome completo do cliente (sem prefixo "Cliente")\n- "endereco": endereco COMPLETO em Title Case (rua, numero, complemento como apto/bloco, bairro, cidade). NAO inclua CEP no endereco.\n- "cep": CEP no formato NNNNN-NNN (8 digitos). NUNCA confunda com telefone\n- "telefone": apenas numero de telefone/celular com DDD (10-11 digitos). Se parecer CEP deixe vazio\n- "tipo": "coleta" se mencionar buscar/retirar/coleta; "entrega" se mencionar entregar/devolver; senao "vazio"\n- "qtd": quantidade de tapetes (inteiro, 0 se nao informado)\n- "valor": valor em reais\n- "janela": "livre","manha","tarde" ou "custom"\n- "hi"/"hf": horario inicio/fim se janela=custom (formato HH:MM)\n- "obs": observacoes relevantes apenas (nao inclua medidas de tapetes aqui)\nJSON: {"nome":"","endereco":"","cep":"","telefone":"","tipo":"vazio","qtd":0,"valor":0,"janela":"livre","hi":"","hf":"","obs":""}'}
       ]}]}})});
     const data=await res.json();
     let ext={};try{ext=JSON.parse((data.content?.[0]?.text||'{}').replace(/```json?|```/g,'').trim());}catch(e){}
     if(ext.nome)g('f-nome').value=ext.nome;
     if(ext.telefone)g('f-tel').value=ext.telefone;
+    if(ext.cep){g('f-cep').value=fmtCep(ext.cep);onCepInput('f');}
     if(ext.endereco)g('f-end').value=ext.endereco;
-    if(ext.complemento)g('f-compl').value=normalizeComplemento(ext.complemento);
+    // complemento agora faz parte do endereco completo
     if(ext.tipo)initTagMultiSelect('f-tipo',normalizeTipo(ext.tipo));
     if(ext.qtd)g('f-qtd').value=ext.qtd;
     if(ext.valor)g('f-val').value=ext.valor;
@@ -2434,7 +2513,7 @@ async function importTC(){
     }catch(e){}}
     if(!pc){pc=_pendingCoords;}_pendingCoords=null;
     const nomeFmt=fmtNomeValor(card.name,ext.valor||0,valTipo);
-    return {id:Date.now()+Math.random(),nome:nomeFmt,endereco:endFinal,complemento:normalizeComplemento(ext.complemento),tel:ext.telefone||'',tipo:ext.tipo||'entrega',qtd:ext.qtd||0,val:ext.valor||0,valTipo,data:dv,janela:ext.janela||'livre',hi:ext.hi||'',hf:ext.hf||'',obs:ext.obs||'',estT:null,conflict:false,cmsg:'',lat:pc?.lat||null,lng:pc?.lng||null,_cidade:ext._cidade||null};
+    return {id:Date.now()+Math.random(),nome:nomeFmt,endereco:endFinal,complemento:'',tel:ext.telefone||'',tipo:ext.tipo||'entrega',qtd:ext.qtd||0,val:ext.valor||0,valTipo,data:dv,janela:ext.janela||'livre',hi:ext.hi||'',hf:ext.hf||'',obs:ext.obs||'',estT:null,conflict:false,cmsg:'',lat:pc?.lat||null,lng:pc?.lng||null,_cidade:ext._cidade||null};
   }
   // Processa em lotes de 3 para maior velocidade
   const BATCH=3;
@@ -2662,7 +2741,8 @@ function addClient(){
     const hi=v('f-hi'),hf=v('f-hf');
     if(hi&&hf&&hi>=hf){toast('Horário início deve ser anterior ao fim','err');return;}
   }
-  clients.push({id:Date.now()+Math.random(),nome,endereco:end,complemento:normalizeComplemento(v('f-compl')),tel:v('f-tel'),tipo:tipos,qtd,val,valTipo,data:v('f-data')||new Date().toISOString().split('T')[0],janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null});
+  const cep=v('f-cep').replace(/\D/g,'');
+  clients.push({id:Date.now()+Math.random(),nome,endereco:end,cep,complemento:'',tel:v('f-tel'),tipo:tipos,qtd,val,valTipo,data:v('f-data')||new Date().toISOString().split('T')[0],janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null});
   order=clients.map((_,i)=>i);
   resetForm();clearImg();renderC();updStats();updBtns();
   toast(nome+' adicionado!','ok');
@@ -2687,8 +2767,8 @@ function editC(id){
   const c=clients.find(x=>x.id===id);if(!c)return;
   g('em-id').value=id;
   g('em-nome').value=c.nome||'';
-  g('em-end').value=c.endereco||'';
-  g('em-compl').value=c.complemento||'';
+  g('em-cep').value=c.cep?fmtCep(c.cep):'';
+  g('em-end').value=(c.endereco||'')+(c.complemento?' — '+c.complemento:'');
   g('em-tel').value=c.tel||'';
   initTagMultiSelect('em-tipo',normalizeTipo(c.tipo));
   g('em-qtd').value=c.qtd||'';
@@ -2706,8 +2786,9 @@ function saveEditC(){
   const id=parseFloat(g('em-id').value);
   const c=clients.find(x=>x.id===id);if(!c)return;
   c.nome=g('em-nome').value.trim()||c.nome;
+  c.cep=g('em-cep').value.replace(/\D/g,'');
   c.endereco=g('em-end').value.trim();
-  c.complemento=normalizeComplemento(g('em-compl').value);
+  c.complemento='';
   c.tel=g('em-tel').value.trim();
   c.tipo=getFormTags('em-tipo');
   c.qtd=parseInt(g('em-qtd').value)||0;
