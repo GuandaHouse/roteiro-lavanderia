@@ -4,7 +4,7 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  v4.3.3 — 03/04/2026 — Tags + InfoWindow + Rota Fix + Escala    ║
+║  v4.3.4 — 03/04/2026 — Marcadores Partida + Drag Pro + Delays    ║
 ║  ─────────────────────────────────────────                   ║
 ║  TAGS CONFIGURÁVEIS:                                             ║
 ║  • Sistema de tags com cores personalizáveis (estilo Trello)     ║
@@ -651,6 +651,9 @@ body.dark .toast{background:rgba(255,255,255,.12)}
 .toast-center .tc-dot{width:6px;height:6px;border-radius:50%;background:#34c759;box-shadow:0 0 6px rgba(52,199,89,.4);flex-shrink:0}
 .toast-center.show{opacity:1;transform:translateX(0) scale(1);transition:opacity .3s ease,transform .35s cubic-bezier(.4,0,.2,1)}
 .toast-center.fade{opacity:0;transform:translateX(4px) scale(.98);transition:opacity .5s ease,transform .5s ease}
+/* v4.3.4: Config page sticky save bar */
+.cfg-save-bar{position:sticky;bottom:0;left:0;right:0;z-index:100;background:var(--bg);border-top:1px solid var(--bd);padding:12px 16px;display:flex;justify-content:flex-end;gap:8px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
 </style>
 </head>
 <body>
@@ -969,11 +972,12 @@ body.dark .toast{background:rgba(255,255,255,.12)}
         <span style="font-size:16px;line-height:1">+</span> Nova tag
       </button>
     </div>
-    <div class="card">
-      <button class="btn bp" style="width:100%;justify-content:center" onclick="saveCfg()"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span> Salvar configura&#xE7;&#xF5;es</button>
-      <div id="cfg-msg" style="margin-top:10px"></div>
-    </div>
   </div>
+  </div>
+  <!-- v4.3.4: Sticky save bar at bottom -->
+  <div class="cfg-save-bar">
+    <div id="cfg-msg" style="flex:1;display:flex;align-items:center"></div>
+    <button class="btn bp" onclick="saveCfg()" style="gap:8px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span> Salvar configura&#xE7;&#xF5;es</button>
   </div>
 </div>
 
@@ -1083,7 +1087,7 @@ body.dark .toast{background:rgba(255,255,255,.12)}
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
-let clients=[],order=[],gMap=null,gRoute=null,gMarkers=[],hmMap=null,hmHeatLayer=null;
+let clients=[],order=[],gMap=null,gRoute=null,gMarkers=[],gBaseMarkers=[],hmMap=null,hmHeatLayer=null;
 let imgData=null,ambRes=[],ambSel=-1,histIdx=-1,geoT=null,cfg={},_pendingCoords=null;
 let selBoard=null,selList=null,_tboardsHtml='',_tlistsHtml='';
 
@@ -1689,7 +1693,7 @@ function renderTagsConfig(){
       +'<div style="display:flex;align-items:center;gap:8px">'
         +'<span style="width:14px;height:14px;border-radius:50%;background:'+t.color+';flex-shrink:0"></span>'
         +'<input type="text" value="'+t.label+'" style="flex:1;border:none;background:transparent;font-size:13px;font-weight:600;color:var(--tx);outline:none" onchange="setTagLabel('+i+',this.value)"/>'
-        +(i>=2?'<button class="bic del" style="width:20px;height:20px;font-size:10px;flex-shrink:0" onclick="removeTag('+i+')">\u2715</button>':'')
+        +'<button class="bic del" style="width:20px;height:20px;font-size:10px;flex-shrink:0" onclick="removeTag('+i+')">\u2715</button>'
       +'</div>'
       +'<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">'+paletteHtml+'</div>'
     +'</div>';
@@ -1698,7 +1702,7 @@ function renderTagsConfig(){
 function setTagColor(idx,color){_tags[idx].color=color;_saveTags();renderTagsConfig();renderC();}
 function setTagLabel(idx,label){_tags[idx].label=label.trim()||_tags[idx].label;_saveTags();updateTagSelects();renderC();}
 function removeTag(idx){
-  if(_tags.length<=2){toast('M\xednimo de 2 tags','warn');return;}
+  if(_tags.length<=1){toast('M\xednimo de 1 tag','warn');return;}
   const removedId=_tags[idx].id;
   _tags.splice(idx,1);_saveTags();
   // Migrar clientes com a tag removida para a primeira tag
@@ -2524,15 +2528,30 @@ async function recalcRouteFromOrder(){
       origin:baseAddr,destination:retAddr,waypoints,
       travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR'
     },(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
-    if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>{if(m.map)m.map=null;});gMarkers=[];
+    if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>{if(m.map)m.map=null;});gMarkers=[];gBaseMarkers.forEach(m=>{if(m.map)m.map=null;});gBaseMarkers=[];
     gRoute=new google.maps.DirectionsRenderer({map:gMap,directions:dirResult,suppressMarkers:true,polylineOptions:{strokeColor:'#6C5CE7',strokeWeight:4,strokeOpacity:0.8}});
     const legs=dirResult.routes[0].legs;
     // Markers na nova ordem (AdvancedMarkerElement)
     geocoded.forEach((c,pos)=>{
       if(legs[pos]&&legs[pos].end_location){c.lat=legs[pos].end_location.lat();c.lng=legs[pos].end_location.lng();}
-      const mk=createAdvMarker({position:{lat:c.lat,lng:c.lng},map:gMap,label:String(pos+1),fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',onClick:()=>{new google.maps.InfoWindow({content:'<strong>'+c.nome+'</strong><br>'+c.endereco+(c.complemento?' — '+c.complemento:'')}).open({anchor:mk,map:gMap});}});
+      const mk=createAdvMarker({position:{lat:c.lat,lng:c.lng},map:gMap,label:String(pos+1),fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',onClick:()=>{openMarkerInfoWindow(mk,c,pos);}});
       gMarkers.push(mk);
     });
+    // v4.3.4: Marcadores de partida e retorno
+    const origin=legs[0].start_location;
+    const destination=legs[legs.length-1].end_location;
+    if(origin&&destination){
+      if(origin.lat()===destination.lat()&&origin.lng()===destination.lng()){
+        const mkBase=createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida / Retorno'});
+        gBaseMarkers.push(mkBase);
+      } else {
+        const mkStart=createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida'});
+        const mkEnd=createBaseMarker({position:{lat:destination.lat(),lng:destination.lng()},map:gMap,title:'Retorno'});
+        gBaseMarkers.push(mkStart,mkEnd);
+      }
+    }
+    // v4.3.4: Fechar InfoWindow ao clicar fora
+    if(!_mapClickListenerSet){gMap.addListener('click',()=>{if(_activeInfoWindow){_activeInfoWindow.close();_activeInfoWindow=null;}});_mapClickListenerSet=true;}
     const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds);
     const legsDur=legs.map(l=>({duration:l.duration.value}));
     estimateTimesOSRM(legsDur);
@@ -2568,6 +2587,7 @@ function fmtEnderecoComCidade(c){
 }
 let _activeInfoWindow=null;
 let _routeTotalKm=0,_routeTotalMin=0;
+let _mapClickListenerSet=false;
 function toggleMapFullscreen(){
   const wrap=g('mapw'),expIcon=g('expand-icon'),colIcon=g('collapse-icon'),btn=g('map-expand-btn');
   mapIsFullscreen=!mapIsFullscreen;
@@ -2598,10 +2618,23 @@ function updateMapSidebar(){
   let html='<div style="font-size:15px;font-weight:800;margin-bottom:12px;color:var(--tx)">Painel da Rota</div>';
   html+='<div class="ms-route-stats">'
     +'<div class="ms-stat"><div class="ms-stat-val">'+_routeTotalKm.toFixed(1)+' km</div><div class="ms-stat-label">Dist\xe2ncia total</div></div>'
-    +'<div class="ms-stat"><div class="ms-stat-val">'+Math.round(_routeTotalMin)+' min</div><div class="ms-stat-label">Tempo estimado</div></div>'
+    +'<div class="ms-stat"><div class="ms-stat-val">'+fmtDuration(Math.round(_routeTotalMin))+'</div><div class="ms-stat-label">Tempo estimado</div></div>'
     +'<div class="ms-stat"><div class="ms-stat-val">'+doneCount+'/'+totalStops+'</div><div class="ms-stat-label">Conclu\xEDdos</div></div>'
     +'<div class="ms-stat"><div class="ms-stat-val">'+etaFim+'</div><div class="ms-stat-label">\xDAltima parada</div></div>'
   +'</div>';
+  // v4.3.4: Progress bar and delay warning
+  const progressPercent=totalStops>0?Math.round(doneCount/totalStops*100):0;
+  html+='<div style="background:var(--bd);border-radius:6px;height:6px;margin-bottom:12px;overflow:hidden">'
+    +'<div style="background:var(--pu);height:100%;border-radius:6px;width:'+progressPercent+'%;transition:width .3s"></div>'
+  +'</div>'
+    +'<div style="font-size:11px;color:var(--mu);margin-bottom:12px;font-weight:500">'+doneCount+'/'+totalStops+' paradas ('+progressPercent+'%)</div>';
+  // Check for delays
+  const delayedCount=order.filter(i=>clients[i].conflict&&clients[i].cmsg.includes('Al\xE9m do limite')).length;
+  if(delayedCount>0){
+    html+='<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:#92400E;font-weight:500">'
+      +'\u26A0\uFE0F '+delayedCount+' parada'+(delayedCount!==1?'s':'')+' com previs\xE3o de atraso'
+    +'</div>';
+  }
   html+='<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:8px">Paradas</div>';
   // v4.3.3: Cart\xf5es com identidade visual preservada (tags coloridas) + drag and drop
   html+='<div id="ms-client-list">';
@@ -2619,7 +2652,7 @@ function updateMapSidebar(){
         +'</div>'
         +'<div style="font-size:11px;color:var(--mu);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.endereco+(c.complemento?' \u2014 '+c.complemento:'')+'</div>'
         +'<div style="display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap">'
-          +(c.estT?'<span style="font-size:10px;color:var(--pu);font-weight:600">'+c.estT+'</span>':'')
+          +(c.estT?'<span style="font-size:10px;color:var(--pu);font-weight:600">Chegada: '+c.estT+'</span>':'')
           +(vd?'<span style="font-size:10px;color:var(--mu)">'+vd+'</span>':'')
         +'</div>'
       +'</div>'
@@ -2629,15 +2662,18 @@ function updateMapSidebar(){
   sb.innerHTML=html;
   initMapSidebarDragDrop();
 }
-// v4.3.3: Drag and drop para cart\xf5es na sidebar do mapa expandido
+// v4.3.4: Drag and drop para cart\xf5es na sidebar com ghost + drop indicator
 function initMapSidebarDragDrop(){
   const cards=document.querySelectorAll('#ms-client-list .ms-client[data-msstop]');
   let msDrag=null;
+  let ghostEl=null;
+  let dropIndicator=null;
+  const DRAG_THRESHOLD=8;
   cards.forEach(card=>{
     card.addEventListener('mousedown',e=>{
       if(e.target.closest('button'))return;
       const stop=parseInt(card.dataset.msstop);
-      msDrag={stop,startY:e.clientY,card,started:false,overStop:null,overHalf:null};
+      msDrag={stop,startX:e.clientX,startY:e.clientY,card,started:false,overStop:null,overHalf:null};
       document.addEventListener('mousemove',msMove);
       document.addEventListener('mouseup',msEnd);
     });
@@ -2648,13 +2684,28 @@ function initMapSidebarDragDrop(){
   });
   function msMove(e){
     if(!msDrag)return;
+    const dx=Math.abs(e.clientX-msDrag.startX);
     const dy=Math.abs(e.clientY-msDrag.startY);
-    if(!msDrag.started&&dy>DRAG_THRESHOLD){
+    if(!msDrag.started&&(dx>DRAG_THRESHOLD||dy>DRAG_THRESHOLD)){
       msDrag.started=true;
-      msDrag.card.style.opacity='.4';
+      msDrag.card.classList.add('dragging');
+      // Create ghost element
+      ghostEl=msDrag.card.cloneNode(true);
+      ghostEl.classList.add('drag-ghost');
+      ghostEl.style.cssText='position:fixed;pointer-events:none;opacity:.8;z-index:10000;box-shadow:0 5px 15px rgba(0,0,0,.3);width:'+msDrag.card.offsetWidth+'px';
+      document.body.appendChild(ghostEl);
+      // Create drop indicator
+      dropIndicator=document.createElement('div');
+      dropIndicator.style.cssText='position:fixed;height:2px;background:#6C5CE7;z-index:9999;left:0;right:0;pointer-events:none;display:none';
+      document.body.appendChild(dropIndicator);
     }
     if(!msDrag.started)return;
     e.preventDefault();
+    // Move ghost
+    if(ghostEl){
+      ghostEl.style.left=e.clientX-ghostEl.offsetWidth/2+'px';
+      ghostEl.style.top=e.clientY-20+'px';
+    }
     const allCards=[...document.querySelectorAll('#ms-client-list .ms-client[data-msstop]')];
     allCards.forEach(c=>c.classList.remove('drag-over-top','drag-over-bottom'));
     for(const c of allCards){
@@ -2663,19 +2714,26 @@ function initMapSidebarDragDrop(){
         const si=parseInt(c.dataset.msstop);
         if(si!==msDrag.stop){
           const mid=r.top+r.height/2;
-          c.classList.add(e.clientY<mid?'drag-over-top':'drag-over-bottom');
-          msDrag.overStop=si;msDrag.overHalf=e.clientY<mid?'top':'bottom';
+          const isTop=e.clientY<mid;
+          if(dropIndicator){
+            dropIndicator.style.display='block';
+            dropIndicator.style.top=(isTop?r.top:r.bottom)+'px';
+          }
+          msDrag.overStop=si;msDrag.overHalf=isTop?'top':'bottom';
         }
         return;
       }
     }
     msDrag.overStop=null;
+    if(dropIndicator)dropIndicator.style.display='none';
   }
   function msEnd(e){
     document.removeEventListener('mousemove',msMove);
     document.removeEventListener('mouseup',msEnd);
     if(!msDrag)return;
-    document.querySelectorAll('#ms-client-list .ms-client').forEach(c=>{c.style.opacity='';c.classList.remove('drag-over-top','drag-over-bottom');});
+    if(ghostEl){ghostEl.remove();ghostEl=null;}
+    if(dropIndicator){dropIndicator.remove();dropIndicator=null;}
+    document.querySelectorAll('#ms-client-list .ms-client').forEach(c=>c.classList.remove('dragging','drag-over-top','drag-over-bottom'));
     if(msDrag.started&&msDrag.overStop!==null&&msDrag.overStop!==undefined&&msDrag.overStop!==msDrag.stop){
       let to=msDrag.overStop;
       if(msDrag.overHalf==='bottom')to++;
@@ -2701,28 +2759,27 @@ function focusMapMarker(stop){
 }
 function openMarkerInfoWindow(mk,c,stop){
   if(_activeInfoWindow)_activeInfoWindow.close();
-  const isCol=c.tipo==='coleta';
-  const tagColor=isCol?'#00C875':'#0098F7';
-  const tagLabel=isCol?'Coleta':'Entrega';
+  // v4.3.4: Use tag colors and improved layout
+  const tagColor=_getTagColor(c.tipo);
+  const tagLabel=_getTagLabel(c.tipo);
   const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';
-  // v4.3.3: Bal\xe3o redesenhado \u2014 compacto, elegante, sem \xe1rea branca excessiva
   let details=[];
   if(c.tel)details.push('\u260E '+c.tel);
   if(c.qtd)details.push(c.qtd+' '+(cfg._itemLabel||'item')+(c.qtd>1?'s':''));
   if(vd)details.push(vd);
   const jl=c.janela&&c.janela!=='livre'?(c.janela==='manha'?'At\xe9 12h':c.janela==='tarde'?'Ap\xf3s 12h':c.hi+'\u2013'+c.hf):'';
   let html='<div style="font-family:\'Plus Jakarta Sans\',sans-serif;padding:0;min-width:200px;max-width:280px">'
-    +'<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid rgba(0,0,0,.08)">'
+    +'<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid '+tagColor+'20">'
       +'<span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:'+tagColor+';color:#fff;font-size:11px;font-weight:700;flex-shrink:0">'+(stop+1)+'</span>'
       +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:#1e1b4b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.nome+'</div>'
       +'<span style="font-size:10px;font-weight:600;color:'+tagColor+';text-transform:uppercase;letter-spacing:.04em">'+tagLabel+'</span></div>'
     +'</div>'
-    +'<div style="padding:6px 10px;font-size:11px;color:#555;line-height:1.5">'
-      +c.endereco+(c.complemento?' \u2014 '+c.complemento:'');
-  if(details.length)html+='<div style="margin-top:4px;color:#333;font-weight:500">'+details.join(' \xB7 ')+'</div>';
-  if(c.estT)html+='<div style="margin-top:4px;color:#6C5CE7;font-weight:600">Previs\xe3o de chegada: '+c.estT+'</div>';
-  if(jl)html+='<div style="margin-top:2px;color:#FF6B35;font-weight:600;font-size:10px">Janela: '+jl+'</div>';
-  if(c.obs)html+='<div style="margin-top:4px;color:#888;font-style:italic;font-size:10px">'+c.obs+'</div>';
+    +'<div style="padding:8px 10px;font-size:11px;color:#555;line-height:1.5">'
+      +'<div style="color:#333;font-weight:500;margin-bottom:4px">'+c.endereco+(c.complemento?' \u2014 '+c.complemento:'')+'</div>';
+  if(details.length)html+='<div style="color:#666;font-size:10px;margin-bottom:4px">'+details.join(' \xB7 ')+'</div>';
+  if(c.estT)html+='<div style="color:'+tagColor+';font-weight:600;margin-bottom:3px">Chegada: '+c.estT+'</div>';
+  if(jl)html+='<div style="color:#FF6B35;font-weight:600;font-size:10px;margin-bottom:3px">Janela: '+jl+'</div>';
+  if(c.obs)html+='<div style="color:#888;font-style:italic;font-size:10px;margin-top:4px">'+c.obs+'</div>';
   html+='</div></div>';
   const iw=new google.maps.InfoWindow({content:html,maxWidth:300});
   iw.open({anchor:mk,map:gMap});
@@ -2746,6 +2803,16 @@ function createAdvMarker({position,map,label,fillColor,strokeColor,strokeWeight,
   if(label)el.textContent=label;
   const mk=new google.maps.marker.AdvancedMarkerElement({position,map,content:el});
   if(onClick)mk.addListener('gmp-click',onClick);
+  return mk;
+}
+// v4.3.4: Criar marcador de partida/retorno com ícone de prédio
+function createBaseMarker({position,map,label,title}){
+  const el=document.createElement('div');
+  el.style.cssText='width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#6C5CE7;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3);';
+  // SVG building icon (white)
+  const svg=`<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="white" stroke-width="2" style="display:block"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M8 10h.01M16 10h.01M12 10h.01M8 14h.01M16 14h.01M12 14h.01"/></svg>`;
+  el.innerHTML=svg;
+  const mk=new google.maps.marker.AdvancedMarkerElement({position,map,content:el,title});
   return mk;
 }
 function initGoogleMaps(){
@@ -2986,7 +3053,7 @@ async function calcRoute(){
     for(let i=0;i<clients.length;i++){if(!clients[i].lat||!clients[i].lng)noCoords.push(i);}
     order=newOrder.concat(noCoords);
     // Renderizar mapa
-    if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>{if(m.map)m.map=null;});gMarkers=[];
+    if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>{if(m.map)m.map=null;});gMarkers=[];gBaseMarkers.forEach(m=>{if(m.map)m.map=null;});gBaseMarkers=[];
     gRoute=new google.maps.DirectionsRenderer({map:gMap,directions:dirResult,suppressMarkers:true,polylineOptions:{strokeColor:'#6C5CE7',strokeWeight:4,strokeOpacity:0.8}});
     // Atualizar coordenadas com posições resolvidas pelo Google
     finalWpOrder.forEach((gi,pos)=>{
@@ -3003,6 +3070,19 @@ async function calcRoute(){
       const mk=createAdvMarker({position:{lat:c.lat,lng:c.lng},map:gMap,label:String(pos+1),fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',strokeColor:isUrg?'#FF6B35':'#fff',strokeWeight:isUrg?3:2,onClick:()=>{openMarkerInfoWindow(mk,c,pos);}});
       gMarkers.push(mk);
     });
+    // v4.3.4: Marcadores de partida e retorno com ícone de prédio
+    const origin=legs[0].start_location;
+    const destination=legs[legs.length-1].end_location;
+    if(origin&&destination){
+      if(origin.lat()===destination.lat()&&origin.lng()===destination.lng()){
+        const mkBase=createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida / Retorno'});
+        gBaseMarkers.push(mkBase);
+      } else {
+        const mkStart=createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida'});
+        const mkEnd=createBaseMarker({position:{lat:destination.lat(),lng:destination.lng()},map:gMap,title:'Retorno'});
+        gBaseMarkers.push(mkStart,mkEnd);
+      }
+    }
     // Fechar InfoWindow ao clicar no mapa (fora do marcador)
     gMap.addListener('click',()=>{if(_activeInfoWindow){_activeInfoWindow.close();_activeInfoWindow=null;}});
     const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds);
@@ -3074,6 +3154,8 @@ function estimateTimesSimple(){
 }
 function ts(t){const[h,m]=(t||'00:00').split(':').map(Number);return h*3600+m*60;}
 function st2(s){const h=Math.floor(s/3600)%24,m=Math.floor((s%3600)/60);return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');}
+// v4.3.4: Formatar duração em minutos para "Xh Ymin" ou "X min"
+function fmtDuration(min){if(min>=60){const h=Math.floor(min/60),m=min%60;return h+'h '+m+'min';}return min+' min';}
 function resetMap(){if(leafRoute&&leafMap){leafMap.removeLayer(leafRoute);leafRoute=null;}if(leafMap)leafMap.eachLayer(l=>{if(l instanceof L.Marker)leafMap.removeLayer(l);});}
 
 async function genImage(){
@@ -3680,6 +3762,6 @@ function editDoneCard(idx){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v4.3.3</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.4;letter-spacing:.03em;position:relative;z-index:1">v4.3.4</div>
 </body>
 </html>
