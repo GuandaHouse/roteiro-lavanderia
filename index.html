@@ -4,7 +4,7 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  v4.3.8 — 03/04/2026 — UX Refinements + Custom Dropdowns             ║
+║  v4.3.9 — 03/04/2026 — UX Refinements + Custom Dropdowns             ║
 ║  ─────────────────────────────────────────                   ║
 ║  UX:                                                                 ║
 ║  • Sidebar resize handle redesenhado (barra visível, arrastável)     ║
@@ -487,21 +487,48 @@ body.dark .mc-conclude-btn{background:var(--pu);color:#fff}
 .tw{background:var(--ywl);color:#8B6F00}
 .tg{background:var(--s2);color:var(--mu)}
 .tpu{background:var(--pul);color:var(--pud)}
-/* v4.3.8: CEP auto-fill status */
+/* v4.3.9: CEP auto-fill status */
 .cep-status{font-size:11px;font-weight:500;margin-top:3px;min-height:16px;display:flex;align-items:center;gap:4px;transition:all .2s}
 .cep-status.loading{color:var(--pu)}
 .cep-status.ok{color:var(--gnd)}
 .cep-status.err{color:var(--rd)}
-/* v4.3.8: Separate CEP field */
+/* v4.3.9: Separate CEP field */
 .cep-row{display:flex!important;flex-direction:row!important;gap:10px;align-items:start}
 .cep-row>.fg,.cep-row>.edit-field{margin-bottom:0}
 .cep-row>.fg:first-child,.cep-row>.edit-field:first-child{flex:1 1 0%;min-width:0}
 .cep-row>.fg:last-child,.cep-row>.edit-field:last-child{flex:0 0 130px}
 .cep-row input[type="text"]{width:100%;box-sizing:border-box}
+
+/* v4.3.9: Hide Google Maps default My Location button */
+.gm-bundled-control,.gm-svpc,.gm-fullscreen-control{display:none!important}
+
+/* v4.3.9: Dashboard geográfico */
+.geo-dash{position:absolute;bottom:16px;left:16px;z-index:10;display:flex;gap:10px;pointer-events:auto}
+.geo-card{background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border:1px solid rgba(0,0,0,.06);border-radius:16px;padding:16px;min-width:180px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+body.dark .geo-card{background:rgba(26,25,37,.92);border-color:rgba(255,255,255,.08)}
+.geo-card h4{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);margin:0 0 10px}
+.donut-wrap{display:flex;align-items:center;gap:12px}
+.donut-svg{width:90px;height:90px;flex-shrink:0}
+.donut-legend{display:flex;flex-direction:column;gap:4px}
+.donut-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:500}
+.donut-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.geo-stat{text-align:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)}
+.geo-stat .gs-val{font-size:20px;font-weight:800;color:var(--tx)}
+.geo-stat .gs-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-top:2px}
+@media(max-width:768px){.geo-dash{flex-direction:column;bottom:8px;left:8px;right:8px}.geo-card{min-width:auto}}
+
+/* v4.3.9: Field validation */
+@keyframes fieldShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-4px)}40%,80%{transform:translateX(4px)}}
+.field-error{border-color:var(--rd)!important;animation:fieldShake .4s ease;box-shadow:0 0 0 3px rgba(239,68,68,.12)!important}
+.obs-counter{position:absolute;bottom:6px;right:10px;font-size:10px;font-weight:600;color:var(--mu);pointer-events:none;opacity:.6}
+.obs-counter.near-limit{color:var(--rd);opacity:1}
+/* v4.3.9: Flash green on CEP auto-fill */
+@keyframes cepFlash{0%{background:rgba(16,185,129,.12)}100%{background:transparent}}
+.cep-flash{animation:cepFlash .6s ease}
 .cep-input{font-variant-numeric:tabular-nums;letter-spacing:.5px}
 
 
-/* v4.3.8: Smooth tab transitions */
+/* v4.3.9: Smooth tab transitions */
 .tp{transition:opacity .18s ease;opacity:0}
 .tp.on{opacity:1}
 
@@ -535,9 +562,9 @@ body.dark .mc-conclude-btn{background:var(--pu);color:#fff}
 .tag-dropdown{position:absolute;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:100;max-height:180px;overflow-y:auto;margin-top:4px;width:100%;top:calc(100% + 2px);left:0}
 .tag-dd-item{padding:6px 10px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:500}
 .tag-dd-item:hover{background:var(--pul)}
-/* v4.3.8: Custom select option styling */
+/* v4.3.9: Custom select option styling */
 select option{background:var(--bg);color:var(--tx);padding:6px}
-/* v4.3.8: Custom div-based select (replaces native dropdown) */
+/* v4.3.9: Custom div-based select (replaces native dropdown) */
 .csel-wrap{position:relative;width:100%}
 .csel-wrap>select{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
 .csel-display{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:14px;font-family:'Plus Jakarta Sans',sans-serif;background:rgba(255,255,255,.8);color:var(--tx);cursor:pointer;transition:all .2s;backdrop-filter:blur(8px);user-select:none;-webkit-user-select:none}
@@ -559,7 +586,7 @@ body.dark .csel-display{background:rgba(255,255,255,.06);border-color:rgba(255,2
 body.dark .csel-dropdown{background:#1a1925;border-color:rgba(255,255,255,.08)}
 body.dark .csel-option:hover{background:rgba(108,92,231,.12)}
 body.dark .csel-option.selected{background:rgba(108,92,231,.15);color:#c4b5fd}
-/* v4.3.8: Custom time input styling */
+/* v4.3.9: Custom time input styling */
 input[type="time"]{appearance:none;-webkit-appearance:none;background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:8px 11px;font-size:13px;font-family:inherit;color:var(--tx);cursor:pointer;transition:border-color .15s,box-shadow .15s}
 input[type="time"]:focus{outline:none;border-color:var(--pu);box-shadow:0 0 0 3px rgba(108,92,231,.1)}
 input[type="time"]:hover{border-color:rgba(108,92,231,.3)}
@@ -870,7 +897,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
         <div class="fg"><label>Tipo *</label>
           <div id="f-tipo" class="tag-multi-wrap"></div>
         </div>
-        <div class="fg"><label>Quantidade</label><input type="number" id="f-qtd" placeholder="" min="1"/></div>
+        <div class="fg"><label>Quantidade</label><input type="number" id="f-qtd" placeholder="0" min="1"/></div>
         <div class="fg"><label>Status valor</label><select id="f-valtipo" onchange="toggleFValTipo()"><option value="normal">Valor (R$)</option><option value="medir">Medir</option><option value="pago"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> Pago</option></select></div>
         <div class="fg" id="f-val-wrap"><label>Valor (R$)</label><input type="text" inputmode="decimal" id="f-val" placeholder="0,00"/></div>
         <div class="fg"><label>Data</label><input type="date" id="f-data"/></div>
@@ -982,6 +1009,22 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
         <span class="mot-ico dash-panel-toggle" id="dash-panel-toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
       </div>
       <div class="dash-panel-body" id="dash-panel-body"></div>
+    </div>
+    <!-- v4.3.9: Dashboard geográfico -->
+    <div class="geo-dash" id="geo-dash" style="display:none">
+      <div class="geo-card">
+        <h4>Distribui&#xE7;&#xE3;o por Zona</h4>
+        <div class="donut-wrap">
+          <svg class="donut-svg" viewBox="0 0 36 36" id="zone-donut"></svg>
+          <div class="donut-legend" id="zone-legend"></div>
+        </div>
+      </div>
+      <div class="geo-card">
+        <h4>Cobertura</h4>
+        <div class="geo-stat"><div class="gs-val" id="geo-radius">—</div><div class="gs-lbl">Raio m&#xE1;ximo (km)</div></div>
+        <div class="geo-stat"><div class="gs-val" id="geo-density">—</div><div class="gs-lbl">Clientes/km&#xB2;</div></div>
+        <div class="geo-stat"><div class="gs-val" id="geo-avg-dist">—</div><div class="gs-lbl">Dist&#xE2;ncia m&#xE9;dia (km)</div></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1128,7 +1171,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
       <div class="edit-field"><label>Tipo</label><div id="em-tipo" class="tag-multi-wrap"></div></div>
     </div>
     <div class="edit-row">
-      <div class="edit-field"><label>Quantidade</label><input type="number" id="em-qtd" min="0"/></div>
+      <div class="edit-field"><label>Quantidade</label><input type="number" id="em-qtd" min="0" placeholder="0"/></div>
       <div class="edit-field"><label>Valor</label><select id="em-valtipo" onchange="toggleEmValTipo()"><option value="normal">Valor (R$)</option><option value="medir">Medir</option><option value="pago">Pago</option></select></div>
     </div>
     <div class="edit-field" id="em-val-wrap"><label>Valor (R$)</label><input type="text" inputmode="decimal" id="em-val" placeholder="0,00"/></div>
@@ -1183,7 +1226,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
       <div class="fg full cep-row"><div class="fg"><label>Endere&#xe7;o completo</label><input type="text" id="si-end" placeholder="Rua, n&#xBA;, complemento, bairro, cidade" oninput="onEndInput('si')"/></div><div class="fg"><label>CEP</label><input type="text" id="si-cep" class="cep-input" placeholder="00000-000" maxlength="9" oninput="onCepInput('si')"/><div class="cep-status" id="si-cep-status"></div></div></div>
       <div class="fg"><label>Telefone</label><input type="text" id="si-tel" placeholder="(11) 99999-9999"/></div>
       <div class="fg"><label>Tipo</label><div id="si-tipo" class="tag-multi-wrap"></div></div>
-      <div class="fg"><label>Quantidade</label><input type="number" id="si-qtd" min="0" placeholder=""/></div>
+      <div class="fg"><label>Quantidade</label><input type="number" id="si-qtd" min="0" placeholder="0"/></div>
       <div class="fg"><label>Status valor</label><select id="si-valtipo" onchange="toggleSiValTipo()"><option value="normal">Valor (R$)</option><option value="medir">Medir</option><option value="pago">Pago</option></select></div>
       <div class="fg" id="si-val-wrap"><label>Valor R$</label><input type="text" id="si-val" inputmode="decimal" placeholder="0,00"/></div>
       <div class="fg"><label>Janela de horario</label><select id="si-janela" onchange="toggleSiJanela()"><option value="livre">Qualquer horario</option><option value="manha">Manha (ate 12h)</option><option value="tarde">Tarde (apos 12h)</option><option value="custom">Horario especifico</option></select></div>
@@ -1267,7 +1310,7 @@ function renderTagMultiSelect(id){
     html+='<div class="tag-dd-item" style="border-left:3px solid '+t.color+'" onclick="event.stopPropagation();addFormTag(\''+id+'\',\''+t.id+'\')"><span style="width:10px;height:10px;border-radius:4px;background:'+t.color+';flex-shrink:0"></span> '+t.label+'</div>';
   });
   if(!avail.length)html+='<div style="padding:8px 10px;font-size:11px;color:var(--mu)">Todas as tags atribu\xeddas</div>';
-  // v4.3.8: Inline tag creation
+  // v4.3.9: Inline tag creation
   html+='<div style="border-top:1px solid var(--bd);padding:8px 10px">'
     +'<div class="tag-inline-create" id="'+id+'-create" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--pu);font-weight:600" onclick="event.stopPropagation();showInlineTagCreate(\''+id+'\')">'
     +'<span style="font-size:14px;line-height:1">+</span> Criar nova tag'
@@ -1286,7 +1329,7 @@ function rmFormTag(id,tid){_formTags[id]=(_formTags[id]||[]).filter(t=>t!==tid);
 function togTagDD(id){const dd=g(id+'-dd');dd.style.display=dd.style.display==='none'?'block':'none';}
 function getFormTags(id){return _formTags[id]||[];}
 
-// v4.3.8: Inline tag creation from within any form dropdown
+// v4.3.9: Inline tag creation from within any form dropdown
 let _inlineTagColor=null;
 function showInlineTagCreate(id){
   const createBtn=g(id+'-create');
@@ -1339,7 +1382,7 @@ function confirmInlineTag(id){
 }
 
 /* ══════════════════════════════════════════════════════════════
-   v4.3.8: CEP ↔ ENDEREÇO BIDIRECIONAL (ViaCEP)
+   v4.3.9: CEP ↔ ENDEREÇO BIDIRECIONAL (ViaCEP)
    Campo CEP separado. CEP preenche endereço, endereço preenche CEP.
    Funciona em todos os formulários (principal, edição, smart insert).
    Prefixos: 'f' (main), 'em' (edit modal), 'si' (smart insert)
@@ -1418,6 +1461,8 @@ function applyCepToAddress(data,endEl,statusEl,prefix){
       setTimeout(()=>{if(statusEl)statusEl.innerHTML='';},5000);
     }
     toast('Endere\u00e7o preenchido via CEP. Adicione o n\u00famero.','ok');
+    // v4.3.9: Flash verde
+    endEl.classList.remove('cep-flash');void endEl.offsetWidth;endEl.classList.add('cep-flash');
     // Focus address field so user can add number
     endEl.focus();
     // Place cursor at beginning so user can prepend number or at end
@@ -1475,6 +1520,134 @@ async function fetchCepValidate(cep,statusEl){
 
 // Legacy compatibility: detectCEP redirects to new system
 function detectCEP(input){onCepInput(input.id.split('-')[0]);}
+
+
+// ══════════════════════════════════════════════════════════════
+// v4.3.9: UX ENHANCEMENTS
+// ══════════════════════════════════════════════════════════════
+
+// [5] AUTO TITLE CASE — Nome, Endereço, Observações
+const _TC_LOWER=new Set(['de','do','da','dos','das','e','em','no','na','nos','nas','ao','aos','com','por','para','pelo','pela','um','uma','que','se']);
+function titleCase(str){
+  return str.replace(/\S+/g,(word,idx)=>{
+    if(idx>0&&_TC_LOWER.has(word.toLowerCase()))return word.toLowerCase();
+    return word.charAt(0).toUpperCase()+word.slice(1).toLowerCase();
+  });
+}
+function onTitleCaseBlur(e){
+  const v=e.target.value.trim();
+  if(v)e.target.value=titleCase(v);
+}
+// Apply to all name, address, obs fields
+document.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(()=>{
+    ['f-nome','em-nome','si-nome','f-end','em-end','si-end','f-obs','em-obs','si-obs'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)el.addEventListener('blur',onTitleCaseBlur);
+    });
+  },500);
+});
+
+// [6] ENTER PARA SALVAR FORMULÁRIO
+document.addEventListener('keydown',(e)=>{
+  if(e.key!=='Enter')return;
+  if(e.target.tagName==='TEXTAREA')return; // textarea: quebra de linha normal
+  if(e.target.closest('.csel-dropdown'))return; // dentro de dropdown custom
+  // Formulário principal
+  if(e.target.closest('#cform')){e.preventDefault();addClient();return;}
+  // Modal edição
+  if(e.target.closest('#edit-modal')){e.preventDefault();saveEditC();closeModal('edit-modal');return;}
+  // Smart Insert
+  if(e.target.closest('#smart-insert-modal')){e.preventDefault();doSmartInsert();return;}
+});
+
+// [7] MÁSCARA TELEFONE (XX) XXXXX-XXXX
+function fmtTel(v){
+  const d=v.replace(/\D/g,'').slice(0,11);
+  if(d.length<=2)return d;
+  if(d.length<=7)return '('+d.slice(0,2)+') '+d.slice(2);
+  return '('+d.slice(0,2)+') '+d.slice(2,7)+'-'+d.slice(7);
+}
+function onTelInput(e){
+  const pos=e.target.selectionStart;
+  const before=e.target.value;
+  e.target.value=fmtTel(e.target.value);
+  // Adjust cursor
+  const diff=e.target.value.length-before.length;
+  e.target.setSelectionRange(pos+diff,pos+diff);
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(()=>{
+    ['f-tel','em-tel','si-tel'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)el.addEventListener('input',onTelInput);
+    });
+  },500);
+});
+
+// [8] VALIDAÇÃO VISUAL — borda vermelha + shake
+function shakeField(id){
+  const el=document.getElementById(id);if(!el)return;
+  el.classList.add('field-error');
+  el.addEventListener('input',function rem(){el.classList.remove('field-error');el.removeEventListener('input',rem);},{once:true});
+}
+
+// [9] CONTADOR DE CARACTERES — Observações
+const OBS_MAX=200;
+function initObsCounters(){
+  ['f-obs','em-obs','si-obs'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    if(el.dataset.counterInit)return;
+    el.dataset.counterInit='1';
+    el.maxLength=OBS_MAX;
+    const counter=document.createElement('div');
+    counter.className='obs-counter';
+    counter.id=id+'-counter';
+    counter.textContent='0/'+OBS_MAX;
+    el.parentNode.style.position='relative';
+    el.parentNode.appendChild(counter);
+    el.addEventListener('input',()=>{
+      counter.textContent=el.value.length+'/'+OBS_MAX;
+      counter.classList.toggle('near-limit',el.value.length>OBS_MAX*0.8);
+    });
+  });
+}
+document.addEventListener('DOMContentLoaded',()=>setTimeout(initObsCounters,600));
+
+// [11] BIDIRECIONAL: Endereço → CEP via Google Geocoding
+// Quando schedGeo resolve o endereço, extrair postal_code e preencher campo CEP
+const _origCheckAmb=typeof checkAmb==='function'?checkAmb:null;
+async function checkAmbWithCep(){
+  const addr=v('f-end');if(addr.length<8)return;
+  try{
+    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+_getAddrSuffix())+'&region=br&key='+GKEY+_getAnchorBounds()+_getAnchorComponents()).then(r=>r.json());
+    if(d.status==='OK'&&d.results.length){
+      // Extrair CEP do resultado
+      const comps=d.results[0].address_components||[];
+      const pcComp=comps.find(c=>c.types.includes('postal_code'));
+      if(pcComp){
+        const cepEl=document.getElementById('f-cep');
+        if(cepEl&&!cepEl.value.replace(/\D/g,'')){
+          cepEl.value=fmtCep(pcComp.long_name.replace(/\D/g,''));
+          const statusEl=document.getElementById('f-cep-status');
+          if(statusEl){
+            statusEl.className='cep-status ok';
+            statusEl.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> CEP detectado';
+            setTimeout(()=>{statusEl.innerHTML='';},3000);
+          }
+        }
+      }
+      // Continuar lógica de ambiguidade original
+      if(d.results.length>1){
+        ambRes=d.results.map(r=>({lat:r.geometry.location.lat,lon:r.geometry.location.lng,display_name:r.formatted_address}));
+        const box=g('amb-box');
+        let html='<div class="ab w"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <strong>Endere\u00e7o amb\u00edguo</strong> \u2014 selecione o correto:</div>';
+        ambRes.forEach((r,i)=>{html+='<div class="ao" id="ao-'+i+'" onclick="selAmb('+i+')">'+r.display_name+'</div>';});
+        box.innerHTML=html;box.style.display='block';
+      } else {g('amb-box').style.display='none';}
+    }
+  }catch(e){g('amb-box').style.display='none';}
+}
 
 /* ══════════════════════════════════════════════════════════════
    CLOUD SYNC — Cloudflare Worker + KV
@@ -1942,7 +2115,7 @@ function renderPerfDash(){
 }
 
 
-// v4.3.8: Custom div-based select component
+// v4.3.9: Custom div-based select component
 // Wraps native <select> with styled div dropdown, keeps .value compatible
 function initCustomSelects(){
   document.querySelectorAll('select:not([data-csel-init])').forEach(sel=>{
@@ -2036,7 +2209,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('td').value=now.toISOString().split('T')[0];
   document.getElementById('f-data').value=now.toISOString().split('T')[0];
   loadCfg();renderHist();loadTrelloSelection();
-  // v4.3.8: Pre-load bairros data in background
+  // v4.3.9: Pre-load bairros data in background
   setTimeout(()=>{preloadDashData();},2000);
   // v4.3.3: Inicializar tags configur\xe1veis e atualizar selects
   renderTagsConfig();updateTagSelects();initPreferredTab();initCustomSelects();
@@ -2216,10 +2389,10 @@ function stab(n,el){
   el.classList.add('on');
   if(n==='man')g('cform').style.display='block';
   else if(n==='trello')g('cform').style.display='none';
-  // v4.3.8: Save preferred tab
+  // v4.3.9: Save preferred tab
   localStorage.setItem('rota_preferred_tab',n);
 }
-// v4.3.8: Pin/favorite tab system
+// v4.3.9: Pin/favorite tab system
 function initPreferredTab(){
   const pref=localStorage.getItem('rota_preferred_tab');
   if(pref){
@@ -2697,7 +2870,7 @@ function resetTrello(){
 }
 
 // GEO AMBIGUITY
-function schedGeo(){clearTimeout(geoT);geoT=setTimeout(checkAmb,1400);}
+function schedGeo(){clearTimeout(geoT);geoT=setTimeout(typeof checkAmbWithCep==='function'?checkAmbWithCep:checkAmb,1400);}
 async function checkAmb(){
   const addr=v('f-end');if(addr.length<8)return;
   const box=g('amb-box');
@@ -2727,8 +2900,8 @@ function showConfirm(title,msg,onOk){
 }
 function addClient(){
   const nome=v('f-nome'),end=v('f-end'),tipos=getFormTags('f-tipo');
-  if(!nome){toast('Informe o nome','err');return;}
-  if(!end){toast('Informe o endere\xE7o','err');return;}
+  if(!nome){toast('Informe o nome','err');shakeField('f-nome');return;}
+  if(!end){toast('Informe o endere\xE7o','err');shakeField('f-end');return;}
   if(end.length<10||!/\d/.test(end)){toast('Endere\xE7o parece inv\xE1lido (inclua rua e n\xFAmero)','err');return;}
   if(!tipos.length){toast('Selecione pelo menos uma tag','err');return;}
   const qtd=parseInt(v('f-qtd'))||0;
@@ -3387,7 +3560,7 @@ function initGoogleMaps(){
     document.getElementById('map-expand-btn').style.display='flex';
     gMap=new google.maps.Map(mapEl,{center:{lat:-23.55,lng:-46.63},zoom:12,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});}
   const hmEl=document.getElementById('heatmap');
-  if(hmEl)hmMap=new google.maps.Map(hmEl,{center:{lat:-23.55,lng:-46.63},zoom:11,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false});
+  if(hmEl)hmMap=new google.maps.Map(hmEl,{center:{lat:-23.55,lng:-46.63},zoom:11,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});
 }
 function initLeafMap(){}
 const _geoCache={};
@@ -3922,7 +4095,7 @@ function delHist(){
 }
 
 
-// v4.3.8: Pre-load bairros data in background
+// v4.3.9: Pre-load bairros data in background
 let _dashCache={br:null,pts:null,loading:false,loaded:false};
 async function preloadDashData(){
   if(_dashCache.loaded||_dashCache.loading)return;
@@ -3958,7 +4131,7 @@ async function renderDash(){
   const totalClientes=allC.length;const totalRotas=hist.length;
   const sumEl=g('dash-summary');
   if(sumEl)sumEl.textContent=totalClientes+' clientes \xB7 '+totalRotas+' rota'+(totalRotas!==1?'s':'')+' analisada'+(totalRotas!==1?'s':'');
-  // v4.3.8: Use cached data if available
+  // v4.3.9: Use cached data if available
   if(_dashCache.loaded){
     if(panel){panel.style.display='block';}
     renderDashStats(_dashCache.br,_dashCache.pts);
@@ -4006,11 +4179,87 @@ function renderDashStats(br,pts){
     +'</div></div>'
   ).join(''):'<p style="font-size:12px;color:var(--mu);padding:4px 0">Nenhum bairro identificado.</p>';
   if(!pts.length)return;
-  if(!hmMap){hmMap=new google.maps.Map(document.getElementById('heatmap'),{center:{lat:-23.55,lng:-46.63},zoom:11,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false});}
+  if(!hmMap){hmMap=new google.maps.Map(document.getElementById('heatmap'),{center:{lat:-23.55,lng:-46.63},zoom:11,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});}
   if(hmHeatLayer)hmHeatLayer.setMap(null);
   hmHeatLayer=new google.maps.visualization.HeatmapLayer({data:pts.map(pt=>new google.maps.LatLng(pt[0],pt[1])),radius:35,map:hmMap});
-  const hmBnds=new google.maps.LatLngBounds();pts.forEach(pt=>hmBnds.extend({lat:pt[0],lng:pt[1]}));hmMap.fitBounds(hmBnds);
+  const hmBnds=new google.maps.LatLngBounds();pts.forEach(pt=>hmBnds.extend({lat:pt[0],lng:pt[1]}));hmMap.fitBounds(hmBnds);renderGeoDash(pts);
 }
+// v4.3.9: Dashboard geográfico — zonas, cobertura, densidade
+const ZONE_COLORS={Norte:'#6366F1',Sul:'#EC4899',Leste:'#F59E0B',Oeste:'#10B981',Centro:'#8B5CF6'};
+function classifyZone(lat,lng){
+  // Centro de SP como referência
+  const cLat=-23.5505,cLng=-46.6333;
+  const dLat=lat-cLat,dLng=lng-cLng;
+  const dist=Math.sqrt(dLat*dLat+dLng*dLng);
+  if(dist<0.02)return 'Centro';
+  // Ângulo em graus
+  const angle=Math.atan2(dLat,dLng)*180/Math.PI;
+  if(angle>=45&&angle<135)return 'Norte';
+  if(angle>=-135&&angle<-45)return 'Sul';
+  if(angle>=-45&&angle<45)return 'Leste';
+  return 'Oeste';
+}
+function haversine(lat1,lng1,lat2,lng2){
+  const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLng=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function renderGeoDash(pts){
+  const el=g('geo-dash');if(!el||!pts||pts.length<2){if(el)el.style.display='none';return;}
+  el.style.display='flex';
+  // Classificar zonas
+  const zones={Norte:0,Sul:0,Leste:0,Oeste:0,Centro:0};
+  const cLat=-23.5505,cLng=-46.6333;
+  let baseLat=cLat,baseLng=cLng;
+  // Usar âncora se disponível
+  if(_geoAnchor){baseLat=_geoAnchor.lat;baseLng=_geoAnchor.lng;}
+  const dists=[];
+  pts.forEach(pt=>{
+    const z=classifyZone(pt[0],pt[1]);
+    zones[z]++;
+    dists.push(haversine(baseLat,baseLng,pt[0],pt[1]));
+  });
+  const total=pts.length;
+  // Donut SVG
+  const donutEl=g('zone-donut');const legEl=g('zone-legend');
+  if(donutEl&&legEl){
+    let cumul=0;let paths='';let legHtml='';
+    const entries=Object.entries(zones).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]);
+    entries.forEach(([zone,count])=>{
+      const pct=count/total;
+      const startAngle=cumul*360;
+      const endAngle=(cumul+pct)*360;
+      paths+=donutArc(18,18,15.91549,startAngle,endAngle,ZONE_COLORS[zone]);
+      legHtml+='<div class="donut-legend-item"><div class="donut-legend-dot" style="background:'+ZONE_COLORS[zone]+'"></div>'+zone+' <span style="color:var(--mu);margin-left:auto">'+count+'</span></div>';
+      cumul+=pct;
+    });
+    // Center circle
+    donutEl.innerHTML=paths+'<circle cx="18" cy="18" r="10" fill="var(--bg)"/><text x="18" y="18" text-anchor="middle" dominant-baseline="central" style="font-size:6px;font-weight:800;fill:var(--tx)">'+total+'</text>';
+    legEl.innerHTML=legHtml;
+  }
+  // Stats
+  const maxDist=Math.max(...dists);
+  const avgDist=dists.reduce((a,b)=>a+b,0)/dists.length;
+  // Área aproximada (convex hull simplificado)
+  const latMin=Math.min(...pts.map(p=>p[0])),latMax=Math.max(...pts.map(p=>p[0]));
+  const lngMin=Math.min(...pts.map(p=>p[1])),lngMax=Math.max(...pts.map(p=>p[1]));
+  const areaKm2=haversine(latMin,lngMin,latMax,lngMin)*haversine(latMin,lngMin,latMin,lngMax);
+  const density=areaKm2>0?(total/areaKm2):0;
+  const rEl=g('geo-radius'),dEl=g('geo-density'),aEl=g('geo-avg-dist');
+  if(rEl)rEl.textContent=maxDist.toFixed(1);
+  if(dEl)dEl.textContent=density.toFixed(1);
+  if(aEl)aEl.textContent=avgDist.toFixed(1);
+}
+function donutArc(cx,cy,r,startDeg,endDeg,color){
+  if(endDeg-startDeg>=359.99)return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="4"/>';
+  const s=startDeg-90,e=endDeg-90;
+  const sr=s*Math.PI/180,er=e*Math.PI/180;
+  const x1=cx+r*Math.cos(sr),y1=cy+r*Math.sin(sr);
+  const x2=cx+r*Math.cos(er),y2=cy+r*Math.sin(er);
+  const large=(endDeg-startDeg)>180?1:0;
+  return '<path d="M'+x1+' '+y1+' A'+r+' '+r+' 0 '+large+' 1 '+x2+' '+y2+'" fill="none" stroke="'+color+'" stroke-width="4" stroke-linecap="round"/>';
+}
+
 
 // ── SVG Icons (monocromáticos, traço fino) ──
 const MI={
@@ -4381,6 +4630,6 @@ function editDoneCard(idx){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.3.8</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.3.9</div>
 </body>
 </html>
