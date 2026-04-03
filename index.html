@@ -452,7 +452,7 @@ body.dark .mc-conclude-btn{background:var(--pu);color:#fff}
 .ai-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--gnd);background:var(--gnl);border:1px solid #86EFAC;padding:3px 9px;border-radius:20px}
 
 /* CLIENT CARD */
-.cc{background:var(--sf);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--bd);border-radius:12px;padding:12px 14px 12px 13px;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;cursor:pointer;transition:transform .2s cubic-bezier(.4,0,.2,1),box-shadow .2s ease,background .2s ease,border-color .2s ease;font-size:13px;position:relative;user-select:none;-webkit-user-select:none}
+.cc{background:var(--sf);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--bd);border-left:3px solid var(--bd);border-radius:12px;padding:12px 14px 12px 13px;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;cursor:pointer;transition:transform .2s cubic-bezier(.4,0,.2,1),box-shadow .2s ease,background .2s ease,border-color .2s ease;font-size:13px;position:relative;user-select:none;-webkit-user-select:none}
 .cc.dragging{opacity:.4;transform:scale(.97);box-shadow:none!important}
 .cc.drag-over-top{box-shadow:0 -2px 0 0 var(--pu),0 -6px 12px -4px rgba(108,92,231,.25)}
 .cc.drag-over-bottom{box-shadow:0 2px 0 0 var(--pu),0 6px 12px -4px rgba(108,92,231,.25)}
@@ -474,13 +474,8 @@ body.dark .mc-conclude-btn{background:var(--pu);color:#fff}
 .tag-dropdown{position:absolute;background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:100;max-height:180px;overflow-y:auto;margin-top:4px;width:100%;top:calc(100% + 2px);left:0}
 .tag-dd-item{padding:6px 10px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:500}
 .tag-dd-item:hover{background:var(--pul)}
-.cc:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(108,92,231,.08);background:rgba(255,255,255,.85);border-color:rgba(108,92,231,.12)}
-body.dark .cc:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.1);box-shadow:0 4px 16px rgba(0,0,0,.2)}
-.cc.col{border-left-color:var(--gn)}.cc.ent{border-left-color:var(--bl)}
-.cc.ent:hover{border-color:rgba(108,92,231,.12)}
-.cc.col:hover{border-color:rgba(108,92,231,.12)}
-body.dark .cc.ent:hover{border-color:rgba(255,255,255,.1)}
-body.dark .cc.col:hover{border-color:rgba(255,255,255,.1)}
+.cc:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(108,92,231,.08);background:rgba(255,255,255,.85);border-color:rgba(108,92,231,.12)!important}
+body.dark .cc:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.1)!important;box-shadow:0 4px 16px rgba(0,0,0,.2)}
 .cc.cfl{border-left-color:var(--rd);background:var(--rl)}
 .cc.cwn{border-left-color:var(--yw);background:var(--ywl)}
 .sn{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:2px}
@@ -2370,9 +2365,11 @@ function renderC(){
     const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';
     // v4.3.5: Multi-tags — borda listrada lado a lado (3px por tag)
     const bw=tagBorderWidth(tipos);
-    const borderStyle=tipos.length<=1?'border-left:'+bw+'px solid '+tagColor:'border-left:none';
     const tagChips=renderTagChips(tipos);
-    return '<div class="cc'+(c.conflict&&isCol?' cfl':'')+(c.conflict&&!isCol?' cwn':'')+'" data-stop="'+stop+'" style="'+borderStyle+';position:relative;'+(tipos.length>1?'padding-left:'+(13+bw)+'px':'')+'" onclick="editC('+c.id+')">'
+    const typeClass=isCol?' col':tipos.includes('entrega')?' ent':'';
+    // 1 tag: border-left-color inline (CSS base tem border-left:3px solid). 2+ tags: div absoluto com faixas
+    const cardStyle=tipos.length<=1?'border-left-color:'+tagColor:(tipos.length>1?'border-left:none;position:relative;padding-left:'+(13+bw)+'px;overflow:hidden':'');
+    return '<div class="cc'+typeClass+(c.conflict&&isCol?' cfl':'')+(c.conflict&&!isCol?' cwn':'')+'" data-stop="'+stop+'" style="'+cardStyle+'" onclick="editC('+c.id+')">'
       +(tipos.length>1?renderTagBorder(tipos):'')
       +'<div class="sn" style="background:'+tagColor+'20;color:'+tagColor+'">'+(stop+1)+'</div>'
       +'<div class="ci">'
