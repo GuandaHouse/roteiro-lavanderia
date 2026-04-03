@@ -4,7 +4,16 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  v4.3.6 — 03/04/2026 — UX Polish + Card Standardization + Fixes      ║
+║  v4.3.7 — 03/04/2026 — Mapa de Clientes Fullscreen                   ║
+║  ─────────────────────────────────────────                   ║
+║  MAPA DE CLIENTES:                                                   ║
+║  • Mapa de calor ocupa tela inteira (100vh, sem mini)                ║
+║  • Painel flutuante "Top Bairros" glassmorphism sobre o mapa         ║
+║  • Header flutuante com título + estatísticas resumidas              ║
+║  • Painel colapsável (toggle abrir/fechar)                           ║
+║  • gestureHandling:'greedy' para interação livre no mapa             ║
+║                                                                      ║
+║  v4.3.6 — 03/04/2026 — UX Polish + Card Standardization + Fixes     ║
 ║  ─────────────────────────────────────────                   ║
 ║  UX:                                                                 ║
 ║  • Sidebar do mapa redimensionável (drag) + largura salva            ║
@@ -584,10 +593,20 @@ body.dark .hi:hover{background:rgba(255,255,255,.06);box-shadow:0 4px 16px rgba(
 .hm{font-size:12px;color:var(--mu);margin-top:2px}
 
 /* HEATMAP */
-.hmw{height:420px;border-radius:16px;border:1px solid var(--bd);overflow:hidden;background:var(--s2);backdrop-filter:blur(8px);transition:all .4s ease}
+/* v4.3.7: Mapa de Clientes fullscreen com painel flutuante */
+.dash-map-wrap{position:relative;width:100%;height:calc(100vh - 56px);overflow:hidden;background:var(--s2)}
 #heatmap{width:100%;height:100%;display:none}
-.hmph{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--mu);font-size:13px;text-align:center;padding:20px}
-.hmph span{font-size:32px;margin-bottom:8px}
+.hmph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--mu);font-size:13px;text-align:center;padding:20px;z-index:1}
+.dash-float-header{position:absolute;top:16px;left:16px;z-index:2;background:rgba(255,255,255,.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(0,0,0,.06);border-radius:12px;padding:12px 16px;box-shadow:0 2px 12px rgba(0,0,0,.06);display:none}
+body.dark .dash-float-header{background:rgba(20,18,30,.85);border-color:rgba(255,255,255,.08)}
+.dash-float-panel{position:absolute;top:16px;right:16px;z-index:2;background:rgba(255,255,255,.92);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(0,0,0,.06);border-radius:14px;padding:0;box-shadow:0 4px 24px rgba(0,0,0,.08);width:280px;max-height:calc(100vh - 120px);overflow:hidden;display:none;transition:all .25s ease}
+body.dark .dash-float-panel{background:rgba(20,18,30,.9);border-color:rgba(255,255,255,.08)}
+.dash-panel-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none;-webkit-user-select:none}
+.dash-panel-header:hover{background:rgba(108,92,231,.04)}
+.dash-panel-toggle{width:16px;height:16px;transition:transform .2s}
+.dash-panel-toggle.collapsed{transform:rotate(-90deg)}
+.dash-panel-body{padding:0 16px 14px;overflow-y:auto;max-height:calc(100vh - 180px)}
+@media(max-width:768px){.dash-float-panel{width:220px;right:8px;top:8px}.dash-float-header{left:8px;top:8px}}
 
 /* TRELLO CARD */
 .tcc{border:1px solid var(--bd);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px;font-size:13px;cursor:pointer;transition:all .2s;background:var(--sf);backdrop-filter:blur(8px)}
@@ -879,11 +898,24 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
 </div>
 
 <!-- DASHBOARD -->
-<div class="page" id="page-dash">
-  <div class="ph"><h2>Concentra&#xE7;&#xE3;o de Clientes</h2><p>Identifique regi&#xF5;es com potencial para campanhas de marketing.</p></div>
-  <div class="two-col">
-    <div class="hmw"><div id="heatmap"></div><div class="hmph" id="hmph"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>Salve rotas para ver a concentra&#xE7;&#xE3;o de clientes</div></div>
-    <div id="dash-stats"></div>
+<div class="page" id="page-dash" style="max-width:none;padding:56px 0 0">
+  <!-- v4.3.7: Mapa fullscreen com painel flutuante -->
+  <div class="dash-map-wrap">
+    <div id="heatmap"></div>
+    <div class="hmph" id="hmph"><span class="mot-ico" style="width:32px;height:32px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span><p>Salve rotas para ver a concentra&#xE7;&#xE3;o de clientes</p></div>
+    <!-- Header flutuante -->
+    <div class="dash-float-header" id="dash-float-header">
+      <h2 style="font-size:16px;font-weight:700;margin:0">Concentra&#xE7;&#xE3;o de Clientes</h2>
+      <p id="dash-summary" style="font-size:12px;color:var(--mu);margin:0"></p>
+    </div>
+    <!-- Painel flutuante de bairros -->
+    <div class="dash-float-panel" id="dash-float-panel">
+      <div class="dash-panel-header" onclick="toggleDashPanel()">
+        <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)">Top Bairros</span>
+        <span class="mot-ico dash-panel-toggle" id="dash-panel-toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+      </div>
+      <div class="dash-panel-body" id="dash-panel-body"></div>
+    </div>
   </div>
 </div>
 
@@ -971,7 +1003,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
     </div>
   </div>
   <div>
-    <!-- v4.3.6: API keys ocultas da interface (continuam funcionando no código) -->
+    <!-- v4.3.7: API keys ocultas da interface (continuam funcionando no código) -->
     <div class="card" style="display:none">
       <p class="ct">API de IA</p>
       <div class="fg2">
@@ -1753,7 +1785,7 @@ function saveCfg(){
   _saveTags();
   // v4.3.1: Resetar âncora de geocodificação quando muda endereço base
   _geoAnchor=null;
-  // v4.3.6: Feedback visual — esconde barra 3s após salvar
+  // v4.3.7: Feedback visual — esconde barra 3s após salvar
   const saveBar=g('cfg-save-bar');
   if(saveBar){saveBar.style.display='none';setTimeout(()=>{if(g('page-cfg').classList.contains('on'))saveBar.style.display='flex';},3000);}
   toastCenter();
@@ -1805,12 +1837,12 @@ function updateTagSelects(){
 }
 
 function goPage(p,el){if(_isMotoristaMode)return;window.scrollTo(0,0);window.scrollTo(0,0);
-  // v4.3.6: Fechar mapa fullscreen ao navegar para outra aba
+  // v4.3.7: Fechar mapa fullscreen ao navegar para outra aba
   if(mapIsFullscreen&&p!=='rota'){toggleMapFullscreen();}
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(x=>x.classList.remove('on'));
   g('page-'+p).classList.add('on');el.classList.add('on');
-  // v4.3.6: Botão salvar só visível na aba Configurações
+  // v4.3.7: Botão salvar só visível na aba Configurações
   const saveBar=g('cfg-save-bar');if(saveBar)saveBar.style.display=p==='cfg'?'flex':'none';
   if(p==='dash')renderDash();
   if(p==='motor'){renderMotor();if(!_isMotoristaMode&&_currentRouteId&&_cloudVersion>0)startGestorPolling();}
@@ -2757,10 +2789,10 @@ function updateMapSidebar(){
   });
   html+='</div>';
   sb.innerHTML=html;
-  // v4.3.6: Restaurar largura salva da sidebar
+  // v4.3.7: Restaurar largura salva da sidebar
   const savedW=localStorage.getItem('sidebar_width');
   if(savedW)sb.style.width=savedW+'px';
-  // v4.3.6: Adicionar handle de resize se não existir
+  // v4.3.7: Adicionar handle de resize se não existir
   if(!sb.querySelector('.map-sidebar-resize')){
     const handle=document.createElement('div');
     handle.className='map-sidebar-resize';
@@ -2822,7 +2854,7 @@ function initMapSidebarDragDrop(){
       document.body.appendChild(ghostEl);
       // Create drop indicator
       dropIndicator=document.createElement('div');
-      // v4.3.6: Limitar linha indicadora à largura da sidebar
+      // v4.3.7: Limitar linha indicadora à largura da sidebar
       const sidebarEl=document.querySelector('.map-sidebar');
       const sbRect=sidebarEl?sidebarEl.getBoundingClientRect():null;
       dropIndicator.style.cssText='position:fixed;height:2px;background:#6C5CE7;z-index:9999;pointer-events:none;display:none;left:'+(sbRect?sbRect.left+'px':'0')+';width:'+(sbRect?sbRect.width+'px':'100%');
@@ -3226,7 +3258,7 @@ async function calcRoute(){
     estimateTimesOSRM(legsDur);
     const urgMsg=urgentes.length?' ('+urgentes.length+' com janela de horário prioritária)':'';
     renderC();updStats();
-    // v4.3.6: Salvar no histórico quando rota é gerada (corrige histórico e mapa de calor)
+    // v4.3.7: Salvar no histórico quando rota é gerada (corrige histórico e mapa de calor)
     saveHist();
     toast('Rota otimizada gerada!'+urgMsg,'ok');
   }catch(e){toast('Erro ao calcular rota: '+e.message,'err');console.error(e);}
@@ -3491,11 +3523,20 @@ function delHist(){
 }
 
 async function renderDash(){
-  const hist=getHist();const allC=hist.flatMap(h=>h.clients);const el=g('dash-stats');
-  if(!allC.length){g('hmph').style.display='flex';g('heatmap').style.display='none';el.innerHTML='<div class="empty"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><p>Salve rotas para ver a concentra&#xE7;&#xE3;o de clientes</p></div>';return;}
+  const hist=getHist();const allC=hist.flatMap(h=>h.clients);
+  const panel=g('dash-float-panel');const header=g('dash-float-header');
+  if(!allC.length){
+    g('hmph').style.display='flex';g('heatmap').style.display='none';
+    if(panel)panel.style.display='none';if(header)header.style.display='none';
+    return;
+  }
   g('hmph').style.display='none';g('heatmap').style.display='block';
-  el.innerHTML='<div class="card"><p class="ct">Identificando bairros... <span class="spin"></span></p></div>';
-  const _dashT=setTimeout(()=>{if(el.innerHTML.includes('Identificando'))el.innerHTML='<div class="card"><p class="ct" style="color:var(--mu)">⚠ï¸ Não foi possível identificar bairros. Gere uma rota primeiro.</p></div>';},15000);
+  if(header)header.style.display='block';
+  if(panel){panel.style.display='block';g('dash-panel-body').innerHTML='<div style="padding:8px 0;text-align:center;font-size:12px;color:var(--mu)">Identificando bairros... <span class="spin"></span></div>';}
+  const totalClientes=allC.length;const totalRotas=hist.length;
+  const sumEl=g('dash-summary');
+  if(sumEl)sumEl.textContent=totalClientes+' clientes \xB7 '+totalRotas+' rota'+(totalRotas!==1?'s':'')+' analisada'+(totalRotas!==1?'s':'');
+  const _dashT=setTimeout(()=>{const body=g('dash-panel-body');if(body&&body.innerHTML.includes('Identificando'))body.innerHTML='<p style="font-size:12px;color:var(--mu);padding:8px 0">⚠ï¸ Não foi possível identificar bairros.</p>';},15000);
   const br={};const pts=[];
   // Nominatim: sequential to respect rate limit
   for(const c of allC){
@@ -3514,17 +3555,27 @@ async function renderDash(){
   }
   renderDashStats(br,pts);
 }
+// v4.3.7: Toggle painel flutuante de bairros
+function toggleDashPanel(){
+  const body=g('dash-panel-body');const icon=g('dash-panel-toggle');
+  if(!body)return;
+  const isOpen=body.style.display!=='none';
+  body.style.display=isOpen?'none':'block';
+  if(icon)icon.classList.toggle('collapsed',isOpen);
+}
 function renderDashStats(br,pts){
-  const el=g('dash-stats');
+  const el=g('dash-panel-body');if(!el)return;
   const sorted=Object.entries(br).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  el.innerHTML='<div class="card"><p class="ct">Top bairros</p>'+(sorted.length?sorted.map(([b,n],i)=>
-    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
-    +'<div style="width:22px;height:22px;background:var(--pul);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--pud);flex-shrink:0">'+(i+1)+'</div>'
-    +'<div style="flex:1"><div style="display:flex;justify-content:space-between;margin-bottom:4px">'
-    +'<span style="font-size:13px;font-weight:600">'+b+'</span><span class="chip">'+n+'</span></div>'
-    +'<div style="height:5px;background:var(--s2);border-radius:3px"><div style="height:100%;background:var(--pu);border-radius:3px;width:'+Math.round(n/sorted[0][1]*100)+'%"></div></div>'
+  const sumEl2=g('dash-summary');
+  if(sumEl2){const cur=sumEl2.textContent;if(!cur.includes('bairro'))sumEl2.textContent=cur+' \xB7 '+sorted.length+' bairro'+(sorted.length!==1?'s':'');}
+  el.innerHTML=sorted.length?sorted.map(([b,n],i)=>
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+    +'<div style="width:20px;height:20px;background:var(--pul);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--pud);flex-shrink:0">'+(i+1)+'</div>'
+    +'<div style="flex:1"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'
+    +'<span style="font-size:12px;font-weight:600">'+b+'</span><span style="font-size:11px;font-weight:700;color:var(--pu)">'+n+'</span></div>'
+    +'<div style="height:4px;background:var(--s2);border-radius:2px"><div style="height:100%;background:var(--pu);border-radius:2px;width:'+Math.round(n/sorted[0][1]*100)+'%"></div></div>'
     +'</div></div>'
-  ).join(''):'<p style="font-size:13px;color:var(--mu)">Nenhum bairro identificado ainda.</p>')+'</div>';
+  ).join(''):'<p style="font-size:12px;color:var(--mu);padding:4px 0">Nenhum bairro identificado.</p>';
   if(!pts.length)return;
   if(!hmMap){hmMap=new google.maps.Map(document.getElementById('heatmap'),{center:{lat:-23.55,lng:-46.63},zoom:11,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false});}
   if(hmHeatLayer)hmHeatLayer.setMap(null);
@@ -3901,6 +3952,6 @@ function editDoneCard(idx){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.3.6</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.3.7</div>
 </body>
 </html>
