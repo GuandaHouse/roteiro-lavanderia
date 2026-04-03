@@ -4,6 +4,29 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.3.0 — 03/04/2026 — Complemento + Padronização + Dashboard    ║
+║  ─────────────────────────────────────────                   ║
+║  COMPLEMENTO:                                                    ║
+║  • Campo complemento integrado em toda a interface               ║
+║  • Visível em: cards, modal edição, form manual, motorista       ║
+║  • Exibido no mapa (InfoWindow) e PDF de exportação              ║
+║  • Formulário Smart Insert agora inclui complemento              ║
+║                                                                  ║
+║  PADRONIZAÇÃO DE CAMPOS:                                         ║
+║  • Smart Insert: campos valTipo, janela, complemento adicionados ║
+║  • Modal edição: campo complemento adicionado                    ║
+║  • Todos os pontos de entrada agora têm campos idênticos         ║
+║                                                                  ║
+║  DASHBOARD DONUTS:                                               ║
+║  • Fix sobreposição de texto no donut de Valores                 ║
+║  • Donuts maiores na versão web (responsivo)                     ║
+║  • Texto central ajustado para não invadir o anel                ║
+║                                                                  ║
+║  UX MOTORISTA:                                                   ║
+║  • Botão Editar mais visível nos cartões concluídos              ║
+║  • Indicador Sincronizado redesenhado (badge elegante)           ║
+║  • Previsão de chegada dinâmica (recalcula ao concluir parada)   ║
+║                                                                  ║
 ║  v4.2.1 — 02/04/2026 — Fix hover coleta cards border             ║
 ║  ─────────────────────────────────────────                   ║
 ║  GOOGLE MAPS MIGRATION:                                         ║
@@ -286,15 +309,16 @@ textarea{resize:vertical;min-height:56px}
 .mot-summary .ms-item{text-align:center}
 .mot-summary .ms-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);margin-bottom:4px}
 .mot-summary .ms-val{font-size:28px;font-weight:800;line-height:1;color:var(--tx)}
-.mot-charts{background:var(--sf);backdrop-filter:blur(12px);border:1px solid var(--bd);border-radius:16px;padding:20px 16px;margin-bottom:16px;display:flex;gap:12px;justify-content:space-around;flex-wrap:wrap}
-.mot-chart-item{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;min-width:90px}
-.mot-chart-item svg{width:90px;height:90px}
+.mot-charts{background:var(--sf);backdrop-filter:blur(12px);border:1px solid var(--bd);border-radius:16px;padding:20px 16px;margin-bottom:16px;display:flex;gap:16px;justify-content:space-around;flex-wrap:wrap}
+.mot-chart-item{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;min-width:100px}
+.mot-chart-item svg{width:120px;height:120px}
+@media(max-width:600px){.mot-chart-item svg{width:90px;height:90px}.mot-charts{gap:10px;padding:16px 10px}}
 .mot-chart-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);text-align:center}
 .mot-chart-legend{display:flex;flex-wrap:wrap;gap:4px 10px;justify-content:center;margin-top:2px}
 .mot-chart-legend span{font-size:10px;color:var(--mu);display:flex;align-items:center;gap:4px}
 .mot-chart-legend span{line-height:1.3}
-.mot-chart-center{font-size:16px;font-weight:800;fill:var(--tx)}
-.mot-chart-center-sub{font-size:8px;font-weight:600;fill:var(--mu);text-transform:uppercase;letter-spacing:.04em}
+.mot-chart-center{font-size:13px;font-weight:800;fill:var(--tx)}
+.mot-chart-center-sub{font-size:7px;font-weight:600;fill:var(--mu);text-transform:uppercase;letter-spacing:.04em}
 .mot-start-btn{width:100%;padding:18px;border-radius:14px;border:none;font-size:18px;font-weight:800;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:16px;transition:transform .15s,box-shadow .15s;letter-spacing:-.02em}
 .mot-start-btn:active{transform:scale(.97)}
 .mot-start-btn.go{background:var(--tx);box-shadow:0 2px 12px rgba(30,27,75,.15)}
@@ -352,8 +376,9 @@ body.dark .mot-card .mc-nav-btn.primary{background:var(--pu);border-color:var(--
 .mot-card .mc-obs-input:focus{outline:none;border-color:var(--pu);box-shadow:0 0 0 3px rgba(108,92,231,.08)}
 .mot-card .mc-obs-input::placeholder{color:var(--mu);opacity:.5}
 .mot-card .mc-done-banner{background:rgba(30,27,75,.03);padding:12px 18px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--mu)}
-.mot-card .mc-done-banner .mc-done-edit{margin-left:auto;background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--mu);cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .15s;flex-shrink:0}
-.mot-card .mc-done-banner .mc-done-edit:active{background:var(--s2);transform:scale(.96)}
+.mot-card .mc-done-banner .mc-done-edit{margin-left:auto;background:var(--pu);border:none;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .15s;flex-shrink:0;opacity:.85;box-shadow:0 1px 4px rgba(108,92,231,.25)}
+.mot-card .mc-done-banner .mc-done-edit:hover{opacity:1;box-shadow:0 2px 8px rgba(108,92,231,.35)}
+.mot-card .mc-done-banner .mc-done-edit:active{transform:scale(.96);opacity:1}
 body.dark .mot-card .mc-done-banner{background:rgba(255,255,255,.03)}
 .mc-conclude-btn{width:100%;padding:14px;border-radius:12px;font-size:14px;font-weight:700;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--tx);color:var(--bg);margin-top:10px;transition:all .15s;letter-spacing:-.01em}
 .mc-conclude-btn:active{transform:scale(.97);opacity:.9}
@@ -492,10 +517,10 @@ body.motorista-mode .mot-mode-header .mot-mode-title{font-size:15px;font-weight:
 body.motorista-mode .mot-mode-header .mot-mode-theme{margin-left:auto}
 
 /* CLOUD SYNC INDICATOR */
-.cloud-status{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--mu);padding:6px 12px;border-radius:8px;background:var(--sf);border:1px solid var(--bd);margin-bottom:12px}
-.cloud-status .cloud-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:background .3s}
-.cloud-dot.synced{background:#22c55e}
-.cloud-dot.syncing{background:#FFCB00;animation:pulse-dot 1s infinite}
+.cloud-status{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--mu);padding:8px 16px;border-radius:12px;background:var(--sf);border:1px solid var(--bd);margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.cloud-status .cloud-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;transition:background .3s}
+.cloud-dot.synced{background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,.4)}
+.cloud-dot.syncing{background:#FFCB00;animation:pulse-dot 1s infinite;box-shadow:0 0 6px rgba(255,203,0,.4)}
 .cloud-dot.offline{background:#94a3b8}
 @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
 
@@ -652,6 +677,7 @@ body.dark .toast{background:rgba(255,255,255,.12)}
         <div class="fg"><label>Nome *</label><input type="text" id="f-nome" placeholder="Nome completo"/></div>
         <div class="fg"><label>Telefone</label><input type="tel" id="f-tel" placeholder="(11) 99999-9999"/></div>
         <div class="fg full"><label>Endere&#xE7;o completo *</label><input type="text" id="f-end" placeholder="Rua, n&#xFA;mero, bairro, cidade" oninput="schedGeo()"/></div>
+        <div class="fg"><label>Complemento</label><input type="text" id="f-compl" placeholder="Apto, bloco, andar..."/></div>
         <div class="fg"><label>Tipo *</label>
           <select id="f-tipo">
             <option value="">Selecione...</option>
@@ -858,6 +884,7 @@ body.dark .toast{background:rgba(255,255,255,.12)}
       <div class="edit-field" style="grid-column:1/-1"><label>Nome</label><input type="text" id="em-nome"/></div>
     </div>
     <div class="edit-field"><label>Endere&#xe7;o</label><input type="text" id="em-end"/></div>
+    <div class="edit-field"><label>Complemento</label><input type="text" id="em-compl" placeholder="Apto, bloco, andar..."/></div>
     <div class="edit-row">
       <div class="edit-field"><label>Telefone</label><input type="text" id="em-tel"/></div>
       <div class="edit-field"><label>Tipo</label><select id="em-tipo"><option value="coleta">Coleta</option><option value="entrega">Entrega</option></select></div>
@@ -916,10 +943,15 @@ body.dark .toast{background:rgba(255,255,255,.12)}
     <div class="fg2">
       <div class="fg full"><label>Nome</label><input type="text" id="si-nome" placeholder="Nome do cliente"/></div>
       <div class="fg full"><label>Endereco</label><input type="text" id="si-end" placeholder="Rua, numero, bairro"/></div>
+      <div class="fg"><label>Complemento</label><input type="text" id="si-compl" placeholder="Apto, bloco, andar..."/></div>
       <div class="fg"><label>Telefone</label><input type="text" id="si-tel" placeholder="(11) 99999-9999"/></div>
       <div class="fg"><label>Tipo</label><select id="si-tipo"><option value="coleta">Coleta</option><option value="entrega">Entrega</option></select></div>
       <div class="fg"><label>Qtd tapetes</label><input type="number" id="si-qtd" min="0" value="0"/></div>
-      <div class="fg"><label>Valor R$</label><input type="text" id="si-val" inputmode="decimal" placeholder="0,00"/></div>
+      <div class="fg"><label>Status valor</label><select id="si-valtipo" onchange="toggleSiValTipo()"><option value="normal">Valor (R$)</option><option value="medir">Medir</option><option value="pago">Pago</option></select></div>
+      <div class="fg" id="si-val-wrap"><label>Valor R$</label><input type="text" id="si-val" inputmode="decimal" placeholder="0,00"/></div>
+      <div class="fg"><label>Janela de horario</label><select id="si-janela" onchange="toggleSiJanela()"><option value="livre">Qualquer horario</option><option value="manha">Manha (ate 12h)</option><option value="tarde">Tarde (apos 12h)</option><option value="custom">Horario especifico</option></select></div>
+      <div class="fg" id="si-hi-wrap" style="display:none"><label>Inicio</label><input type="time" id="si-hi"/></div>
+      <div class="fg" id="si-hf-wrap" style="display:none"><label>Fim</label><input type="time" id="si-hf"/></div>
       <div class="fg full"><label>Observacao</label><textarea id="si-obs" rows="2" placeholder="Opcional..."></textarea></div>
     </div>
     <div class="ma" style="margin-top:16px">
@@ -988,7 +1020,7 @@ async function cloudPublish(){
       _cloudVersion=data.version;
       _cloudHash=data.hash;
       toast('Rota publicada no cloud!','ok');
-      setCloudStatus('synced','Sincronizado v'+_cloudVersion);
+      setCloudStatus('synced','Rota sincronizada');
     } else {
       toast('Erro ao publicar: '+(data.error||'desconhecido'),'err');
     }
@@ -1009,7 +1041,7 @@ async function cloudLoad(routeId){
     _currentRouteId=data.routeId;
     _cloudVersion=data.version;
     _cloudHash=data._hash;
-    setCloudStatus('synced','Sincronizado v'+_cloudVersion);
+    setCloudStatus('synced','Rota sincronizada');
     return data;
   }catch(e){
     setCloudStatus('offline','Sem conexao');
@@ -1066,7 +1098,7 @@ async function cloudUpdateStatus(clientIdx,field,value){
     if(data.ok){
       _cloudVersion=data.version;
       _cloudHash=data.hash;
-      setCloudStatus('synced','Sincronizado v'+_cloudVersion);
+      setCloudStatus('synced','Rota sincronizada');
     }
   }catch(e){
     setCloudStatus('offline','Erro ao sincronizar');
@@ -1110,10 +1142,12 @@ function startGestorPolling(){
    ══════════════════════════════════════════════════════════════ */
 function openSmartInsert(){
   if(!clients.length){toast('Monte uma rota primeiro','err');return;}
-  ['si-nome','si-end','si-tel','si-obs'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['si-nome','si-end','si-compl','si-tel','si-obs','si-val','si-hi','si-hf'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('si-qtd').value='0';
-  document.getElementById('si-val').value='';
   document.getElementById('si-tipo').value='coleta';
+  document.getElementById('si-valtipo').value='normal';
+  document.getElementById('si-janela').value='livre';
+  toggleSiValTipo();toggleSiJanela();
   document.getElementById('smart-insert-modal').classList.add('on');
 }
 
@@ -1127,13 +1161,18 @@ async function doSmartInsert(){
   btn.disabled=true;
   btn.innerHTML='<span class="spin"></span> Inserindo...';
 
+  const siValTipo=document.getElementById('si-valtipo').value||'normal';
+  const siJanela=document.getElementById('si-janela').value||'livre';
   const newClient={
     id:Date.now(),nome,endereco:end,
+    complemento:document.getElementById('si-compl').value.trim(),
     tel:document.getElementById('si-tel').value.trim(),
     tipo:document.getElementById('si-tipo').value,
     qtd:parseInt(document.getElementById('si-qtd').value)||0,
-    val:parseFloat((document.getElementById('si-val').value||'0').replace(',','.'))||0,
-    valTipo:'normal',janela:'livre',hi:'',hf:'',
+    val:siValTipo==='normal'?(parseFloat((document.getElementById('si-val').value||'0').replace(',','.'))||0):0,
+    valTipo:siValTipo,janela:siJanela,
+    hi:siJanela==='custom'?document.getElementById('si-hi').value:'',
+    hf:siJanela==='custom'?document.getElementById('si-hf').value:'',
     obs:document.getElementById('si-obs').value.trim(),
     data:clients[0]?.data||new Date().toISOString().split('T')[0],
     lat:null,lng:null,estT:null,
@@ -1429,8 +1468,17 @@ function toggleJanela(){
   g('hi-wrap').style.display=c?'':'none';
   g('hf-wrap').style.display=c?'':'none';
 }
+function toggleSiValTipo(){
+  const vt=document.getElementById('si-valtipo')?.value||'normal';
+  const w=document.getElementById('si-val-wrap');if(w)w.style.display=vt==='normal'?'':'none';
+}
+function toggleSiJanela(){
+  const c=document.getElementById('si-janela')?.value==='custom';
+  const hw=document.getElementById('si-hi-wrap'),fw=document.getElementById('si-hf-wrap');
+  if(hw)hw.style.display=c?'':'none';if(fw)fw.style.display=c?'':'none';
+}
 function resetForm(){
-  ['f-nome','f-tel','f-end','f-qtd','f-val','f-obs','f-hi','f-hf'].forEach(id=>g(id).value='');
+  ['f-nome','f-tel','f-end','f-compl','f-qtd','f-val','f-obs','f-hi','f-hf'].forEach(id=>g(id).value='');
   g('f-tipo').value='';g('f-janela').value='livre';if(g('f-valtipo')){g('f-valtipo').value='normal';toggleFValTipo();}
   g('f-data').value=new Date().toISOString().split('T')[0];
   g('ai-badge').style.display='none';g('amb-box').style.display='none';
@@ -1462,6 +1510,7 @@ async function extractImg(){
     if(ext.nome)g('f-nome').value=ext.nome;
     if(ext.telefone)g('f-tel').value=ext.telefone;
     if(ext.endereco)g('f-end').value=ext.endereco;
+    if(ext.complemento)g('f-compl').value=ext.complemento;
     if(ext.tipo)g('f-tipo').value=ext.tipo;
     if(ext.qtd)g('f-qtd').value=ext.qtd;
     if(ext.valor)g('f-val').value=ext.valor;
@@ -1802,7 +1851,7 @@ function addClient(){
     const hi=v('f-hi'),hf=v('f-hf');
     if(hi&&hf&&hi>=hf){toast('Horário início deve ser anterior ao fim','err');return;}
   }
-  clients.push({id:Date.now()+Math.random(),nome,endereco:end,tel:v('f-tel'),tipo,qtd,val,valTipo,data:v('f-data')||new Date().toISOString().split('T')[0],janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null});
+  clients.push({id:Date.now()+Math.random(),nome,endereco:end,complemento:v('f-compl'),tel:v('f-tel'),tipo,qtd,val,valTipo,data:v('f-data')||new Date().toISOString().split('T')[0],janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null});
   order=clients.map((_,i)=>i);
   resetForm();clearImg();renderC();updStats();updBtns();
   toast(nome+' adicionado!','ok');
@@ -1828,6 +1877,7 @@ function editC(id){
   g('em-id').value=id;
   g('em-nome').value=c.nome||'';
   g('em-end').value=c.endereco||'';
+  g('em-compl').value=c.complemento||'';
   g('em-tel').value=c.tel||'';
   g('em-tipo').value=c.tipo||'coleta';
   g('em-qtd').value=c.qtd||0;
@@ -1846,6 +1896,7 @@ function saveEditC(){
   const c=clients.find(x=>x.id===id);if(!c)return;
   c.nome=g('em-nome').value.trim()||c.nome;
   c.endereco=g('em-end').value.trim();
+  c.complemento=g('em-compl').value.trim();
   c.tel=g('em-tel').value.trim();
   c.tipo=g('em-tipo').value;
   c.qtd=parseInt(g('em-qtd').value)||0;
@@ -1879,7 +1930,7 @@ function renderC(){
           +'<span class="cn">'+c.nome+'</span>'
           +'<span class="cc-type '+(c.tipo==='coleta'?'col':'ent')+'">'+(c.tipo==='coleta'?'Coleta':'Entrega')+'</span>'
         +'</div>'
-        +(c.endereco?'<div class="ca">'+c.endereco+'</div>':'')
+        +(c.endereco?'<div class="ca">'+c.endereco+(c.complemento?' — '+c.complemento:'')+'</div>':'')
         +'<div class="cm">'
           +(c.tel?'<span>☎ '+c.tel+'</span>':'')
           +(c.qtd?'<span>'+c.qtd+' tapete'+(c.qtd>1?'s':'')+'</span>':'')
@@ -2084,7 +2135,7 @@ async function recalcRouteFromOrder(){
     // Markers na nova ordem (AdvancedMarkerElement)
     geocoded.forEach((c,pos)=>{
       if(legs[pos]&&legs[pos].end_location){c.lat=legs[pos].end_location.lat();c.lng=legs[pos].end_location.lng();}
-      const mk=createAdvMarker({position:{lat:c.lat,lng:c.lng},map:gMap,label:String(pos+1),fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',onClick:()=>{new google.maps.InfoWindow({content:'<strong>'+c.nome+'</strong><br>'+c.endereco}).open({anchor:mk,map:gMap});}});
+      const mk=createAdvMarker({position:{lat:c.lat,lng:c.lng},map:gMap,label:String(pos+1),fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',onClick:()=>{new google.maps.InfoWindow({content:'<strong>'+c.nome+'</strong><br>'+c.endereco+(c.complemento?' — '+c.complemento:'')}).open({anchor:mk,map:gMap});}});
       gMarkers.push(mk);
     });
     const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds);
@@ -2323,7 +2374,7 @@ async function calcRoute(){
     // Markers (AdvancedMarkerElement)
     finalWpOrder.forEach((gi,pos)=>{const c=geocoded[gi];
       const isUrg=pos<urgentes.length&&urgentes.length>0;
-      const mk=createAdvMarker({position:{lat:c.lat,lng:c.lng},map:gMap,label:String(pos+1),fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',strokeColor:isUrg?'#FF6B35':'#fff',strokeWeight:isUrg?3:2,onClick:()=>{new google.maps.InfoWindow({content:'<strong>'+c.nome+'</strong><br>'+c.endereco+(isUrg?'<br><em style="color:#FF6B35">Janela: '+(c.janela==='manha'?'até 12h':c.hi+'-'+c.hf)+'</em>':'')}).open({anchor:mk,map:gMap});}});
+      const mk=createAdvMarker({position:{lat:c.lat,lng:c.lng},map:gMap,label:String(pos+1),fillColor:c.tipo==='coleta'?'#00C875':'#0098F7',strokeColor:isUrg?'#FF6B35':'#fff',strokeWeight:isUrg?3:2,onClick:()=>{new google.maps.InfoWindow({content:'<strong>'+c.nome+'</strong><br>'+c.endereco+(c.complemento?' — '+c.complemento:'')+(isUrg?'<br><em style="color:#FF6B35">Janela: '+(c.janela==='manha'?'até 12h':c.hi+'-'+c.hf)+'</em>':'')}).open({anchor:mk,map:gMap});}});
       gMarkers.push(mk);
     });
     const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds);
@@ -2357,6 +2408,28 @@ function estimateTimesOSRM(legs){
     else if(c.janela==='custom'&&c.hi&&c.hf&&(cur<ts(c.hi)||cur>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
     if(cur>retS){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
     cur+=tempo; // Tempo de parada neste cliente
+  });
+}
+function recalcDynamicETAs(){
+  // Recalcula previsões a partir do horário real atual para paradas não concluídas
+  const now=new Date();
+  let cur=now.getHours()*3600+now.getMinutes()*60+now.getSeconds();
+  const retS=ts(cfg.ret||'17:00'),tempo=(cfg.tempo||10)*60;
+  const al1=cfg.al1,al2=cfg.al2;
+  let first=true;
+  order.forEach((idx)=>{
+    const c=clients[idx];
+    if(c._motDone){return;} // Pula concluídos
+    if(!first){cur+=tempo;} // Tempo de deslocamento + parada (estimativa simples)
+    first=false;
+    // Verifica pausa de almoço
+    if(al1&&al2){const s=ts(al1),e=ts(al2);if(cur>=s&&cur<e)cur=e;}
+    c.estT=st2(cur);c.conflict=false;c.cmsg='';
+    if(c.janela==='manha'&&cur>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
+    else if(c.janela==='tarde'&&cur<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
+    else if(c.janela==='custom'&&c.hi&&c.hf&&(cur<ts(c.hi)||cur>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
+    if(cur>retS){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
+    cur+=tempo; // Tempo de parada
   });
 }
 function estimateTimesSimple(){
@@ -2396,7 +2469,7 @@ async function genImage(){
           <span style="font-weight:600;font-size:13px;color:#1C1F3B;line-height:1.4">${c.nome}</span>
           <span style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:2px 8px;border-radius:20px;background:${isCol?'#E6FBF3':'#E6F5FF'};color:${isCol?'#00A65E':'#0098F7'};white-space:nowrap;margin-top:2px">${isCol?'Coleta':'Entrega'}</span>
         </div>
-        ${c.endereco?`<div style="font-size:12px;color:#6B6F8E;margin-top:3px">${c.endereco}</div>`:''}
+        ${c.endereco?`<div style="font-size:12px;color:#6B6F8E;margin-top:3px">${c.endereco}${c.complemento?' — '+c.complemento:''}</div>`:''}
         ${det?`<div style="font-size:12px;color:#6B6F8E;margin-top:5px">${det}</div>`:''}
         ${c.obs?`<div style="font-size:11px;color:#6B6F8E;margin-top:3px;font-style:italic">${c.obs}</div>`:''}
         ${c.conflict?`<div style="font-size:11px;color:#E2445C;margin-top:3px;font-weight:600">⚠ ${c.cmsg}</div>`:''}
@@ -2455,7 +2528,8 @@ function genPDF_unused(){
   order.forEach((idx,stop)=>{
     const c=clients[idx];
     if(y>258){doc.addPage();y=14;}
-    const lines=doc.splitTextToSize(c.endereco||'',CW-30);
+    const endCompl=(c.endereco||'')+(c.complemento?' — '+c.complemento:'');
+    const lines=doc.splitTextToSize(endCompl,CW-30);
     const hasExtra=c.tel||c.qtd||c.val||c.valTipo!=='normal'&&c.valTipo||c.estT;
     const h=10+(lines.length*4.5)+(hasExtra?5:0)+(c.obs?5:0)+(c.conflict?5:0)+4;
     // Card background
@@ -2660,8 +2734,8 @@ function shareMotWhatsApp(){
 function buildDonutSVG(segments,centerText,centerSub){
   // segments: [{value,color,label}]
   const total=segments.reduce((s,seg)=>s+seg.value,0);
-  if(!total)return '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="var(--bd)" stroke-width="10" opacity=".3"/><text x="50" y="48" text-anchor="middle" class="mot-chart-center" style="font-size:14px">0</text><text x="50" y="58" text-anchor="middle" class="mot-chart-center-sub">'+centerSub+'</text></svg>';
-  const R=38,C=2*Math.PI*R;
+  if(!total)return '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="var(--bd)" stroke-width="8" opacity=".3"/><text x="50" y="48" text-anchor="middle" class="mot-chart-center" style="font-size:13px">0</text><text x="50" y="58" text-anchor="middle" class="mot-chart-center-sub">'+centerSub+'</text></svg>';
+  const R=40,C=2*Math.PI*R;
   let offset=0;
   let arcs='';
   segments.forEach(seg=>{
@@ -2669,7 +2743,7 @@ function buildDonutSVG(segments,centerText,centerSub){
     const pct=seg.value/total;
     const dash=pct*C;
     const gap=C-dash;
-    arcs+='<circle cx="50" cy="50" r="'+R+'" fill="none" stroke="'+seg.color+'" stroke-width="10" stroke-dasharray="'+dash.toFixed(2)+' '+gap.toFixed(2)+'" stroke-dashoffset="'+(-offset).toFixed(2)+'" transform="rotate(-90 50 50)" stroke-linecap="round" style="transition:all .4s ease"/>';
+    arcs+='<circle cx="50" cy="50" r="'+R+'" fill="none" stroke="'+seg.color+'" stroke-width="8" stroke-dasharray="'+dash.toFixed(2)+' '+gap.toFixed(2)+'" stroke-dashoffset="'+(-offset).toFixed(2)+'" transform="rotate(-90 50 50)" stroke-linecap="round" style="transition:all .4s ease"/>';
     offset+=dash;
   });
   return '<svg viewBox="0 0 100 100">'+arcs+'<text x="50" y="48" text-anchor="middle" class="mot-chart-center">'+centerText+'</text><text x="50" y="59" text-anchor="middle" class="mot-chart-center-sub">'+centerSub+'</text></svg>';
@@ -2721,7 +2795,7 @@ function buildChartsHTML(clientsList,orderList){
   return '<div class="mot-charts">'
     +'<div class="mot-chart-item">'+buildDonutSVG(statusSegs,pctDone+'%','progresso')+'<div class="mot-chart-label">Status</div>'+buildDonutLegend(statusSegs)+'</div>'
     +'<div class="mot-chart-item">'+buildDonutSVG(paySegs,payTotal,'de '+total)+'<div class="mot-chart-label">Pagamento</div>'+buildDonutLegend(paySegs)+'</div>'
-    +'<div class="mot-chart-item">'+buildDonutSVG(valSegs,'R$'+fmtBRL(recebido),(aCobrar?'R$'+fmtBRL(aCobrar)+' cobrar':'tudo recebido'))+'<div class="mot-chart-label">Valores</div>'+buildDonutLegend(valSegs)+'</div>'
+    +'<div class="mot-chart-item">'+buildDonutSVG(valSegs,'R$'+fmtBRL(recebido),(aCobrar?'a cobrar':'recebido'))+'<div class="mot-chart-label">Valores</div>'+buildDonutLegend(valSegs)+'</div>'
   +'</div>';
 }
 function renderMotor(){
@@ -2781,7 +2855,7 @@ function renderMotor(){
       +'</div>'
       // Nome + endereço
       +'<div class="mc-name">'+c.nome+'</div>'
-      +'<div class="mc-addr">'+c.endereco+'</div>'
+      +'<div class="mc-addr">'+c.endereco+(c.complemento?' — '+c.complemento:'')+'</div>'
       // Detalhes
       +'<div class="mc-details">'
         +(c.qtd?'<span class="mc-detail">'+mi('bag','mot-ico-sm')+' '+c.qtd+' tapete'+(c.qtd>1?'s':'')+'</span>':'')
@@ -2866,7 +2940,7 @@ function autoConcludePrev(currentStop){
       changed=true;
     }
   }
-  if(changed){saveHist();renderMotor();checkCompletion();}
+  if(changed){recalcDynamicETAs();saveHist();renderMotor();checkCompletion();}
 }
 
 // ── Status do motorista por cliente ──
@@ -2878,6 +2952,7 @@ function setMotStatus(idx,status){
   if(stop>0)autoConcludePrev(stop);
   if(c._motStatus===status){c._motStatus=null;} // toggle off
   else{c._motStatus=status;}
+  recalcDynamicETAs();
   renderMotor();
   const card=document.getElementById('mot-card-'+idx);
   if(card)card.scrollIntoView({behavior:'smooth',block:'center'});
@@ -2909,6 +2984,7 @@ function finishMotClient(idx){
   if(ta&&ta.value.trim()){c._motObs=ta.value.trim();cloudUpdateStatus(idx,'obs',c._motObs);}
   c._motDone=true;
   cloudUpdateStatus(idx,'done',true);
+  recalcDynamicETAs();
   saveHist();
   renderMotor();
   checkCompletion();
