@@ -4022,32 +4022,11 @@ function createBaseMarker({position,map,title,type}){
 }
 function initGoogleMaps(){
   const mapEl=document.getElementById('map');
-  if(mapEl){
-    // v4.5.0: Inicializa mapa mas mantém oculto até rota ser gerada
-    // Cria o mapa em background para estar pronto quando necessário
-    gMap=new google.maps.Map(mapEl,{center:{lat:-23.55,lng:-46.63},zoom:12,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});
-    // Se já tem clientes com coordenadas (dados carregados), mostra o mapa
-    if(clients.length&&clients.some(c=>c.lat&&c.lng)){
-      showMiniMap();
-    }
-    // Trigger resize após breve delay para garantir tiles carregam
-    google.maps.event.addListenerOnce(gMap,'idle',()=>{
-      google.maps.event.trigger(gMap,'resize');
-    });
-  }
+  if(mapEl){mapEl.style.display='block';document.getElementById('mph').style.display='none';
+    document.getElementById('map-expand-btn').style.display='flex';
+    gMap=new google.maps.Map(mapEl,{center:{lat:-23.55,lng:-46.63},zoom:12,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});}
   const hmEl=document.getElementById('heatmap');
   if(hmEl)hmMap=new google.maps.Map(hmEl,{center:{lat:-23.55,lng:-46.63},zoom:11,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});
-}
-// v4.5.0: Mostra minimap quando há conteúdo para exibir
-function showMiniMap(){
-  const mapEl=document.getElementById('map');
-  const mph=document.getElementById('mph');
-  const expandBtn=document.getElementById('map-expand-btn');
-  if(mapEl)mapEl.style.display='block';
-  if(mph)mph.style.display='none';
-  if(expandBtn)expandBtn.style.display='flex';
-  // Forçar resize para corrigir tiles cinzas
-  if(gMap){setTimeout(()=>{google.maps.event.trigger(gMap,'resize');},100);}
 }
 function initLeafMap(){}
 const _geoCache={};
@@ -4233,8 +4212,7 @@ async function calcRoute(){
     legs.forEach((l,i)=>{
       const from=i===0?'BASE':geocoded[finalWpOrder[i-1]].nome;
       const to=i===legs.length-1?'RETORNO':geocoded[finalWpOrder[i]].nome;
-      const isUrg=i>0&&i<=urgentes.length?'⚠️ ':'';
-      console.log('  '+(i+1)+'. '+isUrg+from+' → '+to+': '+l.distance.text+' ('+l.duration.text+')');
+      console.log('  '+(i+1)+'. '+from+' → '+to+': '+l.distance.text+' ('+l.duration.text+')');
     });
     // Mapear para ordem global (índices no array clients[])
     const newOrder=finalWpOrder.map(gi=>geocodedIdx[gi]);
@@ -4255,8 +4233,9 @@ async function calcRoute(){
     _routeTotalKm=totalDistKm;_routeTotalMin=totalDurMin;
     // Markers (AdvancedMarkerElement) — v4.3.5: InfoWindow com dados completos + fechar ao clicar fora
     finalWpOrder.forEach((gi,pos)=>{const c=geocoded[gi];
-      const isUrg=pos<urgentes.length&&urgentes.length>0;
       const tipos=normalizeTipo(c.tipo);const fillColor=tipos.length?_getTagColor(tipos[0]):'#787878';
+      // v4.5.0: Detectar urgência via deadline do cliente (janela apertada)
+      const dlMin=clientDeadlineMin(c);const isUrg=dlMin<24*60;
       const mk=createAdvMarker({position:{lat:c.lat,lng:c.lng},map:gMap,label:String(pos+1),fillColor,strokeColor:isUrg?'#FF6B35':'#fff',strokeWeight:isUrg?3:2,onClick:()=>{openMarkerInfoWindow(mk,c,pos);}});
       gMarkers.push(mk);
     });
@@ -4278,8 +4257,9 @@ async function calcRoute(){
     const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds,{top:40,bottom:40,left:40,right:40});google.maps.event.addListenerOnce(gMap,'idle',()=>{if(gMap.getZoom()>16)gMap.setZoom(16);if(gMap.getZoom()<10)gMap.setZoom(10);});if(geocoded.length===1)gMap.setZoom(15);
     const legsDur=legs.map(l=>({duration:l.duration.value}));
     estimateTimesOSRM(legsDur);
-    const urgMsg=urgentes.length?' ('+urgentes.length+' com janela de horário prioritária)':'';
-    showMiniMap(); // v4.5.0: Mostra minimap agora que há rota
+    // v4.5.0: Contar clientes com janela urgente para mensagem
+    const urgCount=geocoded.filter(c=>clientDeadlineMin(c)<24*60).length;
+    const urgMsg=urgCount?' ('+urgCount+' com janela de hor\xe1rio priorit\xe1ria)':'';
     renderC();updStats();
     // v4.3.7: Salvar no histórico quando rota é gerada (corrige histórico e mapa de calor)
     saveHist();
@@ -4350,12 +4330,7 @@ function ts(t){const[h,m]=(t||'00:00').split(':').map(Number);return h*3600+m*60
 function st2(s){const h=Math.floor(s/3600)%24,m=Math.floor((s%3600)/60);return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');}
 // v4.3.4: Formatar duração em minutos para "Xh Ymin" ou "X min"
 function fmtDuration(min){if(min>=60){const h=Math.floor(min/60),m=min%60;return h+'h '+m+'min';}return min+' min';}
-function resetMap(){if(leafRoute&&leafMap){leafMap.removeLayer(leafRoute);leafRoute=null;}if(leafMap)leafMap.eachLayer(l=>{if(l instanceof L.Marker)leafMap.removeLayer(l);});
-  // v4.5.0: Esconde minimap e mostra placeholder quando não há clientes
-  const mapEl=document.getElementById('map');const mph=document.getElementById('mph');const expandBtn=document.getElementById('map-expand-btn');
-  if(mapEl)mapEl.style.display='none';if(mph)mph.style.display='';if(expandBtn)expandBtn.style.display='none';
-  if(gRoute){gRoute.setMap(null);gRoute=null;}gMarkers.forEach(m=>{if(m.map)m.map=null;});gMarkers=[];gBaseMarkers.forEach(m=>{if(m.map)m.map=null;});gBaseMarkers=[];
-}
+function resetMap(){if(leafRoute&&leafMap){leafMap.removeLayer(leafRoute);leafRoute=null;}if(leafMap)leafMap.eachLayer(l=>{if(l instanceof L.Marker)leafMap.removeLayer(l);});}
 
 async function genImage(){
   if(!clients.length)return;
