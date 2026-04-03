@@ -4,6 +4,22 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.3.6 — 03/04/2026 — UX Polish + Card Standardization + Fixes      ║
+║  ─────────────────────────────────────────                   ║
+║  UX:                                                                 ║
+║  • Sidebar do mapa redimensionável (drag) + largura salva            ║
+║  • Navbar funcional no mapa expandido (fecha fullscreen ao navegar)  ║
+║  • Linha de drag & drop contida na sidebar                           ║
+║  • Controles de navegação removidos dos mapas (minimap + heatmap)    ║
+║  CARTÕES:                                                            ║
+║  • Bolinha: fundo sólido + número branco + centralizada              ║
+║  • Horário: "Chegada: HH:MM" em fonte leve (padronizado c/ sidebar) ║
+║  CORREÇÕES:                                                          ║
+║  • Histórico e Mapa de Calor agora atualizam ao gerar rota          ║
+║  • Botão "Salvar config" só visível na aba Configurações             ║
+║  • Bloco API de IA oculto da interface (funciona no código)          ║
+║  • Versão no rodapé mais visível                                     ║
+║                                                                      ║
 ║  v4.3.5 — 03/04/2026 — Multi-tags + Pastel Colors + Markers Redesign ║
 ║  ─────────────────────────────────────────                   ║
 ║  TAGS CONFIGURÁVEIS:                                             ║
@@ -452,7 +468,7 @@ body.dark .mc-conclude-btn{background:var(--pu);color:#fff}
 .ai-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--gnd);background:var(--gnl);border:1px solid #86EFAC;padding:3px 9px;border-radius:20px}
 
 /* CLIENT CARD */
-.cc{background:var(--sf);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--bd);border-left:3px solid var(--bd);border-radius:12px;padding:12px 14px 12px 13px;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;cursor:pointer;transition:transform .2s cubic-bezier(.4,0,.2,1),box-shadow .2s ease,background .2s ease,border-color .2s ease;font-size:13px;position:relative;user-select:none;-webkit-user-select:none}
+.cc{background:var(--sf);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--bd);border-left:3px solid var(--bd);border-radius:12px;padding:12px 14px 12px 13px;display:flex;align-items:center;gap:10px;margin-bottom:8px;cursor:pointer;transition:transform .2s cubic-bezier(.4,0,.2,1),box-shadow .2s ease,background .2s ease,border-color .2s ease;font-size:13px;position:relative;user-select:none;-webkit-user-select:none}
 .cc.dragging{opacity:.4;transform:scale(.97);box-shadow:none!important}
 .cc.drag-over-top{box-shadow:0 -2px 0 0 var(--pu),0 -6px 12px -4px rgba(108,92,231,.25)}
 .cc.drag-over-bottom{box-shadow:0 2px 0 0 var(--pu),0 6px 12px -4px rgba(108,92,231,.25)}
@@ -478,7 +494,7 @@ body.dark .mc-conclude-btn{background:var(--pu);color:#fff}
 body.dark .cc:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.1)!important;box-shadow:0 4px 16px rgba(0,0,0,.2)}
 .cc.cfl{border-left-color:var(--rd);background:var(--rl)}
 .cc.cwn{border-left-color:var(--yw);background:var(--ywl)}
-.sn{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:2px}
+.sn{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
 .sn.c{background:var(--gnl);color:var(--gnd)}.sn.e{background:var(--bll);color:var(--bl)}
 .ci{flex:1;min-width:0}
 .cn{font-weight:600;font-size:13px;line-height:1.4}
@@ -486,7 +502,7 @@ body.dark .cc:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,2
 .cm{display:flex;gap:8px;margin-top:5px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--mu)}
 .cc-type{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:20px;flex-shrink:0;line-height:1.6;margin-top:1px}
 .cc-type.col{background:var(--gnl);color:var(--gnd)}.cc-type.ent{background:var(--bll);color:var(--bl)}
-.et{font-size:11px;font-weight:700;font-family:'DM Mono',monospace;color:var(--pu)}
+.et{font-size:10px;font-weight:600;color:var(--pu)}
 .et.late{color:var(--rd)}
 .cmsg{font-size:11px;color:var(--rd);margin-top:4px;font-weight:500}
 
@@ -514,7 +530,9 @@ body.dark .map-expand-btn{background:rgba(30,27,50,.85);color:#e4e4e7;box-shadow
 .map-fullscreen .mph{display:none!important}
 .map-fullscreen .map-expand-btn{top:16px;right:16px;width:42px;height:42px;border-radius:12px;z-index:10002}
 .map-fullscreen .map-expand-btn svg{width:20px;height:20px}
-.map-sidebar{display:none;width:380px;height:100vh;overflow-y:auto;background:var(--bg);border-right:1px solid var(--bd);padding:16px;flex-shrink:0;z-index:10001;order:-1}
+.map-sidebar{display:none;width:440px;height:100vh;overflow-y:auto;background:var(--bg);border-right:1px solid var(--bd);padding:16px;flex-shrink:0;z-index:10001;order:-1;position:relative;min-width:300px;max-width:700px}
+.map-sidebar-resize{position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:10002;background:transparent}
+.map-sidebar-resize:hover,.map-sidebar-resize.active{background:rgba(108,92,231,.15)}
 .map-fullscreen .map-sidebar{display:block}
 .map-sidebar .ms-route-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
 .map-sidebar .ms-stat{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;text-align:center}
@@ -953,7 +971,8 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
     </div>
   </div>
   <div>
-    <div class="card">
+    <!-- v4.3.6: API keys ocultas da interface (continuam funcionando no código) -->
+    <div class="card" style="display:none">
       <p class="ct">API de IA</p>
       <div class="fg2">
         <div class="fg full"><label>Chave Anthropic (extra&#xE7;&#xE3;o por IA)</label>
@@ -977,7 +996,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   </div>
   </div>
   <!-- v4.3.4: Sticky save bar at bottom -->
-  <div class="cfg-save-bar">
+  <div class="cfg-save-bar" id="cfg-save-bar" style="display:none">
     <div id="cfg-msg" style="flex:1;display:flex;align-items:center"></div>
     <button class="btn bp" onclick="saveCfg()" style="gap:8px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span> Salvar configura&#xE7;&#xF5;es</button>
   </div>
@@ -1734,6 +1753,9 @@ function saveCfg(){
   _saveTags();
   // v4.3.1: Resetar âncora de geocodificação quando muda endereço base
   _geoAnchor=null;
+  // v4.3.6: Feedback visual — esconde barra 3s após salvar
+  const saveBar=g('cfg-save-bar');
+  if(saveBar){saveBar.style.display='none';setTimeout(()=>{if(g('page-cfg').classList.contains('on'))saveBar.style.display='flex';},3000);}
   toastCenter();
   let warn='';
   if(!cfg.base)warn+='<div class="ab w" style="margin-top:8px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <strong>Endere\xE7o de partida</strong> n\xE3o preenchido. O sistema precisa dele para calcular os hor\xE1rios de chegada nos clientes.</div>';
@@ -1783,9 +1805,13 @@ function updateTagSelects(){
 }
 
 function goPage(p,el){if(_isMotoristaMode)return;window.scrollTo(0,0);window.scrollTo(0,0);
+  // v4.3.6: Fechar mapa fullscreen ao navegar para outra aba
+  if(mapIsFullscreen&&p!=='rota'){toggleMapFullscreen();}
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(x=>x.classList.remove('on'));
   g('page-'+p).classList.add('on');el.classList.add('on');
+  // v4.3.6: Botão salvar só visível na aba Configurações
+  const saveBar=g('cfg-save-bar');if(saveBar)saveBar.style.display=p==='cfg'?'flex':'none';
   if(p==='dash')renderDash();
   if(p==='motor'){renderMotor();if(!_isMotoristaMode&&_currentRouteId&&_cloudVersion>0)startGestorPolling();}
   if(p==='hist')renderHist();
@@ -2371,7 +2397,7 @@ function renderC(){
     const cardStyle=tipos.length<=1?'border-left-color:'+tagColor:(tipos.length>1?'border-left:none;position:relative;padding-left:'+(13+bw)+'px;overflow:hidden':'');
     return '<div class="cc'+typeClass+(c.conflict&&isCol?' cfl':'')+(c.conflict&&!isCol?' cwn':'')+'" data-stop="'+stop+'" style="'+cardStyle+'" onclick="editC('+c.id+')">'
       +(tipos.length>1?renderTagBorder(tipos):'')
-      +'<div class="sn" style="background:'+tagColor+'20;color:'+tagColor+'">'+(stop+1)+'</div>'
+      +'<div class="sn" style="background:'+tagColor+';color:#fff">'+(stop+1)+'</div>'
       +'<div class="ci">'
         +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
           +'<span class="cn">'+c.nome+'</span>'
@@ -2383,7 +2409,7 @@ function renderC(){
           +(c.qtd?'<span>'+c.qtd+' '+(cfg._itemLabel||'item')+(c.qtd>1?'s':'')+'</span>':'')
           +(vd?'<span>'+vd+'</span>':'')
           +(jl?'<span>'+jl+'</span>':'')
-          +(c.estT?'<span class="et '+(c.conflict?'late':'')+'">'+c.estT+'</span>':'')
+          +(c.estT?'<span class="et '+(c.conflict?'late':'')+'">Chegada: '+c.estT+'</span>':'')
         +'</div>'
         +(c.obs?'<div style="font-size:12px;color:var(--mu);margin-top:3px;font-style:italic">'+c.obs+'</div>':'')
         +(c.conflict?'<div class="cmsg">\u26A0 '+c.cmsg+'</div>':'')
@@ -2731,6 +2757,33 @@ function updateMapSidebar(){
   });
   html+='</div>';
   sb.innerHTML=html;
+  // v4.3.6: Restaurar largura salva da sidebar
+  const savedW=localStorage.getItem('sidebar_width');
+  if(savedW)sb.style.width=savedW+'px';
+  // v4.3.6: Adicionar handle de resize se não existir
+  if(!sb.querySelector('.map-sidebar-resize')){
+    const handle=document.createElement('div');
+    handle.className='map-sidebar-resize';
+    sb.appendChild(handle);
+    let resizing=false,startX=0,startW=0;
+    handle.addEventListener('mousedown',e=>{
+      e.preventDefault();resizing=true;startX=e.clientX;startW=sb.offsetWidth;
+      handle.classList.add('active');
+      document.addEventListener('mousemove',onResize);
+      document.addEventListener('mouseup',stopResize);
+    });
+    function onResize(e){
+      if(!resizing)return;
+      const newW=Math.min(700,Math.max(300,startW+(e.clientX-startX)));
+      sb.style.width=newW+'px';
+    }
+    function stopResize(){
+      resizing=false;handle.classList.remove('active');
+      document.removeEventListener('mousemove',onResize);
+      document.removeEventListener('mouseup',stopResize);
+      localStorage.setItem('sidebar_width',sb.offsetWidth);
+    }
+  }
   initMapSidebarDragDrop();
 }
 // v4.3.4: Drag and drop para cart\xf5es na sidebar com ghost + drop indicator
@@ -2769,7 +2822,10 @@ function initMapSidebarDragDrop(){
       document.body.appendChild(ghostEl);
       // Create drop indicator
       dropIndicator=document.createElement('div');
-      dropIndicator.style.cssText='position:fixed;height:2px;background:#6C5CE7;z-index:9999;left:0;right:0;pointer-events:none;display:none';
+      // v4.3.6: Limitar linha indicadora à largura da sidebar
+      const sidebarEl=document.querySelector('.map-sidebar');
+      const sbRect=sidebarEl?sidebarEl.getBoundingClientRect():null;
+      dropIndicator.style.cssText='position:fixed;height:2px;background:#6C5CE7;z-index:9999;pointer-events:none;display:none;left:'+(sbRect?sbRect.left+'px':'0')+';width:'+(sbRect?sbRect.width+'px':'100%');
       document.body.appendChild(dropIndicator);
     }
     if(!msDrag.started)return;
@@ -2900,7 +2956,7 @@ function initGoogleMaps(){
     document.getElementById('map-expand-btn').style.display='flex';
     gMap=new google.maps.Map(mapEl,{center:{lat:-23.55,lng:-46.63},zoom:12,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});}
   const hmEl=document.getElementById('heatmap');
-  if(hmEl)hmMap=new google.maps.Map(hmEl,{center:{lat:-23.55,lng:-46.63},zoom:11,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});
+  if(hmEl)hmMap=new google.maps.Map(hmEl,{center:{lat:-23.55,lng:-46.63},zoom:11,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false});
 }
 function initLeafMap(){}
 const _geoCache={};
@@ -3169,7 +3225,10 @@ async function calcRoute(){
     const legsDur=legs.map(l=>({duration:l.duration.value}));
     estimateTimesOSRM(legsDur);
     const urgMsg=urgentes.length?' ('+urgentes.length+' com janela de horário prioritária)':'';
-    renderC();toast('Rota otimizada gerada!'+urgMsg,'ok');
+    renderC();updStats();
+    // v4.3.6: Salvar no histórico quando rota é gerada (corrige histórico e mapa de calor)
+    saveHist();
+    toast('Rota otimizada gerada!'+urgMsg,'ok');
   }catch(e){toast('Erro ao calcular rota: '+e.message,'err');console.error(e);}
   finally{g('rp').classList.remove('on');g('route-btn').disabled=!clients.length;}
 }
@@ -3467,7 +3526,7 @@ function renderDashStats(br,pts){
     +'</div></div>'
   ).join(''):'<p style="font-size:13px;color:var(--mu)">Nenhum bairro identificado ainda.</p>')+'</div>';
   if(!pts.length)return;
-  if(!hmMap){hmMap=new google.maps.Map(document.getElementById('heatmap'),{center:{lat:-23.55,lng:-46.63},zoom:11,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});}
+  if(!hmMap){hmMap=new google.maps.Map(document.getElementById('heatmap'),{center:{lat:-23.55,lng:-46.63},zoom:11,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false});}
   if(hmHeatLayer)hmHeatLayer.setMap(null);
   hmHeatLayer=new google.maps.visualization.HeatmapLayer({data:pts.map(pt=>new google.maps.LatLng(pt[0],pt[1])),radius:35,map:hmMap});
   const hmBnds=new google.maps.LatLngBounds();pts.forEach(pt=>hmBnds.extend({lat:pt[0],lng:pt[1]}));hmMap.fitBounds(hmBnds);
@@ -3842,6 +3901,6 @@ function editDoneCard(idx){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:10px;font-weight:500;color:var(--mu);opacity:.55;letter-spacing:.03em;position:relative;z-index:1">v4.3.5</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.3.6</div>
 </body>
 </html>
