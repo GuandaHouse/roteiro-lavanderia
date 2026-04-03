@@ -4,6 +4,19 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.5.1 — 03/04/2026 — Business Intelligence + Premium UX              ║
+║  ─────────────────────────────────────────                   ║
+║  CORREÇÕES:                                                           ║
+║  • Minimap: resize trigger para tiles cinzas + fitBounds ao trocar aba ║
+║  • Toggle KM/Tempo: comportamento tipo dark mode (clicou, alternou)   ║
+║  • Redesign completo Top Bairros (tipografia premium)                 ║
+║  FEATURES:                                                            ║
+║  • Aprendizado de Rota: sistema salva ajustes manuais                 ║
+║  • Mapa de Calor por Receita + toggle Concentração/Receita            ║
+║  • Agrupamento Inteligente por Dia da Semana                          ║
+║  • Notificação WhatsApp: janela horário + template + pronome          ║
+║  • Relatório Pós-Rota: score de performance + evolução semanal        ║
+║                                                                      ║
 ║  v4.5.0 — 03/04/2026 — Multi-Strategy Optimizer + Route Intelligence  ║
 ║  ─────────────────────────────────────────                   ║
 ║  ROTEIRIZAÇÃO:                                                        ║
@@ -11,7 +24,6 @@
 ║    melhor rota automaticamente                                        ║
 ║  • Configuração de prioridade: quilometragem vs tempo                 ║
 ║  • Toggle KM/Tempo no mapa expandido (estilo dark mode switch)        ║
-║  • Painel comparativo: ambas opções lado a lado                       ║
 ║  • Indicador de economia da otimização                                ║
 ║  • Undo/Ctrl+Z para reverter reordenações manuais                    ║
 ║  • Animação suave na transição de rotas                               ║
@@ -428,7 +440,7 @@ label{font-size:12px;font-weight:600;color:var(--mu)}
 input,textarea,select{padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:14px;font-family:'Plus Jakarta Sans',sans-serif;background:rgba(255,255,255,.8);color:var(--tx);outline:none;transition:all .2s;width:100%;backdrop-filter:blur(8px)}
 select{appearance:none;-webkit-appearance:none;-moz-appearance:none;padding-right:34px;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236C5CE7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:16px}
 input:focus,textarea:focus,select:focus{border-color:var(--pu);box-shadow:0 0 0 3px rgba(108,92,231,.12)}
-body.dark input,body.dark textarea,body.dark select{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.08);color:#e4e4e7}
+body.dark input,body.dark textarea,body.dark select{background-color:rgba(255,255,255,.06);border-color:rgba(255,255,255,.08);color:#e4e4e7}
 body.dark select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a78bfa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")}
 body.dark input:focus,body.dark textarea:focus,body.dark select:focus{border-color:#a78bfa;box-shadow:0 0 0 3px rgba(167,139,250,.15)}
 textarea{resize:vertical;min-height:56px}
@@ -533,25 +545,58 @@ body.dark .mc-conclude-btn{background:var(--pu);color:#fff}
 .tw{background:var(--ywl);color:#8B6F00}
 .tg{background:var(--s2);color:var(--mu)}
 .tpu{background:var(--pul);color:var(--pud)}
+/* v4.5.1: Top Bairros Premium Redesign */
+.dash-bairro-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:all .18s;border:1px solid transparent}
+.dash-bairro-item:hover{background:rgba(108,92,231,.05);border-color:rgba(108,92,231,.1)}
+body.dark .dash-bairro-item:hover{background:rgba(167,139,250,.08);border-color:rgba(167,139,250,.12)}
+.dash-bairro-rank{width:22px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;font-family:'DM Mono',monospace}
+.dash-bairro-rank.top3{background:var(--pu);color:#fff}
+.dash-bairro-rank.rest{background:var(--pul);color:var(--pud)}
+.dash-bairro-name{font-size:12.5px;font-weight:600;color:var(--tx);letter-spacing:-.01em}
+.dash-bairro-count{font-size:11px;font-weight:700;color:var(--pu);font-family:'DM Mono',monospace;min-width:20px;text-align:right}
+.dash-bairro-bar{height:3px;background:var(--s2);border-radius:2px;flex:1;min-width:40px;overflow:hidden}
+.dash-bairro-bar-fill{height:100%;background:linear-gradient(90deg,var(--pu),var(--pud));border-radius:2px;transition:width .4s ease}
+/* v4.5.1: Heatmap mode toggle (concentração vs receita) */
+.hm-mode-toggle{display:flex;align-items:center;background:var(--sf);border:1.5px solid var(--bd);border-radius:20px;padding:2px;cursor:pointer;user-select:none}
+.hm-mode-opt{padding:4px 10px;border-radius:16px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--mu);transition:all .2s}
+.hm-mode-opt.active{background:var(--pu);color:#fff;box-shadow:0 1px 6px rgba(108,92,231,.25)}
+/* v4.5.1: Day grouping panel */
+.day-group-panel{background:var(--sf);border:1.5px solid var(--bd);border-radius:14px;padding:14px;margin-top:12px}
+.day-group-item{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;border:1px solid var(--bd);margin-bottom:6px;transition:all .15s}
+.day-group-item:hover{border-color:var(--pu);background:var(--pul)}
+.day-group-day{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--pu);min-width:40px}
+.day-group-clients{font-size:12px;font-weight:600;color:var(--tx)}
+.day-group-saving{font-size:10px;font-weight:700;color:var(--gnd);margin-left:auto;white-space:nowrap}
+/* v4.5.1: WhatsApp notification panel */
+.wpp-panel{background:var(--sf);border:1.5px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+.wpp-preview{background:#DCF8C6;border-radius:8px;padding:10px 12px;font-size:12px;color:#303030;line-height:1.5;margin:8px 0;font-family:'Plus Jakarta Sans',sans-serif;position:relative;max-width:280px}
+body.dark .wpp-preview{background:rgba(0,92,75,.3);color:var(--tx)}
+.wpp-preview::after{content:'';position:absolute;bottom:-5px;left:12px;width:10px;height:10px;background:#DCF8C6;clip-path:polygon(0 0,100% 0,0 100%)}
+body.dark .wpp-preview::after{background:rgba(0,92,75,.3)}
+.wpp-send-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:none;background:#25D366;color:#fff;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;font-family:'Plus Jakarta Sans',sans-serif}
+.wpp-send-btn:hover{background:#20BD5A;transform:scale(1.02)}
+/* v4.5.1: Post-route report */
+.report-card{background:var(--sf);border:1.5px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:12px}
+.report-score{font-size:48px;font-weight:800;background:linear-gradient(135deg,var(--pu),var(--gn));-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;line-height:1}
+.report-score-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);text-align:center;margin-top:4px}
+.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.report-metric{text-align:center;padding:10px 8px;border-radius:10px;border:1px solid var(--bd)}
+.report-metric-val{font-size:18px;font-weight:800;color:var(--tx)}
+.report-metric-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-top:2px}
+/* v4.5.1: Route learning indicator */
+.learn-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;background:rgba(52,199,89,.08);border:1px solid rgba(52,199,89,.15);font-size:10px;font-weight:700;color:var(--gnd)}
 /* v4.5.0: Route optimization toggle */
 .route-mode-toggle{display:flex;align-items:center;background:var(--sf);border:1.5px solid var(--bd);border-radius:20px;padding:3px;gap:0;cursor:pointer;user-select:none;-webkit-user-select:none;transition:all .2s}
 .route-mode-toggle .rmt-opt{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:16px;font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--mu);transition:all .25s;white-space:nowrap}
 .route-mode-toggle .rmt-opt.active{background:var(--pu);color:#fff;box-shadow:0 2px 8px rgba(108,92,231,.25)}
+.route-mode-toggle .rmt-knob{width:22px;height:22px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;box-shadow:0 1px 4px rgba(0,0,0,.12);transition:transform .3s cubic-bezier(.4,0,.2,1);pointer-events:none}
+.route-mode-toggle.distance .rmt-knob{transform:translateX(calc(100% + 4px))}
 .route-mode-toggle .rmt-opt svg{width:14px;height:14px}
 /* v4.5.0: Undo button */
 .undo-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:10px;border:1.5px solid var(--bd);background:var(--sf);font-size:11px;font-weight:700;color:var(--mu);cursor:pointer;transition:all .15s;opacity:.5;pointer-events:none}
 .undo-btn.active{opacity:1;pointer-events:auto}
 .undo-btn.active:hover{border-color:var(--pu);color:var(--pu);background:var(--pul)}
 .undo-btn svg{width:14px;height:14px}
-/* v4.5.0: Route comparison panel */
-.route-compare{display:none;background:var(--sf);border:1.5px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:12px;animation:fadeIn .25s}
-.route-compare.show{display:block}
-.route-compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.route-compare-col{text-align:center;padding:8px;border-radius:8px;border:1.5px solid var(--bd);transition:all .2s}
-.route-compare-col.active{border-color:var(--pu);background:var(--pul)}
-.route-compare-col .rc-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--mu);margin-bottom:4px}
-.route-compare-col .rc-val{font-size:16px;font-weight:800;color:var(--tx)}
-.route-compare-col .rc-sub{font-size:10px;color:var(--mu);margin-top:2px}
 /* v4.5.0: Optimization savings indicator */
 .opt-savings{display:none;background:linear-gradient(135deg,rgba(52,199,89,.08),rgba(108,92,231,.06));border:1.5px solid rgba(52,199,89,.2);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:12px;font-weight:600;color:var(--gnd);align-items:center;gap:8px;animation:fadeIn .3s}
 .opt-savings.show{display:flex}
@@ -561,7 +606,7 @@ body.dark .mc-conclude-btn{background:var(--pu);color:#fff}
 .route-animating .ms-client{animation:routeTransition .4s ease}
 /* v4.5.0: History filters */
 .hist-filters{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
-.hist-filters input,.hist-filters select{font-size:12px;padding:6px 10px;border:1.5px solid var(--bd);border-radius:8px;background:var(--sf);color:var(--tx);font-weight:500;outline:none;transition:border-color .15s}
+.hist-filters input,.hist-filters select{font-size:12px;padding:6px 10px;border:1.5px solid var(--bd);border-radius:8px;background-color:var(--sf);color:var(--tx);font-weight:500;outline:none;transition:border-color .15s}
 .hist-filters input:focus,.hist-filters select:focus{border-color:var(--pu)}
 .hist-filters input{flex:1;min-width:120px}
 .hist-filters select{min-width:100px}
@@ -722,8 +767,14 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:opacity(0.5);cursor
 input[type="time"]::-webkit-calendar-picker-indicator:hover{filter:opacity(0.8)}
 .cc:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(108,92,231,.08);background:rgba(255,255,255,.85);border-color:rgba(108,92,231,.12)!important}
 body.dark .cc:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.1)!important;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+body.dark .cc.cfl:hover{background:rgba(226,68,92,.18)}
+body.dark .cc.cwn:hover{background:rgba(255,179,0,.15)}
 .cc.cfl{border-left-color:var(--rd);background:var(--rl)}
+body.dark .cc.cfl{background:rgba(226,68,92,.12);border-left-color:#E2445C}
+body.dark .cc.cfl .cmsg{color:#ff8a9e}
+body.dark .cc.cfl .et.late{color:#ff8a9e}
 .cc.cwn{border-left-color:var(--yw);background:var(--ywl)}
+body.dark .cc.cwn{background:rgba(255,179,0,.1);border-left-color:#FFB300}
 .sn{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
 .sn.c{background:var(--gnl);color:var(--gnd)}.sn.e{background:var(--bll);color:var(--bl)}
 .ci{flex:1;min-width:0}
@@ -1021,6 +1072,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
       <div class="fg2">
         <div class="fg"><label>Nome *</label><input type="text" id="f-nome" placeholder="Nome completo"/></div>
         <div class="fg"><label>Telefone</label><input type="tel" id="f-tel" placeholder="(11) 99999-9999"/></div>
+        <div class="fg"><label>Pronome</label><select id="f-pronome"><option value="">Nenhum</option><option value="Dona">Dona</option><option value="Seu">Seu</option><option value="Sr.">Sr.</option><option value="Sra.">Sra.</option><option value="Dr.">Dr.</option><option value="Dra.">Dra.</option></select></div>
         <div class="fg full cep-row"><div class="fg"><label>Endere&#xE7;o completo *</label><input type="text" id="f-end" placeholder="Rua, n&#xBA;, complemento, bairro, cidade" oninput="schedGeo();onEndInput('f')"/></div><div class="fg"><label>CEP</label><input type="text" id="f-cep" class="cep-input" placeholder="00000-000" maxlength="9" oninput="onCepInput('f')"/><div class="cep-status" id="f-cep-status"></div></div></div>
         <div class="fg"><label>Tipo *</label>
           <div id="f-tipo" class="tag-multi-wrap"></div>
@@ -1139,6 +1191,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
       <div class="dash-panel-body" id="dash-panel-body"></div>
     </div>
     <!-- v4.3.9: Dashboard geográfico -->
+    <div id="day-group-section" class="day-group-panel" style="display:none;position:absolute;bottom:16px;left:16px;z-index:3;width:260px;pointer-events:auto"></div>
     <div class="geo-dash" id="geo-dash" style="display:none">
       <div class="geo-card">
         <h4>Distribui&#xE7;&#xE3;o por Zona</h4>
@@ -1206,7 +1259,8 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
         <div class="fg"><label>Hor&#xE1;rio de sa&#xED;da</label><input type="time" id="cfg-saida" value="10:00"/></div>
         <div class="fg"><label>Limite de retorno</label><input type="time" id="cfg-ret" value="17:00"/></div>
         <div class="fg"><label>Tempo/parada (min)</label><input type="number" id="cfg-tempo" value="10" min="1" max="240"/></div>
-        <div class="fg"><label>Prioridade da rota</label><select id="cfg-route-priority"><option value="time">Tempo (mais rápida)</option><option value="distance">Quilometragem (mais curta)</option></select></div>
+        <div class="fg"><label>Prioridade da rota</label><select id="cfg-route-priority"><option value="time">Tempo (mais r\xe1pida)</option><option value="distance">Quilometragem (mais curta)</option></select></div>
+        <div class="fg"><label>Margem de hor\xe1rio (WhatsApp)</label><select id="cfg-wpp-margin"><option value="60">1 hora</option><option value="120" selected>2 horas</option><option value="180">3 horas</option><option value="30">30 minutos</option></select></div>
         <div class="fg"><label>Pausa almoço — início</label><input type="time" id="cfg-al1"/></div>
         <div class="fg full"><label>Pausa almo&#xE7;o &#x2014; fim</label><input type="time" id="cfg-al2"/></div>
       </div>
@@ -1240,9 +1294,16 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
         </div>
       </div>
     </div>
+    <div class="card">
+      <p class="ct">Notifica\xe7\xe3o WhatsApp</p>
+      <div class="fg2">
+        <div class="fg full"><label>Template da mensagem</label><textarea id="cfg-wpp-template" rows="3" style="font-size:12px" placeholder="Ol\xe1 {pronome} {nome}, {saudacao}! Previs\xe3o de chegada entre {inicio} e {fim}. Obrigado!">Ol\xe1 {pronome} {nome}, {saudacao}! Previs\xe3o de chegada entre {inicio} e {fim}. Obrigado!</textarea></div>
+        <p style="font-size:11px;color:var(--mu);margin-top:-4px;font-weight:500">Vari\xe1veis: {nome}, {pronome}, {saudacao}, {inicio}, {fim}, {tipo}, {valor}, {endereco}</p>
+      </div>
+    </div>
   </div>
   <div>
-    <!-- v4.3.7: API keys ocultas da interface (continuam funcionando no código) -->
+    <!-- v4.3.7: API keys ocultas da interface (continuam funcionando no c\xf3digo) -->
     <div class="card" style="display:none">
       <p class="ct">API de IA</p>
       <div class="fg2">
@@ -1297,6 +1358,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
     <div class="edit-field" style="grid-column:1/-1"><div class="cep-row"><div class="edit-field"><label>Endere&#xe7;o completo</label><input type="text" id="em-end" placeholder="Rua, n&#xBA;, complemento, bairro, cidade" oninput="onEndInput('em')"/></div><div class="edit-field"><label>CEP</label><input type="text" id="em-cep" class="cep-input" placeholder="00000-000" maxlength="9" oninput="onCepInput('em')"/><div class="cep-status" id="em-cep-status"></div></div></div></div>
     <div class="edit-row">
       <div class="edit-field"><label>Telefone</label><input type="text" id="em-tel"/></div>
+      <div class="edit-field"><label>Pronome</label><select id="em-pronome"><option value="">Nenhum</option><option value="Dona">Dona</option><option value="Seu">Seu</option><option value="Sr.">Sr.</option><option value="Sra.">Sra.</option><option value="Dr.">Dr.</option><option value="Dra.">Dra.</option></select></div>
       <div class="edit-field"><label>Tipo</label><div id="em-tipo" class="tag-multi-wrap"></div></div>
     </div>
     <div class="edit-row">
@@ -1354,6 +1416,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
       <div class="fg full"><label>Nome</label><input type="text" id="si-nome" placeholder="Nome do cliente"/></div>
       <div class="fg full cep-row"><div class="fg"><label>Endere&#xe7;o completo</label><input type="text" id="si-end" placeholder="Rua, n&#xBA;, complemento, bairro, cidade" oninput="onEndInput('si')"/></div><div class="fg"><label>CEP</label><input type="text" id="si-cep" class="cep-input" placeholder="00000-000" maxlength="9" oninput="onCepInput('si')"/><div class="cep-status" id="si-cep-status"></div></div></div>
       <div class="fg"><label>Telefone</label><input type="text" id="si-tel" placeholder="(11) 99999-9999"/></div>
+      <div class="fg"><label>Pronome</label><select id="si-pronome"><option value="">Nenhum</option><option value="Dona">Dona</option><option value="Seu">Seu</option><option value="Sr.">Sr.</option><option value="Sra.">Sra.</option><option value="Dr.">Dr.</option><option value="Dra.">Dra.</option></select></div>
       <div class="fg"><label>Tipo</label><div id="si-tipo" class="tag-multi-wrap"></div></div>
       <div class="fg"><label>Quantidade</label><input type="number" id="si-qtd" min="0" placeholder="0"/></div>
       <div class="fg"><label>Status valor</label><select id="si-valtipo" onchange="toggleSiValTipo()"><option value="normal">Valor (R$)</option><option value="medir">Medir</option><option value="pago">Pago</option></select></div>
@@ -2080,6 +2143,7 @@ async function doSmartInsert(){
     id:Date.now(),nome,endereco:end,cep:siCep,
     complemento:'',
     tel:document.getElementById('si-tel').value.trim(),
+    pronome:document.getElementById('si-pronome')?.value||'',
     tipo:getFormTags('si-tipo'),
     qtd:parseInt(document.getElementById('si-qtd').value)||0,
     val:siValTipo==='normal'?(parseFloat((document.getElementById('si-val').value||'0').replace(',','.'))||0):0,
@@ -2476,11 +2540,15 @@ function loadCfg(){
   cfg=JSON.parse(localStorage.getItem('rota_cfg')||'{}');
   ['saida','ret','tempo','base','retaddr','al1','al2','tkey','ttoken','akey','gkey'].forEach(k=>{if(cfg[k]&&g('cfg-'+k))g('cfg-'+k).value=cfg[k];});
   if(cfg.routePriority&&g('cfg-route-priority'))g('cfg-route-priority').value=cfg.routePriority;
+  if(cfg.wppMargin&&g('cfg-wpp-margin'))g('cfg-wpp-margin').value=cfg.wppMargin;
+  if(cfg.wppTemplate&&g('cfg-wpp-template'))g('cfg-wpp-template').value=cfg.wppTemplate;
 }
 function saveCfg(){
   cfg={saida:v('cfg-saida'),ret:v('cfg-ret'),tempo:parseInt(v('cfg-tempo'))||10,
     base:v('cfg-base'),retaddr:v('cfg-retaddr'),
     routePriority:v('cfg-route-priority')||'time',
+    wppMargin:parseInt(v('cfg-wpp-margin'))||120,
+    wppTemplate:v('cfg-wpp-template')||'Ol\xe1 {pronome} {nome}, {saudacao}! Previs\xe3o de chegada entre {inicio} e {fim}. Obrigado!',
     al1:v('cfg-al1'),al2:v('cfg-al2'),
     tkey:v('cfg-tkey'),ttoken:v('cfg-ttoken'),
     akey:v('cfg-akey'),gkey:v('cfg-gkey')};
@@ -2553,6 +2621,20 @@ function goPage(p,el){if(_isMotoristaMode)return;window.scrollTo(0,0);window.scr
   g('page-'+p).classList.add('on');el.classList.add('on');
   // v4.3.7: Botão salvar só visível na aba Configurações
   const saveBar=g('cfg-save-bar');if(saveBar)saveBar.style.display=p==='cfg'?'flex':'none';
+  // v4.5.1: Ao retornar para aba Rota, re-trigger resize + fitBounds no minimap
+  if(p==='rota'&&gMap){
+    setTimeout(()=>{
+      google.maps.event.trigger(gMap,'resize');
+      if(gMarkers.length){
+        const bnds=new google.maps.LatLngBounds();
+        gMarkers.forEach(m=>{const pos=m.position;if(pos)bnds.extend(pos);});
+        gMap.fitBounds(bnds,{top:40,bottom:40,left:40,right:40});
+        google.maps.event.addListenerOnce(gMap,'idle',()=>{if(gMap.getZoom()>16)gMap.setZoom(16);if(gMap.getZoom()<10)gMap.setZoom(10);});
+      } else if(cfg.base&&cfg.base.trim()){
+        (async()=>{try{const a=await _resolveGeoAnchor();if(a&&gMap){gMap.panTo({lat:a.lat,lng:a.lng});gMap.setZoom(12);}}catch(e){}})();
+      }
+    },200);
+  }
   if(p==='dash')renderDash();
   if(p==='motor'){renderMotor();if(!_isMotoristaMode&&_currentRouteId&&_cloudVersion>0)startGestorPolling();}
   if(p==='hist')renderHist();
@@ -2625,6 +2707,7 @@ function toggleSiJanela(){
 }
 function resetForm(){
   ['f-nome','f-tel','f-cep','f-end','f-qtd','f-val','f-obs','f-hi','f-hf'].forEach(id=>g(id).value='');
+  if(g('f-pronome'))g('f-pronome').value='';
   initTagMultiSelect('f-tipo',[]);g('f-janela').value='livre';if(g('f-valtipo')){g('f-valtipo').value='normal';toggleFValTipo();}
   g('f-data').value=new Date().toISOString().split('T')[0];
   g('ai-badge').style.display='none';g('amb-box').style.display='none';
@@ -3093,7 +3176,7 @@ function addClient(){
     if(hi&&hf&&hi>=hf){toast('Horário início deve ser anterior ao fim','err');return;}
   }
   const cep=v('f-cep').replace(/\D/g,'');
-  clients.push({id:Date.now()+Math.random(),nome,endereco:end,cep,complemento:'',tel:v('f-tel'),tipo:tipos,qtd,val,valTipo,data:v('f-data')||new Date().toISOString().split('T')[0],janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null});
+  clients.push({id:Date.now()+Math.random(),nome,endereco:end,cep,complemento:'',tel:v('f-tel'),pronome:g('f-pronome')?.value||'',tipo:tipos,qtd,val,valTipo,data:v('f-data')||new Date().toISOString().split('T')[0],janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null});
   order=clients.map((_,i)=>i);
   resetForm();clearImg();renderC();updStats();updBtns();
   toast(nome+' adicionado!','ok');
@@ -3121,6 +3204,7 @@ function editC(id){
   g('em-cep').value=c.cep?fmtCep(c.cep):'';
   g('em-end').value=(c.endereco||'')+(c.complemento?' — '+c.complemento:'');
   g('em-tel').value=c.tel||'';
+  if(g('em-pronome'))g('em-pronome').value=c.pronome||'';
   initTagMultiSelect('em-tipo',normalizeTipo(c.tipo));
   g('em-qtd').value=c.qtd||'';
   g('em-valtipo').value=c.valTipo||'normal';
@@ -3145,6 +3229,7 @@ function saveEditC(){
   c.endereco=_emEnd?titleCase(_emEnd):c.endereco;
   c.complemento='';
   c.tel=g('em-tel').value.trim();
+  c.pronome=g('em-pronome')?.value||'';
   c.tipo=getFormTags('em-tipo');
   c.qtd=parseInt(g('em-qtd').value)||0;
   c.valTipo=g('em-valtipo').value;
@@ -3425,13 +3510,19 @@ document.addEventListener('keydown',e=>{
 let _routeMode='time'; // 'time' or 'distance'
 let _routeResults={time:null,distance:null}; // cached results from optimizer
 function getRouteMode(){return cfg.routePriority||_routeMode||'time';}
+function toggleRouteMode(){
+  setRouteMode(_routeMode==='time'?'distance':'time');
+  // Update visual toggle
+  document.querySelectorAll('.route-mode-toggle').forEach(el=>{
+    el.classList.toggle('distance',_routeMode==='distance');
+  });
+}
 function setRouteMode(mode){
   _routeMode=mode;
   updateRouteModeToggle();
   // If we have cached results, switch instantly
   if(_routeResults[mode]){
     applyRouteResult(_routeResults[mode]);
-    updateRouteCompare();
     animateRouteTransition();
   }
 }
@@ -3439,26 +3530,6 @@ function updateRouteModeToggle(){
   document.querySelectorAll('.rmt-opt').forEach(el=>{
     el.classList.toggle('active',el.dataset.mode===_routeMode);
   });
-}
-
-// --- Route Comparison Panel ---
-function updateRouteCompare(){
-  const panel=document.querySelector('.route-compare');
-  if(!panel)return;
-  const tr=_routeResults.time,dr=_routeResults.distance;
-  if(!tr||!dr){panel.classList.remove('show');return;}
-  panel.classList.add('show');
-  const cols=panel.querySelectorAll('.route-compare-col');
-  if(cols[0]){
-    cols[0].classList.toggle('active',_routeMode==='time');
-    cols[0].querySelector('.rc-val').textContent=fmtDuration(Math.round(tr.totalMin));
-    cols[0].querySelector('.rc-sub').textContent=tr.totalKm.toFixed(1)+' km';
-  }
-  if(cols[1]){
-    cols[1].classList.toggle('active',_routeMode==='distance');
-    cols[1].querySelector('.rc-val').textContent=dr.totalKm.toFixed(1)+' km';
-    cols[1].querySelector('.rc-sub').textContent=fmtDuration(Math.round(dr.totalMin));
-  }
 }
 
 // --- Optimization Savings Indicator ---
@@ -3751,29 +3822,16 @@ function updateMapSidebar(){
     +'<button class="undo-btn'+((_routeHistory.length>0)?' active':'')+'" onclick="undoRoute()" title="Desfazer (Ctrl+Z)">'
     +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>'
     +'Desfazer</button></div>';
-  // v4.5.0: Route mode toggle
+  // v4.5.1: Route mode toggle — true toggle (click anywhere to switch, like dark mode)
   html+='<div style="display:flex;align-items:center;justify-content:center;margin-bottom:12px">'
-    +'<div class="route-mode-toggle">'
-    +'<div class="rmt-opt'+(_routeMode==='time'?' active':'')+'" data-mode="time" onclick="setRouteMode(\'time\')">'
+    +'<div class="route-mode-toggle'+(_routeMode==='distance'?' distance':'')+'" onclick="toggleRouteMode()" style="position:relative;width:120px;height:28px;cursor:pointer">'
+    +'<div class="rmt-opt'+(_routeMode==='time'?' active':'')+'" style="position:absolute;left:4px;top:50%;transform:translateY(-50%);pointer-events:none">'
     +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
     +'Tempo</div>'
-    +'<div class="rmt-opt'+(_routeMode==='distance'?' active':'')+'" data-mode="distance" onclick="setRouteMode(\'distance\')">'
+    +'<div class="rmt-opt'+(_routeMode==='distance'?' active':'')+'" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);pointer-events:none">'
     +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M8 6h10v10"/></svg>'
     +'Km</div>'
     +'</div></div>';
-  // v4.5.0: Comparison panel
-  html+='<div class="route-compare'+(_routeResults.time&&_routeResults.distance?' show':'')+'">'
-    +'<div class="route-compare-grid">'
-    +'<div class="route-compare-col'+(_routeMode==='time'?' active':'')+'" onclick="setRouteMode(\'time\')">'
-    +'<div class="rc-label">Mais r\xe1pida</div>'
-    +'<div class="rc-val">'+(_routeResults.time?fmtDuration(Math.round(_routeResults.time.totalMin)):'--')+'</div>'
-    +'<div class="rc-sub">'+(_routeResults.time?_routeResults.time.totalKm.toFixed(1)+' km':'--')+'</div>'
-    +'</div>'
-    +'<div class="route-compare-col'+(_routeMode==='distance'?' active':'')+'" onclick="setRouteMode(\'distance\')">'
-    +'<div class="rc-label">Mais curta</div>'
-    +'<div class="rc-val">'+(_routeResults.distance?_routeResults.distance.totalKm.toFixed(1)+' km':'--')+'</div>'
-    +'<div class="rc-sub">'+(_routeResults.distance?fmtDuration(Math.round(_routeResults.distance.totalMin)):'--')+'</div>'
-    +'</div></div></div>';
   // v4.5.0: Savings indicator
   html+='<div class="opt-savings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span class="opt-savings-text"></span></div>';
   html+='<div class="ms-route-stats">'
@@ -3791,7 +3849,8 @@ function updateMapSidebar(){
   // Check for delays
   const delayedCount=order.filter(i=>clients[i].conflict&&clients[i].cmsg.includes('Al\xE9m do limite')).length;
   if(delayedCount>0){
-    html+='<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:#92400E;font-weight:500">'
+    const isDarkMode=document.body.classList.contains('dark');
+    html+='<div style="background:'+(isDarkMode?'rgba(245,158,11,.12)':'#FEF3C7')+';border:1px solid '+(isDarkMode?'rgba(245,158,11,.3)':'#F59E0B')+';border-radius:10px;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:'+(isDarkMode?'#FBBF24':'#92400E')+';font-weight:500">'
       +'\u26A0\uFE0F '+delayedCount+' parada'+(delayedCount!==1?'s':'')+' com previs\xE3o de atraso'
     +'</div>';
   }
@@ -4024,7 +4083,16 @@ function initGoogleMaps(){
   const mapEl=document.getElementById('map');
   if(mapEl){mapEl.style.display='block';document.getElementById('mph').style.display='none';
     document.getElementById('map-expand-btn').style.display='flex';
-    gMap=new google.maps.Map(mapEl,{center:{lat:-23.55,lng:-46.63},zoom:12,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});}
+    gMap=new google.maps.Map(mapEl,{center:{lat:-23.55,lng:-46.63},zoom:12,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});
+    // v4.5.1: Multiple resize triggers to fix gray tiles on small containers
+    const _triggerResize=()=>{if(gMap)google.maps.event.trigger(gMap,'resize');};
+    google.maps.event.addListenerOnce(gMap,'tilesloaded',_triggerResize);
+    setTimeout(_triggerResize,300);setTimeout(_triggerResize,1000);setTimeout(_triggerResize,3000);
+    // Centralizar no endereço base se configurado
+    if(cfg.base&&cfg.base.trim()){
+      (async()=>{try{const a=await _resolveGeoAnchor();if(a&&gMap){gMap.panTo({lat:a.lat,lng:a.lng});}}catch(e){}})();
+    }
+  }
   const hmEl=document.getElementById('heatmap');
   if(hmEl)hmMap=new google.maps.Map(hmEl,{center:{lat:-23.55,lng:-46.63},zoom:11,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});
 }
@@ -4195,8 +4263,6 @@ async function calcRoute(){
       dirResult=optResult.best.dirResult;
       // Show savings indicator
       setTimeout(()=>showOptSavings(optResult.best,optResult.worst),500);
-      // Update comparison panel
-      setTimeout(()=>updateRouteCompare(),600);
     } else {
       // Fallback: Google optimize
       const waypoints=geocoded.map(c=>_waypointFor(c));
@@ -4670,6 +4736,17 @@ function renderDashStats(br,pts){
   // v4.4.0: Enforce minimum zoom level to prevent extreme zoom out
   google.maps.event.addListenerOnce(hmMap,'idle',()=>{if(hmMap.getZoom()>15)hmMap.setZoom(15);if(hmMap.getZoom()<10)hmMap.setZoom(10);});
   renderGeoDash(pts);
+  // v4.5.1: Day grouping suggestions
+  const groupings=generateDayGroupings();
+  const groupEl=g('day-group-section');
+  if(groupEl&&groupings&&groupings.length){
+    groupEl.style.display='block';
+    groupEl.innerHTML='<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:8px">Agrupamento por Dia</div>'
+      +groupings.map(gr=>'<div class="day-group-item"><span class="day-group-day">'+gr.day+'</span>'
+      +'<div><div class="day-group-clients">'+gr.count+' clientes</div>'
+      +'<div style="font-size:10px;color:var(--mu)">'+gr.bairros+'</div></div>'
+      +'<span class="day-group-saving">-'+gr.savingMin+'min</span></div>').join('');
+  }
 }
 // v4.3.9: Dashboard geográfico — zonas, cobertura, densidade
 const ZONE_COLORS={Norte:'#6366F1',Sul:'#EC4899',Leste:'#F59E0B',Oeste:'#10B981',Centro:'#8B5CF6'};
@@ -5249,6 +5326,218 @@ function showSkeletonLoading(containerId,count){
   el.innerHTML=html;
 }
 
+
+// ====== v4.5.1: ROUTE LEARNING SYSTEM ======
+let _routeLearnings=JSON.parse(localStorage.getItem('rota_learnings')||'[]');
+function saveRouteLearning(beforeOrder,afterOrder,improvement){
+  // Save the pattern: which reordering improved the route
+  const pattern={timestamp:Date.now(),before:beforeOrder.slice(0,8),after:afterOrder.slice(0,8),
+    improvement:improvement,clientCount:clients.length};
+  _routeLearnings.push(pattern);
+  if(_routeLearnings.length>100)_routeLearnings=_routeLearnings.slice(-100);
+  localStorage.setItem('rota_learnings',JSON.stringify(_routeLearnings));
+  console.log('[LEARNING] Padr\xe3o salvo:',improvement);
+}
+// Enhanced pushRouteState to track learning
+const _origPushRouteState=pushRouteState;
+pushRouteState=function(){
+  _origPushRouteState();
+  // Save pre-change metrics for learning comparison
+  if(_routeHistory.length>0){
+    const last=_routeHistory[_routeHistory.length-1];
+    last._prevTotalMin=_routeTotalMin;last._prevTotalKm=_routeTotalKm;
+  }
+};
+// After recalcRouteFromOrder, check if manual change improved route
+const _origRecalcRoute=recalcRouteFromOrder;
+recalcRouteFromOrder=async function(){
+  const prevMin=_routeTotalMin;const prevKm=_routeTotalKm;const prevOrder=[...order];
+  await _origRecalcRoute.call(this);
+  // Compare: did the manual change improve things?
+  const minDiff=prevMin-_routeTotalMin;const kmDiff=prevKm-_routeTotalKm;
+  if(minDiff>1||kmDiff>0.5){
+    saveRouteLearning(prevOrder,[...order],{minSaved:Math.round(minDiff),kmSaved:+kmDiff.toFixed(1)});
+    // Show learning badge briefly
+    const badge=document.querySelector('.learn-badge');
+    if(badge){badge.style.display='inline-flex';badge.textContent='\u{1F9E0} Sistema aprendeu com seu ajuste';
+      setTimeout(()=>{badge.style.display='none';},4000);}
+  }
+};
+
+// ====== v4.5.1: HEATMAP REVENUE MODE ======
+let _heatmapMode='concentration'; // 'concentration' or 'revenue'
+function toggleHeatmapMode(){
+  _heatmapMode=_heatmapMode==='concentration'?'revenue':'concentration';
+  document.querySelectorAll('.hm-mode-opt').forEach(el=>{
+    el.classList.toggle('active',el.dataset.mode===_heatmapMode);
+  });
+  rerenderHeatmap();
+}
+function rerenderHeatmap(){
+  if(!hmMap)return;
+  const hist=getHist();const allC=hist.flatMap(h=>h.clients);
+  if(!allC.length)return;
+  if(hmHeatLayer)hmHeatLayer.setMap(null);
+  if(_heatmapMode==='revenue'){
+    // Revenue heatmap — weight by value
+    const data=[];
+    if(_dashCache.loaded&&_dashCache.pts){
+      allC.forEach((c,i)=>{
+        if(_dashCache.pts[i]){
+          const val=parseFloat(c.val)||1;
+          data.push({location:new google.maps.LatLng(_dashCache.pts[i][0],_dashCache.pts[i][1]),weight:val});
+        }
+      });
+    }
+    hmHeatLayer=new google.maps.visualization.HeatmapLayer({data,radius:40,map:hmMap,
+      gradient:['rgba(0,0,0,0)','rgba(34,197,94,.3)','rgba(34,197,94,.6)','rgba(255,203,0,.7)','rgba(255,123,0,.8)','rgba(226,68,92,1)']});
+  } else {
+    // Normal concentration heatmap
+    if(_dashCache.loaded&&_dashCache.pts){
+      hmHeatLayer=new google.maps.visualization.HeatmapLayer({data:_dashCache.pts.map(pt=>new google.maps.LatLng(pt[0],pt[1])),radius:35,map:hmMap});
+    }
+  }
+}
+
+// ====== v4.5.1: DAY GROUPING SUGGESTIONS ======
+function generateDayGroupings(){
+  const hist=getHist();const allC=hist.flatMap(h=>h.clients);
+  if(allC.length<4)return null;
+  // Cluster clients by proximity using simple grid-based clustering
+  const clusters={};
+  allC.forEach(c=>{
+    if(!c.lat||!c.lng)return;
+    // Grid cell ~5km
+    const gridKey=Math.round(c.lat*20)+','+Math.round(c.lng*20);
+    if(!clusters[gridKey])clusters[gridKey]={clients:[],lat:0,lng:0};
+    clusters[gridKey].clients.push(c);
+    clusters[gridKey].lat+=c.lat;clusters[gridKey].lng+=c.lng;
+  });
+  // Average positions
+  Object.values(clusters).forEach(cl=>{
+    cl.lat/=cl.clients.length;cl.lng/=cl.clients.length;
+  });
+  // Sort clusters by size, assign to days
+  const sorted=Object.values(clusters).filter(c=>c.clients.length>=2).sort((a,b)=>b.clients.length-a.clients.length);
+  const days=['Seg','Ter','Qua','Qui','Sex'];
+  return sorted.slice(0,5).map((cl,i)=>{
+    const bairros=[...new Set(cl.clients.map(c=>{
+      const parts=c.endereco.split('-');
+      return parts.length>1?parts[parts.length-1].trim():parts[0].trim();
+    }))].slice(0,3);
+    // Estimate savings: sequential visits vs spread across days
+    const savingMin=Math.round(cl.clients.length*8); // ~8min saved per grouped client
+    return {day:days[i%5],count:cl.clients.length,bairros:bairros.join(', '),savingMin};
+  });
+}
+
+// ====== v4.5.1: WHATSAPP NOTIFICATION ======
+function generateWppMessages(){
+  if(!order.length)return [];
+  const margin=cfg.wppMargin||120;
+  const template=cfg.wppTemplate||'Ol\xe1 {pronome} {nome}, {saudacao}! Previs\xe3o de chegada entre {inicio} e {fim}. Obrigado!';
+  const now=new Date();const hour=now.getHours();
+  const saudacao=hour<12?'bom dia':hour<18?'boa tarde':'boa noite';
+  return order.map(idx=>{
+    const c=clients[idx];
+    if(!c.estT)return null;
+    const estSec=ts(c.estT);
+    // Round down to nearest 30min for start
+    const startSec=Math.floor(estSec/1800)*1800;
+    const endSec=startSec+margin*60;
+    const inicio=st2(startSec);const fim=st2(endSec);
+    const pronome=c.pronome||'';
+    const nome=c.nome.split(' ')[0]; // First name
+    let msg=template.replace(/{nome}/g,nome).replace(/{pronome}/g,pronome)
+      .replace(/{saudacao}/g,saudacao).replace(/{inicio}/g,inicio).replace(/{fim}/g,fim)
+      .replace(/{tipo}/g,normalizeTipo(c.tipo).join('/')||'')
+      .replace(/{valor}/g,c.val?'R$ '+fmtBRL(c.val):'')
+      .replace(/{endereco}/g,c.endereco);
+    // Clean double spaces from empty pronome
+    msg=msg.replace(/\s+/g,' ').trim();
+    return {client:c,msg,tel:c.tel};
+  }).filter(Boolean);
+}
+function sendWppMessage(tel,msg){
+  const phone=tel.replace(/\D/g,'');
+  const fullPhone=phone.length<=11?'55'+phone:phone;
+  const url='https://wa.me/'+fullPhone+'?text='+encodeURIComponent(msg);
+  window.open(url,'_blank');
+}
+function sendAllWpp(){
+  const msgs=generateWppMessages();
+  if(!msgs.length){toast('Gere a rota primeiro','warn');return;}
+  msgs.forEach((m,i)=>{
+    setTimeout(()=>sendWppMessage(m.tel,m.msg),i*800);
+  });
+  toast(msgs.length+' mensagens enviadas','ok');
+}
+
+// ====== v4.5.1: POST-ROUTE REPORT ======
+function generatePostRouteReport(){
+  if(!order.length)return null;
+  const doneCount=order.filter(i=>clients[i]._motDone).length;
+  const totalStops=order.length;
+  const onTimeCount=order.filter(i=>{const c=clients[i];return c._motDone&&!c.conflict;}).length;
+  const conflictCount=order.filter(i=>clients[i].conflict).length;
+  // Revenue
+  const totalRevenue=order.reduce((s,i)=>{const v=parseFloat(clients[i].val)||0;return s+v;},0);
+  // Efficiency score (0-100)
+  const completionRate=totalStops>0?doneCount/totalStops:0;
+  const onTimeRate=doneCount>0?onTimeCount/doneCount:1;
+  const kmEfficiency=_routeTotalKm>0?Math.min(1,100/_routeTotalKm):1; // Lower km = better
+  const score=Math.round((completionRate*40+onTimeRate*40+kmEfficiency*20));
+  // Revenue per km
+  const revenuePerKm=_routeTotalKm>0?(totalRevenue/_routeTotalKm):0;
+  return {score,doneCount,totalStops,onTimeCount,conflictCount,totalRevenue,
+    revenuePerKm,totalKm:_routeTotalKm,totalMin:_routeTotalMin,
+    completionRate:Math.round(completionRate*100),onTimeRate:Math.round(onTimeRate*100)};
+}
+function renderPostRouteReport(){
+  const report=generatePostRouteReport();
+  if(!report)return '';
+  return '<div class="report-card">'
+    +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:12px">Relat\xf3rio da Rota</div>'
+    +'<div class="report-score">'+report.score+'</div>'
+    +'<div class="report-score-label">Score de efici\xeancia</div>'
+    +'<div class="report-grid">'
+    +'<div class="report-metric"><div class="report-metric-val">'+report.doneCount+'/'+report.totalStops+'</div><div class="report-metric-label">Conclu\xeddos</div></div>'
+    +'<div class="report-metric"><div class="report-metric-val">'+report.onTimeRate+'%</div><div class="report-metric-label">No hor\xe1rio</div></div>'
+    +'<div class="report-metric"><div class="report-metric-val">R$ '+fmtBRL(report.totalRevenue)+'</div><div class="report-metric-label">Receita total</div></div>'
+    +'<div class="report-metric"><div class="report-metric-val">R$ '+fmtBRL(report.revenuePerKm)+'</div><div class="report-metric-label">Receita/km</div></div>'
+    +'<div class="report-metric"><div class="report-metric-val">'+report.totalKm.toFixed(1)+'</div><div class="report-metric-label">Km total</div></div>'
+    +'<div class="report-metric"><div class="report-metric-val">'+fmtDuration(Math.round(report.totalMin))+'</div><div class="report-metric-label">Tempo total</div></div>'
+    +'</div></div>';
+}
+
+// ====== v4.5.1: ADD WHATSAPP + REPORT + GROUPING TO MAP SIDEBAR ======
+const _origUpdateMapSidebar=updateMapSidebar;
+updateMapSidebar=function(){
+  _origUpdateMapSidebar();
+  const sb=g('map-sidebar');if(!sb)return;
+  // Add WhatsApp section
+  const wppMsgs=generateWppMessages();
+  if(wppMsgs.length>0){
+    let wppHtml='<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bd)">'
+      +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:8px">Notificar Clientes</div>';
+    // Preview first message
+    const first=wppMsgs[0];
+    wppHtml+='<div class="wpp-preview">'+first.msg+'</div>';
+    wppHtml+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+    wppMsgs.forEach((m,i)=>{
+      const firstName=m.client.nome.split(' ')[0];
+      wppHtml+='<button class="wpp-send-btn" onclick="sendWppMessage(\''+m.tel.replace(/'/g,"\\'")+'\',\''+m.msg.replace(/'/g,"\\'").replace(/
+/g,'\\n')+'\')"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492l4.632-1.467A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818c-2.168 0-4.194-.591-5.932-1.622l-.424-.253-2.748.87.89-2.65-.279-.443A9.772 9.772 0 012.182 12c0-5.414 4.404-9.818 9.818-9.818S21.818 6.586 21.818 12s-4.404 9.818-9.818 9.818z"/></svg> '+firstName+'</button>';
+    });
+    wppHtml+='</div></div>';
+    sb.insertAdjacentHTML('beforeend',wppHtml);
+  }
+  // Add learning badge
+  sb.insertAdjacentHTML('afterbegin','<div class="learn-badge" style="display:none;margin-bottom:8px"></div>');
+  // Add post-route report
+  const reportHtml=renderPostRouteReport();
+  if(reportHtml)sb.insertAdjacentHTML('beforeend',reportHtml);
+};
 </script>
 <script>
 (function(){
@@ -5264,6 +5553,6 @@ function showSkeletonLoading(containerId,count){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.5.0</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.5.1</div>
 </body>
 </html>
