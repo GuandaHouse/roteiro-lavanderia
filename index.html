@@ -1102,22 +1102,23 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
 
 /* ── 480px and below: phones ── */
 @media(max-width:480px){
-  /* Nav: compact for small screens */
-  nav{padding:0 8px;gap:0}
-  .logo{padding:10px 10px 10px 0;gap:6px;font-size:12px;margin-right:2px}
+  /* Nav: compact, hide scrollbar */
+  nav{padding:0 6px;gap:0;scrollbar-width:none;-ms-overflow-style:none}
+  nav::-webkit-scrollbar{display:none}
+  .logo{padding:10px 8px 10px 0;gap:5px;font-size:12px;margin-right:0;border-right:none}
   .logo-i{width:26px;height:26px;border-radius:6px;font-size:13px}
   .logo span{display:none}
-  .ntab{padding:12px 8px;font-size:11px}
+  .ntab{padding:12px 7px;font-size:10.5px}
   .nav-r{display:none}
-  .theme-toggle-wrap{padding-left:6px}
-  .theme-toggle{width:40px;height:22px;border-radius:11px}
-  .theme-toggle .knob{width:18px;height:18px}
-  body.dark .theme-toggle .knob{transform:translateX(18px)}
-  .theme-toggle .knob svg{width:11px;height:11px}
+  .theme-toggle-wrap{padding-left:4px}
+  .theme-toggle{width:36px;height:20px;border-radius:10px}
+  .theme-toggle .knob{width:16px;height:16px}
+  body.dark .theme-toggle .knob{transform:translateX(16px)}
+  .theme-toggle .knob svg{width:10px;height:10px}
 
-  /* Pages: tighter padding */
-  .page{padding:60px 12px 16px}
-  #page-dash{padding:48px 0 0!important}
+  /* Pages: tighter padding, no overflow */
+  .page{padding:52px 10px 16px;overflow-x:hidden}
+  #page-dash{padding:44px 0 0!important}
 
   /* Cards */
   .card{padding:14px;border-radius:14px;margin-bottom:12px}
@@ -1130,9 +1131,10 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   .two-col{gap:14px}
 
   /* Stats grid */
-  .sg{gap:8px}
-  .st{padding:12px;border-radius:12px}
-  .sv{font-size:22px}
+  .sg{gap:6px;overflow:hidden}
+  .st{padding:10px 8px;border-radius:10px;overflow:hidden}
+  .sv{font-size:20px}
+  .sl{font-size:9px;letter-spacing:.04em}
 
   /* Forms */
   .fg2{grid-template-columns:1fr;gap:10px}
@@ -1146,8 +1148,9 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   .bsm{padding:5px 10px;font-size:11px}
 
   /* Tabs */
-  .tabs{gap:0;overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .tab{padding:8px 12px;font-size:12px;white-space:nowrap;flex-shrink:0}
+  .tabs{gap:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{padding:8px 10px;font-size:11px;white-space:nowrap;flex-shrink:0}
 
   /* Motorist cards */
   .mot-card .mc-name{font-size:16px;padding:8px 14px 0}
@@ -1202,16 +1205,18 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
 
 /* ── 768px and below: tablets + large phones ── */
 @media(max-width:768px){
-  /* Nav: hide version, compact */
+  /* Nav: hide version, compact, no scrollbar */
+  nav{scrollbar-width:none;-ms-overflow-style:none}
+  nav::-webkit-scrollbar{display:none}
   .nav-r{font-size:10px;max-width:80px;overflow:hidden;text-overflow:ellipsis}
   .ntab{padding:13px 10px;font-size:12px}
   .logo span{font-size:12px}
 
   /* Pages */
-  .page{padding:64px 16px 20px}
+  .page{padding:60px 14px 20px;overflow-x:hidden}
 
   /* Prevent horizontal overflow */
-  .page,.card,.cc,.mot-card,.hist-card{max-width:100%;overflow:hidden}
+  .page,.card,.cc,.mot-card,.hist-card,.sg,.st{max-width:100%;overflow:hidden}
 
   /* Map fullscreen mobile */
   .map-fullscreen{top:48px!important;height:calc(100vh - 48px)!important}
