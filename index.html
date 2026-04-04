@@ -4,6 +4,7 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.8.2 — 04/04/2026 — FIX: two-col overflow, emoji in render, timing  ║
 ║  v4.8.1 — 04/04/2026 — DIAG: timing instrumentation + emoji sanitize   ║
 ║  v4.8.0 — 04/04/2026 — PERF: parallel geocoding + pre-geocoding       ║
 ║  v4.7.9 — 04/04/2026 — FIX: mobile date, touch targets, donut legend  ║
@@ -1227,8 +1228,9 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   /* Botões share bar com min-width:140px — remover min-width */
   #mot-share-bar .btn{min-width:0!important;flex:1 1 0!important;font-size:11px!important;padding:6px 8px!important}
   #mot-share-bar{flex-wrap:wrap!important}
-  /* Two-col grid — forçar 1 coluna */
-  .two-col{grid-template-columns:1fr!important;gap:12px!important}
+  /* Two-col grid — forçar 1 coluna + conter overflow */
+  .two-col{grid-template-columns:1fr!important;gap:12px!important;width:100%!important;max-width:100%!important;overflow:hidden!important;min-width:0!important}
+  .two-col>*{min-width:0!important;max-width:100%!important;overflow:hidden!important}
   /* Modais — inline max-width sobrescrito */
   .modal,[class*="modal"]{max-width:calc(100vw - 24px)!important}
   /* File import table — overflow scroll */
@@ -4457,7 +4459,7 @@ function renderC(){
       +'<div class="sn" style="background:'+tagColor+';color:#fff">'+(stop+1)+'</div>'
       +'<div class="ci">'
         +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
-          +'<span class="cn">'+c.nome+'</span>'
+          +'<span class="cn">'+_stripEmoji(c.nome)+'</span>'
           +(tagChips?'<div style="display:flex;gap:3px;flex-wrap:wrap;flex-shrink:0">'+tagChips+'</div>':'')
         +'</div>'
         +(c.endereco?'<div class="ca">'+fmtEnderecoComCidade(c)+'</div>':'')
@@ -4468,7 +4470,7 @@ function renderC(){
           +(jl?'<span>'+jl+'</span>':'')
           +(c.estT?'<span class="et '+(c.conflict?'late':'')+'">'+t('card.arrival')+' '+c.estT+'</span>':'')
         +'</div>'
-        +(c.obs?'<div style="font-size:12px;color:var(--mu);margin-top:3px;font-style:italic">'+c.obs+'</div>':'')
+        +(c.obs?'<div style="font-size:12px;color:var(--mu);margin-top:3px;font-style:italic">'+_stripEmoji(c.obs)+'</div>':'')
         +(c.conflict?'<div class="cmsg">'+_icoAlert+' '+c.cmsg+'</div>':'')
       +'</div>'
       +'<button class="bic del" style="width:28px;height:28px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center" onclick="event.stopPropagation();removeC('+c.id+')">'+_icoX+'</button>'
@@ -7051,6 +7053,6 @@ function rerenderHeatmap(){
   });
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.8.1</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.8.2</div>
 </body>
 </html>
