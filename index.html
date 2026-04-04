@@ -4,6 +4,15 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.6.7 — 03/04/2026 — MOTOR V2.1: Penalidade reforçada + prioridade   ║
+║  ─────────────────────────────────────────                   ║
+║  ALTO:                                                                 ║
+║  • Piso mínimo de penalidade: violação de janela ≥ 3600s (1h fictícia) ║
+║  • α inicial 3× mais alto (3000) — violações pesam forte desde início  ║
+║  • Piso do α elevado (1500) — nunca relaxa demais                      ║
+║  • NN heurística: clientes deadline ≤12h forçados nas primeiras posições║
+║  • CI heurística: α consistente com SA (3000)                          ║
+║                                                                        ║
 ║  v4.6.6 — 03/04/2026 — MOTOR V2: VRPTW + Simulated Annealing          ║
 ║  ─────────────────────────────────────────                   ║
 ║  CRÍTICO:                                                              ║
@@ -3784,8 +3793,8 @@ function _evalOrder(order,matrix,alpha,gcIdx){
     const c=clients[order[i]];
     const dl=_clientDeadlineSec(c);
     const st=_clientStartSec(c);
-    if(cur>dl){violations++;violTime+=(cur-dl);}
-    if(cur<st){violTime+=(st-cur);} // chegou cedo demais para "tarde"
+    if(cur>dl){violations++;violTime+=Math.max(cur-dl,3600);} // v4.6.7: piso mínimo 1h — qualquer violação pesa forte
+    if(cur<st){violTime+=Math.max(st-cur,1800);} // v4.6.7: piso mínimo 30min para chegada antecipada
     cur+=tempoSec;
   }
   // Retorno
@@ -3801,11 +3810,23 @@ function _evalOrder(order,matrix,alpha,gcIdx){
 function _nnDeadline(matrix,gcIdx){
   const N=clients.length;
   const visited=new Set();const order=[];
-  // Urgentes primeiro (nearest entre eles)
-  const urgent=[];
-  for(let i=0;i<N;i++){if(clients[i].janela!=='livre')urgent.push(i);}
+  const saidaSec=ts(cfg.saida||'10:00');
+  // v4.6.7: Separar urgentes críticos (deadline ≤ 12h) dos demais urgentes
+  const criticos=[],urgentes=[];
+  for(let i=0;i<N;i++){
+    if(clients[i].janela==='livre')continue;
+    const dl=_clientDeadlineSec(clients[i]);
+    if(dl<=12*3600)criticos.push({idx:i,dl});
+    else urgentes.push(i);
+  }
+  // Críticos: ordenar por deadline (mais apertado primeiro), depois nearest entre empates
+  criticos.sort((a,b)=>a.dl-b.dl);
   let curNode=0; // base
-  const urgSet=new Set(urgent);
+  for(const c of criticos){
+    order.push(c.idx);visited.add(c.idx);curNode=gcIdx[c.idx];
+  }
+  // Depois os urgentes restantes (nearest neighbor)
+  const urgSet=new Set(urgentes);
   while(urgSet.size>0){
     let best=Infinity,bestId=-1;
     for(const u of urgSet){
@@ -3830,7 +3851,7 @@ function _nnDeadline(matrix,gcIdx){
 
 // Etapa 3b: Heurística — Cheapest Insertion com time windows
 function _cheapestInsertTW(matrix,gcIdx){
-  const N=clients.length;const alpha=2000;
+  const N=clients.length;const alpha=3000; // v4.6.7: consistente com α do SA
   // Começar com o mais urgente
   let urgIdx=0,minDl=_clientDeadlineSec(clients[0]);
   for(let i=1;i<N;i++){const dl=_clientDeadlineSec(clients[i]);if(dl<minDl){minDl=dl;urgIdx=i;}}
@@ -3887,7 +3908,7 @@ function _saPerturb(order){
 
 function _runSA(initialOrder,matrix,gcIdx){
   const N=initialOrder.length;
-  let alpha=1000;
+  let alpha=3000; // v4.6.7: α inicial mais alto — violações pesam 3× desde o início
   let current=[...initialOrder];
   let currentEval=_evalOrder(current,matrix,alpha,gcIdx);
   let best=[...current],bestEval={...currentEval};
@@ -3918,7 +3939,7 @@ function _runSA(initialOrder,matrix,gcIdx){
     // Penalidade adaptativa
     const check=_evalOrder(best,matrix,0,gcIdx);
     if(check.violations>0)alpha*=1.2;
-    else alpha=Math.max(alpha*0.9,500);
+    else alpha=Math.max(alpha*0.9,1500); // v4.6.7: piso do α mais alto
     currentEval=_evalOrder(current,matrix,alpha,gcIdx);
     bestEval=_evalOrder(best,matrix,alpha,gcIdx);
     T*=cool;noImprove++;iter++;
@@ -5854,6 +5875,6 @@ function rerenderHeatmap(){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.6.6</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.6.7</div>
 </body>
 </html>
