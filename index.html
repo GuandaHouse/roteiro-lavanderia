@@ -4,7 +4,7 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  v4.7.4 — 04/04/2026 — PERF: SA 3× faster + Mobile UX + M1 emojis     ║
+║  v4.7.5 — 04/04/2026 — Mobile layout fixes + Remove DESEMPENHO         ║
 ║  v4.7.3 — 04/04/2026 — FIX: drag UX (click vs drag, map autoscroll)    ║
 ║  v4.7.2 — 04/04/2026 — FIX: i18n keys reconciled + Mobile responsive   ║
 ║  ─────────────────────────────────────────                   ║
@@ -1059,15 +1059,7 @@ body.dark .completion-card{background:#1a1925;border:1px solid rgba(255,255,255,
 .completion-actions{display:flex;gap:8px;margin-top:16px}
 .completion-actions .btn{flex:1}
 
-/* PERFORMANCE DASHBOARD */
-.perf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
-.perf-card{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:16px;text-align:center;transition:transform .2s}
-.perf-card:hover{transform:translateY(-2px)}
-.perf-val{font-size:26px;font-weight:800;color:var(--tx);line-height:1}
-.perf-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);margin-top:6px}
-.perf-trend{font-size:11px;font-weight:600;margin-top:4px}
-.perf-trend.up{color:#22c55e}
-.perf-trend.down{color:#E2445C}
+/* v4.7.5: Performance dashboard CSS removido */
 
 /* SMART INSERT */
 .smart-insert-bar{display:flex;gap:8px;margin-bottom:16px;align-items:center}
@@ -1112,17 +1104,17 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   .logo{padding:10px 8px 10px 0;gap:5px;font-size:12px;margin-right:0;border-right:none}
   .logo-i{width:26px;height:26px;border-radius:6px;font-size:13px}
   .logo span{display:none}
-  /* v4.7.4: Navbar mobile — ícones + texto curto, sem overflow */
-  .ntab{padding:10px 8px;font-size:10px;flex-direction:column;gap:2px;flex:1;min-width:0;text-align:center}
-  .ntab-ico{display:block;width:20px;height:20px}
-  .ntab span{overflow:hidden;text-overflow:ellipsis;max-width:100%}
-  nav{overflow:visible;flex-wrap:nowrap;justify-content:space-around}
+  /* v4.7.5: Navbar mobile — SÓ ícones, zero texto truncado */
+  nav{overflow:hidden;flex-wrap:nowrap;padding:0 4px;gap:0}
+  .ntab{padding:12px 0;font-size:0;flex:1;min-width:0;justify-content:center;white-space:nowrap}
+  .ntab-ico{display:block;width:22px;height:22px}
+  .ntab span{display:none}
   .nav-r{display:none}
-  .theme-toggle-wrap{padding-left:4px}
-  .theme-toggle{width:36px;height:20px;border-radius:10px}
-  .theme-toggle .knob{width:16px;height:16px}
+  .theme-toggle-wrap{padding-left:2px;flex-shrink:0}
+  .theme-toggle{width:34px;height:18px;border-radius:9px}
+  .theme-toggle .knob{width:14px;height:14px}
   body.dark .theme-toggle .knob{transform:translateX(16px)}
-  .theme-toggle .knob svg{width:10px;height:10px}
+  .theme-toggle .knob svg{width:9px;height:9px}
 
   /* Pages: tighter padding, no overflow */
   .page{padding:52px 10px 16px;overflow-x:hidden}
@@ -1138,11 +1130,13 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   /* Two-col: single column */
   .two-col{gap:14px}
 
-  /* Stats grid */
-  .sg{gap:6px;overflow:hidden}
-  .st{padding:10px 8px;border-radius:10px;overflow:hidden}
+  /* Stats grid — v4.7.5: remove overflow:hidden que cortava cards */
+  .sg{gap:6px}
+  .st{padding:10px 8px;border-radius:10px;box-sizing:border-box}
   .sv{font-size:20px}
   .sl{font-size:10px;letter-spacing:.04em}
+  /* Alert banners — word wrap para não cortar texto */
+  .ab{word-break:break-word;overflow-wrap:break-word;box-sizing:border-box;max-width:100%}
 
   /* Forms */
   .fg2{grid-template-columns:1fr;gap:10px}
@@ -1223,8 +1217,9 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   /* Pages */
   .page{padding:60px 14px 20px;overflow-x:hidden}
 
-  /* Prevent horizontal overflow */
-  .page,.card,.cc,.mot-card,.hist-card,.sg,.st{max-width:100%;overflow:hidden}
+  /* Prevent horizontal overflow — v4.7.5: .sg/.st usam box-sizing em vez de overflow:hidden */
+  .page,.card,.cc,.mot-card,.hist-card{max-width:100%;overflow:hidden}
+  .sg,.st{max-width:100%;box-sizing:border-box}
 
   /* Map fullscreen mobile */
   .map-fullscreen{top:48px!important;height:calc(100vh - 48px)!important}
@@ -1478,7 +1473,6 @@ html,body{overflow-x:hidden;max-width:100vw}
 <!-- HISTORICO -->
 <div class="page" id="page-hist">
   <div class="ph"><h2 data-i18n="hist.title">Hist&#xF3;rico de Rotas</h2><p data-i18n="hist.desc">Todas as rotas geradas ficam salvas aqui.</p></div>
-  <div id="perf-dash"></div>
   <div id="hlist"></div>
 </div>
 
@@ -1883,8 +1877,6 @@ pt:{
   'comp.received':'Recebido','comp.to_charge':'A cobrar','comp.pickups':'Coletados','comp.deliveries':'Entregues',
   // Share
   'share.summary':'Resumo da Rota','share.completed':'conclu\xeddos','share.absent':'ausentes',
-  // Performance
-  'perf.avg':'M\xe9dia recebido/rota','perf.total':'Total recebido',
   // Map panel dynamic
   'map.panel_title':'Painel da Rota','map.undo_tip':'Desfazer (Ctrl+Z)','map.beyond_limit':'Al\xe9m do limite',
   'map.delayed':'{n} parada(s) com previs\xe3o de atraso','map.departure_return':'Partida / Retorno',
@@ -1954,15 +1946,6 @@ pt:{
   'hist.clients':'clientes',
   'mot.awaiting_driver':'Aguardando motorista',
   'mot.no_payment':'Sem pagamento registrado',
-  'perf.absence_rate':'Taxa de Ausência',
-  'perf.avg_clients':'Média de Clientes',
-  'perf.avg_received':'Média Recebida',
-  'perf.completion_rate':'Taxa de Conclusão',
-  'perf.routes':'rotas',
-  'perf.title':'Desempenho',
-  'perf.total_received':'Total Recebido',
-  'perf.total_to_charge':'Total a Cobrar',
-  'perf.with_data':'com dados',
   't.clients_imported':'Clientes importados',
   't.lang_changed':'Idioma alterado',
   't.pdf_generated':'PDF gerado com sucesso',
@@ -2073,7 +2056,6 @@ en:{
   'comp.stops':'{n} stops','comp.completed':'Completed','comp.absent':'Absent',
   'comp.received':'Received','comp.to_charge':'To charge','comp.pickups':'Picked up','comp.deliveries':'Delivered',
   'share.summary':'Route Summary','share.completed':'completed','share.absent':'absent',
-  'perf.avg':'Avg received/route','perf.total':'Total received',
   'map.panel_title':'Route Panel','map.undo_tip':'Undo (Ctrl+Z)','map.beyond_limit':'Beyond deadline',
   'map.delayed':'{n} stop(s) with delay forecast','map.departure_return':'Departure / Return',
   'cep.searching':'Searching...','cep.not_found':'ZIP not found','cep.search_error':'Search error',
@@ -2136,15 +2118,6 @@ en:{
   'hist.clients':'clients',
   'mot.awaiting_driver':'Awaiting driver',
   'mot.no_payment':'No payment recorded',
-  'perf.absence_rate':'Absence Rate',
-  'perf.avg_clients':'Avg Clients',
-  'perf.avg_received':'Avg Received',
-  'perf.completion_rate':'Completion Rate',
-  'perf.routes':'routes',
-  'perf.title':'Performance',
-  'perf.total_received':'Total Received',
-  'perf.total_to_charge':'Total to Charge',
-  'perf.with_data':'with data',
   't.clients_imported':'Clients imported',
   't.lang_changed':'Language changed',
   't.pdf_generated':'PDF generated successfully',
@@ -3060,58 +3033,7 @@ function shareCompletionWhatsApp(){
   window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
 }
 
-/* ══════════════════════════════════════════════════════════════
-   PERFORMANCE DASHBOARD
-   ══════════════════════════════════════════════════════════════ */
-function renderPerfDash(){
-  const hist=getHist();
-  const el=document.getElementById('perf-dash');
-  if(!el)return;
-  // Filtra rotas que tenham dados de motorista
-  const withData=hist.filter(h=>h.order&&h.order.some(idx=>{
-    const c=h.clients[idx]||h.clients[0];
-    return c&&c._motStatus;
-  }));
-  if(withData.length<2){el.innerHTML='';return;}
-
-  // Calcular metricas
-  let totalRoutes=withData.length;
-  let sumConcl=0,sumAusente=0,sumTotal=0;
-  let sumRecebido=0,sumACobrar=0;
-  let sumClients=0;
-
-  withData.forEach(h=>{
-    const total=h.order.length;
-    sumTotal+=total;
-    sumClients+=h.clients.length;
-    h.order.forEach(idx=>{
-      const c=h.clients[idx]||h.clients[0];
-      if(!c)return;
-      if(c._motStatus==='coletado'||c._motStatus==='entregue')sumConcl++;
-      if(c._motStatus==='ausente')sumAusente++;
-      const v=parseFloat(c.val)||0;
-      if(!v||c.valTipo==='pago'||c.valTipo==='medir')return;
-      if(c._motPay==='Pix (cobrar)')sumACobrar+=v;
-      else if(c._motPay)sumRecebido+=v;
-    });
-  });
-
-  const avgConcl=sumTotal?Math.round(sumConcl/sumTotal*100):0;
-  const avgAusencia=sumTotal?Math.round(sumAusente/sumTotal*100):0;
-  const avgClientes=totalRoutes?Math.round(sumClients/totalRoutes):0;
-  const avgRecebido=totalRoutes?sumRecebido/totalRoutes:0;
-
-  el.innerHTML='<div class="card" style="margin-bottom:20px">'
-    +'<p class="ct">'+t('perf.title')+' ('+totalRoutes+' '+t('perf.routes')+' '+t('perf.with_data')+')</p>'
-    +'<div class="perf-grid">'
-    +'<div class="perf-card"><div class="perf-val">'+avgConcl+'%</div><div class="perf-label">'+t('perf.completion_rate')+'</div></div>'
-    +'<div class="perf-card"><div class="perf-val">'+avgAusencia+'%</div><div class="perf-label">'+t('perf.absence_rate')+'</div></div>'
-    +'<div class="perf-card"><div class="perf-val">'+avgClientes+'</div><div class="perf-label">'+t('perf.avg_clients')+'</div></div>'
-    +'<div class="perf-card"><div class="perf-val">R$ '+fmtBRL(avgRecebido)+'</div><div class="perf-label">'+t('perf.avg_received')+'</div></div>'
-    +'<div class="perf-card"><div class="perf-val">R$ '+fmtBRL(sumRecebido)+'</div><div class="perf-label">'+t('perf.total_received')+'</div></div>'
-    +'<div class="perf-card"><div class="perf-val">R$ '+fmtBRL(sumACobrar)+'</div><div class="perf-label">'+t('perf.total_to_charge')+'</div></div>'
-    +'</div></div>';
-}
+/* v4.7.5: PERFORMANCE DASHBOARD removido a pedido do Philip */
 
 
 // v4.3.9: Custom div-based select component
@@ -6171,7 +6093,6 @@ function saveHist(){
   if(_currentRouteId)cloudPublish();
 }
 function renderHist(){
-  renderPerfDash();
   const hist=getHist();const el=g('hlist');
   if(!hist.length){el.innerHTML='<div class="empty"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span><p>'+t('hist.empty')+'</p></div>';return;}
   // v4.5.0: Date filter for history list
@@ -7056,6 +6977,6 @@ function rerenderHeatmap(){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.7.4</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.7.5</div>
 </body>
 </html>
