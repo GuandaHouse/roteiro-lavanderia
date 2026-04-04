@@ -4,7 +4,7 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  v4.7.6 — 04/04/2026 — Mobile: center titles + bottom sheet dash       ║
+║  v4.7.8 — 04/04/2026 — Mobile: nuclear !important anti-overflow fix    ║
 ║  v4.7.3 — 04/04/2026 — FIX: drag UX (click vs drag, map autoscroll)    ║
 ║  v4.7.2 — 04/04/2026 — FIX: i18n keys reconciled + Mobile responsive   ║
 ║  ─────────────────────────────────────────                   ║
@@ -603,7 +603,7 @@ textarea{resize:vertical;min-height:56px}
 .mot-chart-item svg{width:120px;height:120px}
 @media(max-width:600px){.mot-chart-item svg{width:90px;height:90px}.mot-charts{gap:10px;padding:16px 10px}}
 @media(max-width:480px){.mot-charts{flex-direction:row;flex-wrap:wrap;gap:10px;padding:14px 10px;overflow:hidden}.mot-chart-item{flex:1 1 calc(33.3% - 8px);min-width:0;width:auto}.mot-chart-item svg{width:72px;height:72px}.mot-chart-legend span{font-size:9px}}
-@media(max-width:375px){.mot-charts{gap:6px;padding:12px 6px}.mot-chart-item svg{width:64px;height:64px}.mot-chart-legend span{font-size:8px}}
+
 .mot-chart-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);text-align:center}
 .mot-chart-legend{display:flex;flex-wrap:wrap;gap:4px 10px;justify-content:center;margin-top:2px}
 .mot-chart-legend span{font-size:10px;color:var(--mu);display:flex;align-items:center;gap:4px}
@@ -1102,65 +1102,68 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
    v4.7.2: MOBILE RESPONSIVENESS — Comprehensive
    ═══════════════════════════════════════════════ */
 
-/* ── 480px and below: phones ── */
-@media(max-width:480px){
-  /* Nav: compact, hide scrollbar */
-  nav{padding:0 6px;gap:0;scrollbar-width:none;-ms-overflow-style:none}
-  nav::-webkit-scrollbar{display:none}
-  .logo{padding:10px 8px 10px 0;gap:5px;font-size:12px;margin-right:0;border-right:none}
-  .logo-i{width:26px;height:26px;border-radius:6px;font-size:13px}
-  .logo span{display:none}
-  /* v4.7.5: Navbar mobile — SÓ ícones, zero texto truncado */
-  nav{overflow:hidden;flex-wrap:nowrap;padding:0 4px;gap:0}
-  .ntab{padding:12px 0;font-size:0;flex:1;min-width:0;justify-content:center;white-space:nowrap}
-  .ntab-ico{display:block;width:22px;height:22px}
-  .ntab span{display:none}
-  .nav-r{display:none}
-  .theme-toggle-wrap{padding-left:2px;flex-shrink:0}
-  .theme-toggle{width:34px;height:18px;border-radius:9px}
-  .theme-toggle .knob{width:14px;height:14px}
-  body.dark .theme-toggle .knob{transform:translateX(16px)}
-  .theme-toggle .knob svg{width:9px;height:9px}
+/* ── 768px and below: tablets + large phones ── */
+@media(max-width:768px){
+  /* v4.7.8: NUCLEAR anti-overflow — !important pra sobrescrever regras base */
+  *,*::before,*::after{box-sizing:border-box!important;max-width:100%!important}
+  html,body{overflow-x:hidden!important;width:100%!important;max-width:100vw!important}
+  body{overflow-x:hidden!important}
 
-  /* Pages: tighter padding, no overflow */
-  .page{padding:52px 10px 16px;overflow-x:hidden}
-  #page-dash{padding:44px 0 0!important}
+  /* Nav: icon-only abaixo de 768px */
+  nav{padding:0 4px!important;gap:0!important;overflow:hidden!important;flex-wrap:nowrap!important;scrollbar-width:none;-ms-overflow-style:none;width:100%!important}
+  nav::-webkit-scrollbar{display:none}
+  .nav-r{display:none!important}
+  .logo span{display:none!important}
+  .logo{padding:10px 6px 10px 0!important;gap:4px!important;margin-right:0!important;border-right:none!important}
+  .ntab{padding:12px 0!important;font-size:0!important;flex:1!important;min-width:0!important;justify-content:center!important}
+  .ntab-ico{display:block!important;width:22px!important;height:22px!important}
+  .ntab span{display:none!important}
+  .theme-toggle-wrap{padding-left:2px!important;flex-shrink:0!important}
+  .theme-toggle{width:36px!important;height:20px!important;border-radius:10px!important}
+  .theme-toggle .knob{width:16px!important;height:16px!important}
+  body.dark .theme-toggle .knob{transform:translateX(16px)!important}
+  .theme-toggle .knob svg{width:10px!important;height:10px!important}
+
+  /* Pages — width:100% + !important garante que não herda max-width:1160px */
+  .page{padding:52px 12px 20px!important;overflow-x:hidden!important;width:100%!important;max-width:100%!important}
+
+  /* Anti-overflow em todos os containers */
+  .card,.mot-card,.hist-card{overflow:hidden!important}
+  .cc{overflow:hidden!important}
 
   /* Cards */
-  .card{padding:14px;border-radius:14px;margin-bottom:12px}
+  .card{padding:16px;border-radius:14px;margin-bottom:12px}
   .cc{padding:10px 10px 10px 11px;gap:8px;border-radius:10px}
   .cn{font-size:12px}
   .ca{font-size:11px}
-  .cm{font-size:11px;gap:6px}
+  .cm{font-size:11px;gap:6px;flex-wrap:wrap}
+  .cm span{white-space:nowrap}
+  .et{white-space:nowrap}
 
-  /* Two-col: single column */
-  .two-col{gap:14px}
-
-  /* Stats grid — v4.7.5: remove overflow:hidden que cortava cards */
+  /* Stats grid */
   .sg{gap:6px}
-  .st{padding:10px 8px;border-radius:10px;box-sizing:border-box}
-  .sv{font-size:20px}
+  .st{padding:10px 8px;border-radius:10px}
+  .sv{font-size:22px}
   .sl{font-size:10px;letter-spacing:.04em}
-  /* Alert banners — word wrap para não cortar texto */
-  .ab{word-break:break-word;overflow-wrap:break-word;box-sizing:border-box;max-width:100%}
+
+  /* Alert banners */
+  .ab{word-break:break-word;overflow-wrap:break-word;max-width:100%}
 
   /* Forms */
   .fg2{grid-template-columns:1fr;gap:10px}
   input,textarea,select{font-size:16px;padding:10px 12px}
 
-  /* Map */
-  .mapw{height:180px;border-radius:12px}
-
   /* Buttons */
   .btn{padding:8px 14px;font-size:12px;border-radius:10px}
   .bsm{padding:5px 10px;font-size:11px}
 
-  /* Tabs */
-  .tabs{gap:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none}
-  .tabs::-webkit-scrollbar{display:none}
-  .tab{padding:8px 10px;font-size:11px;white-space:nowrap;flex-shrink:0}
-  /* v4.7.6: Em 375px, tabs icon-only pra caber tudo */
-  @media(max-width:375px){.tab span[data-i18n]{display:none}.tab{padding:8px 12px;justify-content:center}}
+  /* Tabs — grid 2x2 no mobile pra caber todas */
+  .tabs{display:grid!important;grid-template-columns:1fr 1fr!important;gap:4px!important;overflow:hidden!important;width:100%!important}
+  .tab{padding:8px 6px!important;font-size:10px!important;white-space:nowrap;flex-shrink:0;justify-content:center;text-align:center;min-width:0!important}
+  .tab .mot-ico{display:none!important}
+
+  /* Map */
+  .mapw{height:200px;border-radius:12px}
 
   /* Motorist cards */
   .mot-card .mc-name{font-size:16px;padding:8px 14px 0}
@@ -1175,31 +1178,13 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   .hist-filters{flex-wrap:wrap;gap:8px}
   .hist-filters input,.hist-filters select{min-width:0;flex:1 1 100%}
 
-  /* v4.7.6: Dashboard — bottom sheet mobile */
-  .dash-drawer{
-    position:fixed!important;top:auto!important;right:0!important;left:0!important;bottom:0!important;
-    width:100%!important;max-height:70vh!important;height:auto!important;
-    border-radius:16px 16px 0 0!important;
-    padding:0 0 env(safe-area-inset-bottom,0)!important;
-    transition:transform .35s cubic-bezier(.4,0,.2,1)!important;
-    opacity:1!important;pointer-events:auto!important;
-    z-index:20!important;
-    overflow:hidden!important;
-  }
-  .dash-drawer.collapsed{transform:translateY(calc(100% - 56px))!important;overflow-y:hidden!important}
-  .dash-drawer:not(.collapsed){overflow-y:auto!important}
-  .dash-drawer.closed{transform:translateY(100%)!important;pointer-events:none!important}
-  .dash-drawer .dash-sheet-handle{display:flex!important}
-  .dash-drawer-card{border-radius:0!important;border:none!important;box-shadow:none!important;padding:14px 16px!important}
-  .dash-drawer-card:first-child{padding-top:0!important}
-  .dash-drawer-toggle{display:none!important}
-  .dash-map-wrap{height:calc(100vh - 48px)!important}
-
-  /* Dashboard top bar */
-  .dash-top-bar{left:8px;right:8px;top:8px;gap:6px;padding:8px 12px;flex-wrap:wrap}
-  .dash-top-title{font-size:12px}
-  .dash-top-stat{font-size:11px}
-  .dash-top-sep{display:none}
+  /* Títulos centralizados no mobile — TODOS */
+  .ph{text-align:center}
+  .ph h2{font-size:18px}
+  .ph p{font-size:13px}
+  .ct{text-align:center}
+  .mot-page-header{flex-direction:column!important;align-items:center!important;gap:4px}
+  .page>h2,.page>.ph h2,.page h2:first-child{text-align:center}
 
   /* Edit modal */
   .modal{padding:18px;border-radius:14px;max-width:calc(100vw - 24px)}
@@ -1215,23 +1200,9 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   /* Toast */
   .toast{bottom:12px;right:12px;left:12px;max-width:none;font-size:12px;padding:10px 14px;border-radius:12px}
 
-  /* Map sidebar fullscreen */
+  /* Map fullscreen + sidebar */
+  .map-fullscreen{top:48px!important;height:calc(100vh - 48px)!important}
   .map-sidebar{min-width:0!important}
-
-  /* v4.7.6: Títulos centralizados no mobile — TODOS os h1/h2 de página */
-  .ph{text-align:center}
-  .ph h2{font-size:18px}
-  .ph p{font-size:13px}
-  .ct{text-align:center}
-  /* Motorista page header: flex→column centered */
-  .mot-page-header{flex-direction:column!important;align-items:center!important;gap:4px}
-  /* Catch-all: qualquer h2 dentro de .page */
-  .page>h2,.page>.ph h2,.page h2:first-child{text-align:center}
-
-  /* v4.7.6: Card meta items não truncam */
-  .cm{flex-wrap:wrap}
-  .cm span{white-space:nowrap}
-  .et{white-space:nowrap}
 
   /* File import table */
   .fi-table{font-size:11px}
@@ -1239,30 +1210,79 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
 
   /* Config page */
   .cfg-save-bar{padding:10px 12px}
-}
-
-/* ── 768px and below: tablets + large phones ── */
-@media(max-width:768px){
-  /* Nav: hide version, compact, no scrollbar */
-  nav{scrollbar-width:none;-ms-overflow-style:none}
-  nav::-webkit-scrollbar{display:none}
-  .nav-r{font-size:10px;max-width:80px;overflow:hidden;text-overflow:ellipsis}
-  .ntab{padding:13px 10px;font-size:12px}
-  .logo span{font-size:12px}
-
-  /* Pages */
-  .page{padding:60px 14px 20px;overflow-x:hidden}
-
-  /* Prevent horizontal overflow — v4.7.6: .cc sem overflow:hidden (cortava badge/botão X) */
-  .page,.card,.mot-card,.hist-card{max-width:100%;overflow:hidden}
-  .cc{max-width:100%;box-sizing:border-box;overflow:visible}
-  .sg,.st{max-width:100%;box-sizing:border-box}
-
-  /* Map fullscreen mobile */
-  .map-fullscreen{top:48px!important;height:calc(100vh - 48px)!important}
 
   /* Completion overlay */
   .completion-overlay{padding:12px}
+
+  /* v4.7.8: FIXES ENCONTRADOS NA AUDITORIA */
+  /* Motorista container inline max-width:580px — forçar 100% */
+  #page-motor>div{max-width:100%!important}
+  /* Botões share bar com min-width:140px — remover min-width */
+  #mot-share-bar .btn{min-width:0!important;flex:1 1 0!important;font-size:11px!important;padding:6px 8px!important}
+  #mot-share-bar{flex-wrap:wrap!important}
+  /* Two-col grid — forçar 1 coluna */
+  .two-col{grid-template-columns:1fr!important;gap:12px!important}
+  /* Modais — inline max-width sobrescrito */
+  .modal,[class*="modal"]{max-width:calc(100vw - 24px)!important}
+  /* File import table — overflow scroll */
+  .fi-table-wrap,.fi-table{max-width:100%!important;overflow-x:auto!important}
+  .fi-table td,.fi-table th{white-space:normal!important;word-break:break-word!important}
+  /* mc-pay-row — 2 colunas em vez de 4 */
+  .mot-card .mc-pay-row{grid-template-columns:1fr 1fr!important}
+  /* Qualquer elemento com min-width inline — nuclear override */
+  [style*="min-width"]{min-width:0!important}
+  /* Qualquer elemento com max-width inline > viewport */
+  [style*="max-width:5"],[style*="max-width:4"],[style*="max-width:3"]{max-width:100%!important}
+  /* Stats grid — forçar 2 colunas */
+  .sg{grid-template-columns:1fr 1fr!important}
+  /* page-dash inline max-width:none — forçar */
+  #page-dash{max-width:100%!important;width:100%!important;padding-left:12px!important;padding-right:12px!important;overflow-x:hidden!important}
+}
+
+/* ── 480px and below: extra refinements for small phones ── */
+@media(max-width:480px){
+  .logo-i{width:26px;height:26px;border-radius:6px;font-size:13px}
+  .theme-toggle{width:34px;height:18px;border-radius:9px}
+  .theme-toggle .knob{width:14px;height:14px}
+  body.dark .theme-toggle .knob{transform:translateX(16px)}
+  .theme-toggle .knob svg{width:9px;height:9px}
+  .page{padding:52px 10px 16px}
+  #page-dash{padding:44px 0 0!important}
+  .card{padding:14px}
+  .sv{font-size:20px}
+  .two-col{gap:14px}
+
+  /* Dashboard — bottom sheet */
+  .dash-drawer{
+    position:fixed!important;top:auto!important;right:0!important;left:0!important;bottom:0!important;
+    width:100%!important;max-height:70vh!important;height:auto!important;
+    border-radius:16px 16px 0 0!important;
+    padding:0 0 env(safe-area-inset-bottom,0)!important;
+    transition:transform .35s cubic-bezier(.4,0,.2,1)!important;
+    opacity:1!important;pointer-events:auto!important;
+    z-index:20!important;overflow:hidden!important;
+  }
+  .dash-drawer.collapsed{transform:translateY(calc(100% - 56px))!important;overflow-y:hidden!important}
+  .dash-drawer:not(.collapsed){overflow-y:auto!important}
+  .dash-drawer.closed{transform:translateY(100%)!important;pointer-events:none!important}
+  .dash-drawer .dash-sheet-handle{display:flex!important}
+  .dash-drawer-card{border-radius:0!important;border:none!important;box-shadow:none!important;padding:14px 16px!important}
+  .dash-drawer-card:first-child{padding-top:0!important}
+  .dash-drawer-toggle{display:none!important}
+  .dash-map-wrap{height:calc(100vh - 48px)!important}
+  .dash-top-bar{left:8px;right:8px;top:8px;gap:6px;padding:8px 12px;flex-wrap:wrap}
+  .dash-top-title{font-size:12px}
+  .dash-top-stat{font-size:11px}
+  .dash-top-sep{display:none}
+}
+
+/* ── 375px and below: tiny phones ── */
+@media(max-width:375px){
+  .page{padding:52px 8px 16px!important}
+  .card{padding:12px!important}
+  .mot-charts{gap:6px;padding:12px 6px}
+  .mot-chart-item svg{width:64px;height:64px}
+  .mot-chart-legend span{font-size:8px}
 }
 
 /* ── Prevent horizontal scroll globally ── */
@@ -6941,6 +6961,33 @@ function rerenderHeatmap(){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.7.6</div>
+<script>
+/* v4.7.8 DIAGNOSTICO DE OVERFLOW — remover depois de validar */
+(function(){
+  if(window.innerWidth>768)return;
+  window.addEventListener('load',function(){
+    setTimeout(function(){
+      var vw=document.documentElement.clientWidth;
+      var problems=[];
+      document.querySelectorAll('*').forEach(function(el){
+        if(el.scrollWidth>vw+2){
+          var tag=el.tagName.toLowerCase();
+          var id=el.id?'#'+el.id:'';
+          var cls=el.className&&typeof el.className==='string'?'.'+el.className.split(' ').join('.'):'';
+          problems.push(tag+id+cls+' scrollW='+el.scrollWidth+' vs vw='+vw);
+        }
+      });
+      if(problems.length){
+        var d=document.createElement('div');
+        d.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#1a1a2e;color:#0f0;font:10px/1.3 monospace;padding:8px;z-index:99999;max-height:40vh;overflow:auto;border-top:2px solid #e00';
+        d.innerHTML='<b>OVERFLOW ('+problems.length+'):</b><br>'+problems.join('<br>');
+        document.body.appendChild(d);
+        d.onclick=function(){d.remove()};
+      }
+    },2000);
+  });
+})();
+</script>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.7.8</div>
 </body>
 </html>
