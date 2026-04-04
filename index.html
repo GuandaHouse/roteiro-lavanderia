@@ -4,6 +4,9 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.8.8 — 04/04/2026 — FEAT: parser programático Trello (zero IA) + remove       ║
+║         donuts motorista + fix toast transparente dark mode                      ║
+║  v4.8.7 — 04/04/2026 — FIX: dark mode FOUC prevention (zero flash no refresh)  ║
 ║  v4.8.6 — 04/04/2026 — PERF: Trello import instrumentation + batch 5 + geo async ║
 ║  v4.8.5 — 04/04/2026 — PERF: haversine-first + OSRM race + dead time diag ║
 ║  v4.8.4 — 04/04/2026 — PERF: timeout em TODAS as chamadas externas      ║
@@ -494,6 +497,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Roteiro de Coleta</title>
+<!-- v4.8.7: FOUC prevention — dark mode vars no :root ANTES do first paint -->
+<script>(function(){if(localStorage.getItem('rota_theme')==='dark')document.documentElement.className='dark';})();</script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
@@ -511,10 +516,15 @@
   --r:10px;--rl2:16px;
 }
 body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--tx);font-size:15px;line-height:1.5;min-height:100vh;position:relative;overflow-x:hidden;transition:background .4s ease,color .4s ease}
+/* v4.8.7: Bloqueia transition no load (evita flash de animação light→dark) */
+html.dark body{transition:none}
+html.dark body.theme-ready{transition:background .4s ease,color .4s ease}
 body::before{content:'';position:fixed;top:-200px;right:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(108,92,231,.06) 0%,rgba(0,152,247,.04) 40%,transparent 70%);pointer-events:none;z-index:0;transition:opacity .4s ease}
 body::after{content:'';position:fixed;bottom:-200px;left:-100px;width:500px;height:500px;background:radial-gradient(circle,rgba(52,199,89,.05) 0%,rgba(255,203,0,.03) 40%,transparent 70%);pointer-events:none;z-index:0;transition:opacity .4s ease}
 
 /* DARK MODE */
+/* v4.8.7: html.dark define vars ANTES do body existir (FOUC prevention) */
+html.dark{--bg:#0f0e17;--sf:rgba(255,255,255,.04);--s2:rgba(255,255,255,.03);--bd:rgba(255,255,255,.06);--tx:#e4e4e7;--mu:rgba(255,255,255,.4);--pul:rgba(108,92,231,.08);--gnl:rgba(52,199,89,.06);--gnd:#4ade80;--bll:rgba(59,130,246,.06);--bl:#60a5fa;--pu:#a78bfa;--pud:#c4b5fd;color-scheme:dark}
 body.dark{--bg:#0f0e17;--sf:rgba(255,255,255,.04);--s2:rgba(255,255,255,.03);--bd:rgba(255,255,255,.06);--tx:#e4e4e7;--mu:rgba(255,255,255,.4);--pul:rgba(108,92,231,.08);--gnl:rgba(52,199,89,.06);--gnd:#4ade80;--bll:rgba(59,130,246,.06);--bl:#60a5fa;--pu:#a78bfa;--pud:#c4b5fd;color:#e4e4e7}
 body.dark::before{background:radial-gradient(circle,rgba(108,92,231,.08) 0%,rgba(0,152,247,.05) 40%,transparent 70%)}
 body.dark::after{background:radial-gradient(circle,rgba(52,199,89,.04) 0%,rgba(167,139,250,.03) 40%,transparent 70%)}
@@ -743,13 +753,14 @@ body.dark .hm-mode-opt:hover:not(.active){background:rgba(255,255,255,.06)}
 /* v4.4.0: Sync feedback indicator */
 .sync-indicator{position:fixed;top:58px;left:50%;transform:translateX(-50%) translateY(-8px);z-index:201;display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;pointer-events:none;transition:all .4s cubic-bezier(.4,0,.2,1);opacity:0;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.08)} /* v4.6.9: fixo abaixo do nav, centralizado, sem sobrepor */
 .sync-indicator.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.sync-indicator.ok{background:rgba(34,197,94,.12);color:#16a34a;border:1px solid rgba(34,197,94,.2)}
-.sync-indicator.saving{background:rgba(108,92,231,.12);color:var(--pu);border:1px solid rgba(108,92,231,.2)}
-.sync-indicator.err{background:rgba(239,68,68,.12);color:#dc2626;border:1px solid rgba(239,68,68,.2)}
-body.dark .sync-indicator.ok{background:rgba(34,197,94,.15);color:#4ade80}
-body.dark .sync-indicator.saving{background:rgba(167,139,250,.15);color:#c4b5fd}
+.sync-indicator.ok{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
+.sync-indicator.saving{background:#f5f3ff;color:var(--pu);border:1px solid #ddd6fe}
+.sync-indicator.err{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+body.dark .sync-indicator.ok{background:#14532d;color:#4ade80;border-color:#166534}
+body.dark .sync-indicator.saving{background:#2e1065;color:#c4b5fd;border-color:#4c1d95}
+body.dark .sync-indicator.err{background:#450a0a;color:#fca5a5;border-color:#7f1d1d}
 /* v4.4.0: Delete confirmation toast */
-.confirm-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);z-index:500;background:var(--sf);backdrop-filter:blur(16px);border:1px solid var(--bd);border-radius:14px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);opacity:0;transition:all .3s cubic-bezier(.4,0,.2,1);pointer-events:none}
+.confirm-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);z-index:500;background:var(--bg);border:1px solid var(--bd);border-radius:14px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.18);opacity:0;transition:all .3s cubic-bezier(.4,0,.2,1);pointer-events:none}
 .confirm-toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
 .confirm-toast .ct-msg{font-size:13px;font-weight:600;color:var(--tx)}
 .confirm-toast .ct-actions{display:flex;gap:6px}
@@ -1094,11 +1105,12 @@ hr{border:none;border-top:1.5px solid var(--bd);margin:16px 0}
 .ph p{font-size:14px;color:var(--mu)}
 
 /* TOAST */
-.toast{position:fixed;bottom:22px;right:22px;background:rgba(30,27,75,.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:#fff;padding:11px 16px;border-radius:14px;font-size:13px;font-weight:500;opacity:0;transform:translateY(8px);transition:all .25s;z-index:9999;pointer-events:none;max-width:320px;box-shadow:0 8px 24px rgba(0,0,0,.15)}
-body.dark .toast{background:rgba(255,255,255,.12)}
+.toast{position:fixed;bottom:22px;right:22px;background:#1e1b4b;color:#fff;padding:11px 16px;border-radius:14px;font-size:13px;font-weight:500;opacity:0;transform:translateY(8px);transition:all .25s;z-index:9999;pointer-events:none;max-width:320px;box-shadow:0 8px 24px rgba(0,0,0,.15)}
+body.dark .toast{background:#1e1b4b}
 .toast.show{opacity:1;transform:none}
-.toast.ok{background:rgba(22,163,106,.9)}.toast.err{background:rgba(226,68,92,.9)}.toast.warn{background:rgba(255,123,0,.9)}
-.toast-center{position:fixed;top:60px;right:12px;left:auto;transform:translateX(8px) scale(.97);opacity:0;z-index:10000;pointer-events:none;display:flex;align-items:center;gap:7px;padding:8px 16px;border-radius:10px;background:rgba(255,255,255,.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 1px 4px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04),0 0 0 .5px rgba(0,0,0,.03);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;font-size:13px;font-weight:500;color:#1d1d1f;letter-spacing:-.01em;transition:none} /* v4.6.9: top:60px — abaixo da navbar */
+.toast.ok{background:#16a34a}.toast.err{background:#e2445c}.toast.warn{background:#ff7b00}
+.toast-center{position:fixed;top:60px;right:12px;left:auto;transform:translateX(8px) scale(.97);opacity:0;z-index:10000;pointer-events:none;display:flex;align-items:center;gap:7px;padding:8px 16px;border-radius:10px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.06);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;font-size:13px;font-weight:500;color:#1d1d1f;letter-spacing:-.01em;transition:none} /* v4.6.9: top:60px — abaixo da navbar */
+body.dark .toast-center{background:#1e1b4b;color:#e4e4e7;box-shadow:0 2px 8px rgba(0,0,0,.3)}
 .toast-center .tc-dot{width:6px;height:6px;border-radius:50%;background:#34c759;box-shadow:0 0 6px rgba(52,199,89,.4);flex-shrink:0}
 .toast-center.show{opacity:1;transform:translateX(0) scale(1);transition:opacity .3s ease,transform .35s cubic-bezier(.4,0,.2,1)}
 .toast-center.fade{opacity:0;transform:translateX(4px) scale(.98);transition:opacity .5s ease,transform .5s ease}
@@ -1309,6 +1321,8 @@ html,body{overflow-x:hidden;max-width:100vw}
 </style>
 </head>
 <body>
+<!-- v4.8.7: Aplica dark ao body IMEDIATAMENTE (complementa o script do head) -->
+<script>if(document.documentElement.classList.contains('dark'))document.body.classList.add('dark');</script>
 
 <nav>
   <div class="logo" onclick="goPage('rota',document.querySelectorAll('.ntab')[0])" style="cursor:pointer"><div class="logo-i"><span class="mot-ico" style="width:15px;height:15px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span></div><span>Roteiro de Coleta</span></div>
@@ -3252,8 +3266,11 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 /* Theme toggle */
-function toggleTheme(){document.body.classList.toggle('dark');localStorage.setItem('rota_theme',document.body.classList.contains('dark')?'dark':'light');}
-(function(){if(localStorage.getItem('rota_theme')==='dark')document.body.classList.add('dark');})();
+// v4.8.7: toggleTheme sincroniza html E body (FOUC prevention usa html.dark)
+function toggleTheme(){const isDark=!document.body.classList.contains('dark');document.body.classList.toggle('dark',isDark);document.documentElement.classList.toggle('dark',isDark);localStorage.setItem('rota_theme',isDark?'dark':'light');}
+(function(){if(localStorage.getItem('rota_theme')==='dark'){document.body.classList.add('dark');document.documentElement.classList.add('dark');}
+// v4.8.7: Reabilita transition após load (bloqueada durante init pra evitar flash)
+requestAnimationFrame(()=>requestAnimationFrame(()=>{document.body.classList.add('theme-ready');}));})();
 
 // v4.6.3: AUTO-SAVE — persist active route to localStorage on every change
 let _autoSaveTimer=null;
@@ -4023,8 +4040,8 @@ function togTC(i){
   cb.checked=!cb.checked;el.classList.toggle('on',cb.checked);
 }
 
-async function importTC(){
-  if(!cfg.akey){toast(t('err.configure_ai'),'err');return;}
+function importTC(){
+  // v4.8.8: Não precisa mais de API key — parser programático
   const cards=(window._tcards||[]).filter((_,i)=>{const cb=g('tch-'+i);return cb&&cb.checked;});
   if(!cards.length){toast(t('err.select_card'),'warn');return;}
   if(clients.length>0){
@@ -4063,82 +4080,223 @@ async function importTC(){
     s=s.charAt(0).toUpperCase()+s.slice(1);
     return s.trim();
   }
-  async function processCard(card){
-    const _pc0=performance.now();
-    const text=card.name+'\n'+(card.desc||'');
-    // v4.8.6: Timing da chamada Anthropic
-    const _pcAI0=performance.now();
-    const res=await fetch('https://roteiro-lavanderia.nigel-guandalini.workers.dev/api/anthropic',{method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({apiKey:cfg.akey,body:{model:'claude-sonnet-4-20250514',max_tokens:600,
-        messages:[{role:'user',content:'Analise este card do Trello de uma lavanderia'+((_geoAnchor?.city)?(' em '+_geoAnchor.city+(_geoAnchor.state?', '+_geoAnchor.state:'')):', Brasil')+'. O titulo segue o formato "Cliente NOME (Tipo) Valor X". A descricao contem endereco, quantidade de tapetes e telefone.\n\nREGRAS DO ENDERECO:\n- Preserve o tipo de logradouro EXATAMENTE como esta na descricao (ex: se estiver "Avenida" mantenha "Avenida", NUNCA troque por "Rua")\n- CORRIJA apenas abreviacoes: "Av." ou "Av " -> "Avenida", "R." -> "Rua", "Al." -> "Alameda", "Dr." -> "Doutor"\n- COMPLETE nomes abreviados (ex: "Dr Altino" -> "Doutor Altino Arantes")\n- Formato obrigatorio: "Logradouro, Numero - Bairro" (ex: "Avenida Doutor Altino Arantes, 77 - Vila Clementino")\n- Se o endereco for em OUTRO MUNICIPIO (ex: Maua, Santo Andre, Sao Bernardo do Campo, Diadema, Cotia, Osasco, Guarulhos), inclua o nome do municipio no final: "Logradouro, Numero - Bairro, Municipio" (ex: "Rua Joao Pessoa, 259 - Centro, Sao Bernardo do Campo")\n- Se bairro nao estiver na desc, deduza pelo CEP ou pelo nome da rua conhecida de SP\n\nREGRAS DE JANELA DE HORARIO (MUITO IMPORTANTE):\nProcure NO TITULO E NA DESCRICAO qualquer indicacao de horario de atendimento do cliente. Exemplos:\n- "ate meio-dia", "ate 12h", "ate as 12", "manha" -> janela="manha", hi="", hf=""\n- "a tarde", "somente tarde", "apos 12h", "depois do almoco" -> janela="tarde", hi="", hf=""\n- "entre 14 e 16h", "das 14 as 16", "14h-16h", "entre 14:00 e 16:00" -> janela="custom", hi="14:00", hf="16:00"\n- "ate 15h", "antes das 15h", "ate as 15:00" -> janela="custom", hi="", hf="15:00"\n- "apos 14h", "depois das 14h", "a partir das 14" -> janela="custom", hi="14:00", hf=""\n- "10h", "as 10h", "por volta das 10" -> janela="custom", hi="09:30", hf="10:30"\n- Se NAO houver indicacao de horario -> janela="livre", hi="", hf=""\nSempre use formato HH:MM (24h). Extraia horarios mesmo se estiverem abreviados.\n\nRetorne APENAS JSON puro sem markdown:\n- "tipo": coleta/entrega/vazio\n- "endereco": "Logradouro, Numero - Bairro" em Title Case\n- "complemento": apto/bloco/andar\n- "telefone": DDD+numero com hifen\n- "qtd": tapetes (inteiro)\n- "valor": numerico (0 se Medir/Pago)\n- "valorTipo": medir/pago/normal\n- "janela": livre/manha/tarde/custom\n- "hi": horario inicio (HH:MM ou vazio)\n- "hf": horario fim (HH:MM ou vazio)\n- "obs": observacoes gerais\nJSON: {"endereco":"","telefone":"","tipo":"vazio","qtd":0,"valor":0,"valorTipo":"normal","janela":"livre","hi":"","hf":"","obs":""}\nTexto do card:\n'+text}]}})});
-    const data=await res.json();
-    const _pcAI1=performance.now();
-    console.log('[TRELLO-IMPORT] Anthropic API: '+Math.round(_pcAI1-_pcAI0)+'ms — '+card.name.substring(0,30));
-    // v4.6.7: Detectar erros da API (créditos, rate limit, etc.)
-    if(data.type==='error'||data.error){
-      const errMsg=data.error?.message||data.error?.type||'Erro desconhecido na API';
-      throw new Error('API Anthropic: '+errMsg);
+  // v4.8.8: PARSER PROGRAMÁTICO — substitui Anthropic API (custo zero, <1ms/card)
+  // IA fica APENAS para importação por imagem
+  function parseCardProgrammatic(card){
+    const title=(card.name||'').trim();
+    const desc=(card.desc||'').trim();
+    const fullText=title+'\n'+desc;
+
+    // ── TIPO (coleta/entrega) ──
+    let tipo='coleta';
+    const tipoMatch=title.match(/\((entrega|coleta|devoluc[aã]o|retirada)\)/i)
+      ||title.match(/\b(entrega|devoluc[aã]o)\b/i);
+    if(tipoMatch){
+      const t=tipoMatch[1].toLowerCase();
+      tipo=(t==='entrega'||t.startsWith('devoluc'))?'entrega':'coleta';
     }
-    let ext={};try{ext=JSON.parse((data.content?.[0]?.text||'{}').replace(/```json?|```/g,'').trim());}catch(e){}
-    // v4.6.7: Rejeitar card se a IA não retornou endereço (dados inválidos)
+
+    // ── VALOR e VALORTIPO ──
+    let valor=0,valorTipo='normal';
+    const valMedir=title.match(/\bvalor\s+medir\b/i)||desc.match(/\bvalor\s+medir\b/i);
+    const valPago=title.match(/\bvalor\s+pago\b/i)||desc.match(/\bvalor\s+pago\b/i);
+    if(valMedir){valorTipo='medir';}
+    else if(valPago){valorTipo='pago';}
+    else{
+      const vm=title.match(/\bvalor\s+(?:R\$\s*)?([\d.,]+)/i)||desc.match(/\bvalor\s+(?:R\$\s*)?([\d.,]+)/i);
+      if(vm){valor=parseFloat(vm[1].replace('.','').replace(',','.'))||0;}
+    }
+
+    // ── TELEFONE ──
+    let telefone='';
+    const telRe=/(?:\+?55\s?)?(?:\(?\d{2}\)?\s?)?\d{4,5}[\s.\-]?\d{4}/g;
+    const telMatchesD=desc.match(telRe)||[];
+    const telMatchesT=title.match(telRe)||[];
+    const telAll=telMatchesD.concat(telMatchesT);
+    if(telAll.length){
+      let raw=telAll[0].replace(/\D/g,'');
+      if(raw.length===13&&raw.startsWith('55'))raw=raw.slice(2);
+      if(raw.length===11)telefone=raw.slice(0,2)+' '+raw.slice(2,7)+'-'+raw.slice(7);
+      else if(raw.length===10)telefone=raw.slice(0,2)+' '+raw.slice(2,6)+'-'+raw.slice(6);
+      else telefone=raw;
+    }
+
+    // ── QUANTIDADE ──
+    let qtd=0;
+    const qtdM=desc.match(/(\d+)\s*(?:tapetes?|pe[cç]as?|itens?|unid(?:ades?)?)/i)
+      ||title.match(/(\d+)\s*(?:tapetes?|pe[cç]as?|itens?|unid(?:ades?)?)/i);
+    if(qtdM)qtd=parseInt(qtdM[1],10)||0;
+
+    // ── ENDEREÇO ──
+    const _abrevs=[
+      [/\bAv\.\s?/gi,'Avenida '],[/\bAv\s/gi,'Avenida '],
+      [/\bR\.\s?/gi,'Rua '],[/\bAl\.\s?/gi,'Alameda '],
+      [/\bDr\.\s?/gi,'Doutor '],[/\bDr\s/gi,'Doutor '],
+      [/\bProf\.\s?/gi,'Professor '],[/\bProf\s/gi,'Professor '],
+      [/\bEng\.\s?/gi,'Engenheiro '],[/\bTrav\.\s?/gi,'Travessa '],
+      [/\bPça\.\s?/gi,'Praça '],[/\bPca\.\s?/gi,'Praça '],
+      [/\bSta\.\s?/gi,'Santa '],[/\bSto\.\s?/gi,'Santo '],
+      [/\bN[º°]?\s?/gi,'']
+    ];
+    // Complemento patterns (extrair ANTES de montar endereço)
+    let complemento='';
+    const compRe=/\b((?:apto?\.?|apartamento|bloco|bl\.?|blc\.?|andar|casa|sala|conj(?:unto)?\.?|sobreloja|fundos|cobertura)\s*[\d\w\/-]*)/i;
+
+    // Tentar extrair endereço das linhas da descrição
+    let endereco='';
+    const lines=desc.split(/[\n\r]+/).map(l=>l.trim()).filter(Boolean);
+    for(const line of lines){
+      // Pular linhas que são claramente telefone, qtd, valor, obs
+      if(/^\(?\d{2}\)?\s?\d{4,5}[\s.\-]?\d{4}$/.test(line))continue;
+      if(/^\d+\s*(?:tapetes?|pe[cç]as?)/i.test(line))continue;
+      if(/^valor\s/i.test(line))continue;
+      if(/^obs[:\s]/i.test(line))continue;
+      // Linha que parece endereço: contém logradouro ou número
+      if(/(?:^(?:rua|r\.|av[.\s]|avenida|alameda|al\.|travessa|pra[cç]a|estrada|rod|viela|largo|beco)\b|\d{5}-?\d{3}|\b\d{1,5}\s*[-,])/i.test(line)){
+        endereco=line;break;
+      }
+    }
+    // Se não achou por pattern, pegar primeira linha da desc que não é tel/qtd/valor
+    if(!endereco){
+      for(const line of lines){
+        if(/\(?\d{2}\)?\s?\d{4,5}[\s.\-]?\d{4}/.test(line))continue;
+        if(/^\d+\s*(?:tapetes?|pe[cç]as?)/i.test(line))continue;
+        if(/^valor\s/i.test(line))continue;
+        if(/^obs[:\s]/i.test(line))continue;
+        if(line.length>5){endereco=line;break;}
+      }
+    }
+
+    // Extrair complemento do endereço
+    const compMatch=endereco.match(compRe);
+    if(compMatch){
+      complemento=compMatch[1].trim();
+      endereco=endereco.replace(compRe,'').replace(/\s*[,\-]\s*$/,'').trim();
+    }
+    // Extrair CEP (remover do endereço visual)
+    const cepM=endereco.match(/\b(\d{5}-?\d{3})\b/);
+    if(cepM)endereco=endereco.replace(cepM[0],'').replace(/\s*[,\-]\s*$/,'').trim();
+
+    // Expandir abreviações
+    for(const [re,rep] of _abrevs)endereco=endereco.replace(re,rep);
+    // Limpar espaços duplos
+    endereco=endereco.replace(/\s{2,}/g,' ').trim();
+    // Title Case no endereço
+    if(endereco)endereco=titleCase(endereco);
+    // Normalizar complemento
+    if(complemento)complemento=normalizeComplemento(complemento);
+
+    // ── OBSERVAÇÕES ──
+    let obs='';
+    for(const line of lines){
+      if(/^obs[:\s]/i.test(line)){obs=line.replace(/^obs[:\s]*/i,'').trim();break;}
+    }
+    // Coletar linhas não consumidas como obs
+    if(!obs){
+      const extras=[];
+      for(const line of lines){
+        if(line===endereco)continue;
+        if(compMatch&&line.includes(compMatch[1]))continue;
+        if(telAll.length&&telAll.some(t=>line.includes(t)))continue;
+        if(qtdM&&line.includes(qtdM[0]))continue;
+        if(/^valor\s/i.test(line))continue;
+        if(/^obs[:\s]/i.test(line))continue;
+        if(line.length>3&&!endereco.includes(line))extras.push(line);
+      }
+      if(extras.length)obs=extras.join('; ');
+    }
+
+    // ── JANELA DE HORÁRIO ──
+    let janela='livre',hi='',hf='';
+    const ft=fullText.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    // "manhã", "até meio-dia", "até 12h"
+    if(/\b(?:manha|ate\s+meio[\s\-]?dia|ate\s+(?:as?\s+)?12\s*h?)\b/.test(ft)){
+      janela='manha';
+    }
+    // "à tarde", "após 12h", "depois do almoço"
+    else if(/\b(?:a?\s*tarde|somente\s+tarde|apos\s+12\s*h?|depois\s+d[eo]\s+almoco)\b/.test(ft)){
+      janela='tarde';
+    }
+    // "entre Xh e Yh" / "das X às Y"
+    else if((function(){
+      const m=ft.match(/(?:entre|das?)\s+(\d{1,2})(?::(\d{2}))?\s*h?\s*(?:e|as?|a|\-)\s*(\d{1,2})(?::(\d{2}))?\s*h?/);
+      if(m){janela='custom';hi=m[1].padStart(2,'0')+':'+(m[2]||'00');hf=m[3].padStart(2,'0')+':'+(m[4]||'00');return true;}
+      return false;
+    })()){/* matched */}
+    // "Xh-Yh"
+    else if((function(){
+      const m=ft.match(/(\d{1,2})(?::(\d{2}))?\s*h?\s*[\-–a]\s*(\d{1,2})(?::(\d{2}))?\s*h/);
+      if(m){janela='custom';hi=m[1].padStart(2,'0')+':'+(m[2]||'00');hf=m[3].padStart(2,'0')+':'+(m[4]||'00');return true;}
+      return false;
+    })()){/* matched */}
+    // "até Xh" / "antes das Xh"
+    else if((function(){
+      const m=ft.match(/(?:ate|antes\s+d[aeo]s?)\s+(?:as?\s+)?(\d{1,2})(?::(\d{2}))?\s*h?/);
+      if(m&&!ft.includes('meio')){janela='custom';hi='';hf=m[1].padStart(2,'0')+':'+(m[2]||'00');return true;}
+      return false;
+    })()){/* matched */}
+    // "após Xh" / "depois das Xh" / "a partir das Xh"
+    else if((function(){
+      const m=ft.match(/(?:apos|depois\s+d[aeo]s?|a\s+partir\s+d[aeo]s?)\s+(?:as?\s+)?(\d{1,2})(?::(\d{2}))?\s*h?/);
+      if(m){janela='custom';hi=m[1].padStart(2,'0')+':'+(m[2]||'00');hf='';return true;}
+      return false;
+    })()){/* matched */}
+    // "por volta das Xh" / "às Xh"
+    else if((function(){
+      const m=ft.match(/(?:por\s+volta\s+d[aeo]s?|as)\s+(\d{1,2})(?::(\d{2}))?\s*h?/);
+      if(m){
+        const h=parseInt(m[1],10);janela='custom';
+        const mm=parseInt(m[2]||'0',10);
+        const base=h*60+mm;
+        const lo=Math.max(0,base-30),up=Math.min(1439,base+30);
+        hi=String(Math.floor(lo/60)).padStart(2,'0')+':'+String(lo%60).padStart(2,'0');
+        hf=String(Math.floor(up/60)).padStart(2,'0')+':'+String(up%60).padStart(2,'0');
+        return true;
+      }
+      return false;
+    })()){/* matched */}
+
+    return {tipo,endereco,complemento,telefone,qtd,valor,valorTipo,janela,hi,hf,obs};
+  }
+
+  // v4.8.8: processCard usa parser programático (zero API, <1ms)
+  function processCard(card){
+    const _pc0=performance.now();
+    const ext=parseCardProgrammatic(card);
+    // Rejeitar card sem endereço
     if(!ext.endereco||!ext.endereco.trim()){
-      throw new Error('IA não retornou endereço para: '+card.name.substring(0,40));
+      throw new Error('Parser não encontrou endereço para: '+card.name.substring(0,40));
     }
     const dv=v('td')||new Date().toISOString().split('T')[0];
     const valTipo=ext.valorTipo==='medir'?'medir':ext.valorTipo==='pago'?'pago':'normal';
     let endFinal=ext.endereco||'';
-    // v4.3.3: Usar sistema de geocodifica\xe7\xe3o din\xe2mico (nominatim com \xe2ncora)
-    // v4.8.6: Geocoding FIRE-AND-FORGET (não bloqueia o processCard)
-    // Antes: await nominatim() bloqueava ~200-500ms por card
-    // Agora: preGeocode() roda em background, calcRoute resolve depois
     const nomeFmt=fmtNomeValor(card.name,ext.valor||0,valTipo);
-    const newClient={id:Date.now()+Math.random(),nome:_stripEmoji(nomeFmt),endereco:_stripEmoji(endFinal),complemento:'',tel:ext.telefone||'',tipo:ext.tipo||'coleta',qtd:ext.qtd||0,val:ext.valor||0,valTipo,data:dv,janela:ext.janela||'livre',hi:ext.hi||'',hf:ext.hf||'',obs:_stripEmoji(ext.obs||''),estT:null,conflict:false,cmsg:'',lat:null,lng:null,_cidade:null};
+    const newClient={id:Date.now()+Math.random(),nome:_stripEmoji(nomeFmt),endereco:_stripEmoji(endFinal),complemento:ext.complemento||'',tel:ext.telefone||'',tipo:ext.tipo||'coleta',qtd:ext.qtd||0,val:ext.valor||0,valTipo,data:dv,janela:ext.janela||'livre',hi:ext.hi||'',hf:ext.hf||'',obs:_stripEmoji(ext.obs||''),estT:null,conflict:false,cmsg:'',lat:null,lng:null,_cidade:null};
     // Fire-and-forget: geocodifica em background
     if(endFinal)preGeocode(newClient);
-    console.log('[TRELLO-IMPORT] processCard total: '+Math.round(performance.now()-_pc0)+'ms — '+card.name.substring(0,30));
+    console.log('[TRELLO-IMPORT] processCard: '+Math.round(performance.now()-_pc0)+'ms — '+card.name.substring(0,30));
     return newClient;
   }
-  // v4.8.6: INSTRUMENTAÇÃO DE PERFORMANCE DA IMPORTAÇÃO
-  const _impPerf={start:performance.now(),aiTotal:0,batchTimes:[]};
-  console.log('[TRELLO-IMPORT] >>> Iniciando importação de '+cards.length+' cartões');
-  // v4.8.6: Batch de 5 em paralelo (antes era 3) — Anthropic aguenta
-  const BATCH=5;
-  for(let i=0;i<cards.length;i+=BATCH){
-    const _batchStart=performance.now();
-    const batch=cards.slice(i,i+BATCH);
-    const names=batch.map(c=>c.name.split(/\s*[\(\)]\s*/)[0].replace(/^cliente\s*/i,'').trim()).join(', ');
-    g('prog-name').textContent=names;
-    console.log('[TRELLO-IMPORT] Batch '+(Math.floor(i/BATCH)+1)+'/'+Math.ceil(cards.length/BATCH)+': '+batch.length+' cards');
-    const results=await Promise.allSettled(batch.map(c=>processCard(c)));
-    let apiFailed=false;
-    for(const r of results){
-      if(r.status==='fulfilled'&&r.value){clients.push(r.value);count++;}
-      else if(r.status==='rejected'){
-        const msg=r.reason?.message||'';
-        console.warn('[IMPORT] Card falhou:',msg);
-        if(msg.includes('API Anthropic')){apiFailed=true;}
-      }
+  // v4.8.8: IMPORTAÇÃO SÍNCRONA — parser programático, zero API
+  const _impPerf={start:performance.now(),batchTimes:[]};
+  console.log('[TRELLO-IMPORT] >>> Iniciando importação de '+cards.length+' cartões (parser programático)');
+  // v4.8.8: Processa todos de uma vez (síncrono, <1ms/card)
+  for(let i=0;i<cards.length;i++){
+    try{
+      const result=processCard(cards[i]);
+      clients.push(result);count++;
+    }catch(e){
+      console.warn('[IMPORT] Card falhou:',e.message,'—',cards[i].name.substring(0,30));
     }
-    // v4.6.7: Se a API falhou, parar importação e avisar
-    if(apiFailed){
-      toast(t('e.anthropic'),'err');
-      g('trello-cards').innerHTML='<div class="ab w"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <div><strong>Importação interrompida!</strong><br>A API da Anthropic retornou erro. Verifique se há créditos disponíveis em <a href="https://console.anthropic.com/settings/billing" target="_blank" style="color:var(--pu)">console.anthropic.com</a>.</div></div>';
-      break;
-    }
-    const _batchEnd=performance.now();
-    _impPerf.batchTimes.push(Math.round(_batchEnd-_batchStart));
-    console.log('[TRELLO-IMPORT] Batch '+(Math.floor(i/BATCH)+1)+' concluído: '+Math.round(_batchEnd-_batchStart)+'ms');
-    g('prog-text').textContent='Processando '+(Math.min(i+BATCH,total))+' de '+total+'...';
-    g('prog-bar').style.width=Math.round(Math.min(i+BATCH,total)/total*100)+'%';
+    g('prog-text').textContent='Processando '+(i+1)+' de '+total+'...';
+    g('prog-bar').style.width=Math.round((i+1)/total*100)+'%';
+    g('prog-name').textContent=cards[i].name.split(/\s*[\(\)]\s*/)[0].replace(/^cliente\s*/i,'').trim();
     renderC();updStats();
   }
   order=clients.map((_,i)=>i);renderC();updStats();updBtns();
-  // v4.8.6: Log final de performance
-  _impPerf.end=performance.now();
-  const _impTotal=Math.round(_impPerf.end-_impPerf.start);
-  console.log('[TRELLO-IMPORT] === TOTAL: '+_impTotal+'ms ('+cards.length+' cartões, '+count+' importados) ===');
-  console.log('[TRELLO-IMPORT] Batches: ['+_impPerf.batchTimes.join(', ')+']ms | Média/batch: '+Math.round(_impPerf.batchTimes.reduce((a,b)=>a+b,0)/_impPerf.batchTimes.length)+'ms');
+  // v4.8.8: Log final de performance (parser programático)
+  const _impTotal=Math.round(performance.now()-_impPerf.start);
+  console.log('[TRELLO-IMPORT] === TOTAL: '+_impTotal+'ms ('+cards.length+' cartões, '+count+' importados, parser programático) ===');
   console.log('[TRELLO-IMPORT] Média/cartão: '+Math.round(_impTotal/cards.length)+'ms');
   toast(count+t('t.clients_imported'),'ok');
   g('trello-nav-bar').innerHTML=buildTrelloNavBar();
@@ -6682,8 +6840,8 @@ function renderMotor(){
       +(_motoristaViewedAt?'<div style="color:var(--gnd);font-size:11px;margin-top:4px;font-weight:600">'+mi('check','mot-ico-sm')+' '+t('mot.viewed_at')+' '+new Date(_motoristaViewedAt).toLocaleTimeString(_lang==='en'?'en-US':'pt-BR',{hour:'2-digit',minute:'2-digit'})+'</div>':'<div style="color:var(--mu);font-size:11px;margin-top:4px;opacity:.6">'+t('mot.awaiting')+'</div>')
       +'</div></div>';
   }
-  // Gráficos donut
-  html+=buildChartsHTML(clients,order);
+  // v4.8.8: Gráficos donut só para gestor (Philip: motorista não precisa de dashboards)
+  if(_gestorReadonly)html+=buildChartsHTML(clients,order);
   // Partida
   if(cfg.base)html+='<div style="border:1px solid var(--bd);border-radius:14px;padding:14px 16px;margin-bottom:12px;font-size:14px;display:flex;gap:12px;align-items:center;background:var(--sf)"><span style="opacity:.35">'+mi('building')+'</span><div><div style="font-weight:700;font-size:13px;color:var(--tx)">'+t('map.departure')+'</div><div style="color:var(--mu);font-size:12px">'+cfg.base+'</div></div></div>';
   // Cards dos clientes
@@ -7136,6 +7294,6 @@ function rerenderHeatmap(){
   });
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.8.6</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.8.8</div>
 </body>
 </html>
