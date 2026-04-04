@@ -4,6 +4,7 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.8.6 — 04/04/2026 — PERF: Trello import instrumentation + batch 5 + geo async ║
 ║  v4.8.5 — 04/04/2026 — PERF: haversine-first + OSRM race + dead time diag ║
 ║  v4.8.4 — 04/04/2026 — PERF: timeout em TODAS as chamadas externas      ║
 ║  v4.8.3 — 04/04/2026 — FIX: sidebar drag false positive + emoji M1     ║
@@ -4063,12 +4064,17 @@ async function importTC(){
     return s.trim();
   }
   async function processCard(card){
+    const _pc0=performance.now();
     const text=card.name+'\n'+(card.desc||'');
+    // v4.8.6: Timing da chamada Anthropic
+    const _pcAI0=performance.now();
     const res=await fetch('https://roteiro-lavanderia.nigel-guandalini.workers.dev/api/anthropic',{method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({apiKey:cfg.akey,body:{model:'claude-sonnet-4-20250514',max_tokens:600,
         messages:[{role:'user',content:'Analise este card do Trello de uma lavanderia'+((_geoAnchor?.city)?(' em '+_geoAnchor.city+(_geoAnchor.state?', '+_geoAnchor.state:'')):', Brasil')+'. O titulo segue o formato "Cliente NOME (Tipo) Valor X". A descricao contem endereco, quantidade de tapetes e telefone.\n\nREGRAS DO ENDERECO:\n- Preserve o tipo de logradouro EXATAMENTE como esta na descricao (ex: se estiver "Avenida" mantenha "Avenida", NUNCA troque por "Rua")\n- CORRIJA apenas abreviacoes: "Av." ou "Av " -> "Avenida", "R." -> "Rua", "Al." -> "Alameda", "Dr." -> "Doutor"\n- COMPLETE nomes abreviados (ex: "Dr Altino" -> "Doutor Altino Arantes")\n- Formato obrigatorio: "Logradouro, Numero - Bairro" (ex: "Avenida Doutor Altino Arantes, 77 - Vila Clementino")\n- Se o endereco for em OUTRO MUNICIPIO (ex: Maua, Santo Andre, Sao Bernardo do Campo, Diadema, Cotia, Osasco, Guarulhos), inclua o nome do municipio no final: "Logradouro, Numero - Bairro, Municipio" (ex: "Rua Joao Pessoa, 259 - Centro, Sao Bernardo do Campo")\n- Se bairro nao estiver na desc, deduza pelo CEP ou pelo nome da rua conhecida de SP\n\nREGRAS DE JANELA DE HORARIO (MUITO IMPORTANTE):\nProcure NO TITULO E NA DESCRICAO qualquer indicacao de horario de atendimento do cliente. Exemplos:\n- "ate meio-dia", "ate 12h", "ate as 12", "manha" -> janela="manha", hi="", hf=""\n- "a tarde", "somente tarde", "apos 12h", "depois do almoco" -> janela="tarde", hi="", hf=""\n- "entre 14 e 16h", "das 14 as 16", "14h-16h", "entre 14:00 e 16:00" -> janela="custom", hi="14:00", hf="16:00"\n- "ate 15h", "antes das 15h", "ate as 15:00" -> janela="custom", hi="", hf="15:00"\n- "apos 14h", "depois das 14h", "a partir das 14" -> janela="custom", hi="14:00", hf=""\n- "10h", "as 10h", "por volta das 10" -> janela="custom", hi="09:30", hf="10:30"\n- Se NAO houver indicacao de horario -> janela="livre", hi="", hf=""\nSempre use formato HH:MM (24h). Extraia horarios mesmo se estiverem abreviados.\n\nRetorne APENAS JSON puro sem markdown:\n- "tipo": coleta/entrega/vazio\n- "endereco": "Logradouro, Numero - Bairro" em Title Case\n- "complemento": apto/bloco/andar\n- "telefone": DDD+numero com hifen\n- "qtd": tapetes (inteiro)\n- "valor": numerico (0 se Medir/Pago)\n- "valorTipo": medir/pago/normal\n- "janela": livre/manha/tarde/custom\n- "hi": horario inicio (HH:MM ou vazio)\n- "hf": horario fim (HH:MM ou vazio)\n- "obs": observacoes gerais\nJSON: {"endereco":"","telefone":"","tipo":"vazio","qtd":0,"valor":0,"valorTipo":"normal","janela":"livre","hi":"","hf":"","obs":""}\nTexto do card:\n'+text}]}})});
     const data=await res.json();
+    const _pcAI1=performance.now();
+    console.log('[TRELLO-IMPORT] Anthropic API: '+Math.round(_pcAI1-_pcAI0)+'ms — '+card.name.substring(0,30));
     // v4.6.7: Detectar erros da API (créditos, rate limit, etc.)
     if(data.type==='error'||data.error){
       const errMsg=data.error?.message||data.error?.type||'Erro desconhecido na API';
@@ -4083,22 +4089,27 @@ async function importTC(){
     const valTipo=ext.valorTipo==='medir'?'medir':ext.valorTipo==='pago'?'pago':'normal';
     let endFinal=ext.endereco||'';
     // v4.3.3: Usar sistema de geocodifica\xe7\xe3o din\xe2mico (nominatim com \xe2ncora)
-    let pc=null;
-    if(endFinal){try{
-      const geoResult=await nominatim(endFinal);
-      if(geoResult){pc={lat:geoResult.lat,lng:geoResult.lng};if(geoResult.cidade)ext._cidade=geoResult.cidade;}
-    }catch(e){}}
-    if(!pc){pc=_pendingCoords;}_pendingCoords=null;
+    // v4.8.6: Geocoding FIRE-AND-FORGET (não bloqueia o processCard)
+    // Antes: await nominatim() bloqueava ~200-500ms por card
+    // Agora: preGeocode() roda em background, calcRoute resolve depois
     const nomeFmt=fmtNomeValor(card.name,ext.valor||0,valTipo);
-    // v4.8.1: _stripEmoji em TODOS os campos texto (M1 Monochrome: zero emojis)
-    return {id:Date.now()+Math.random(),nome:_stripEmoji(nomeFmt),endereco:_stripEmoji(endFinal),complemento:'',tel:ext.telefone||'',tipo:ext.tipo||'coleta',qtd:ext.qtd||0,val:ext.valor||0,valTipo,data:dv,janela:ext.janela||'livre',hi:ext.hi||'',hf:ext.hf||'',obs:_stripEmoji(ext.obs||''),estT:null,conflict:false,cmsg:'',lat:pc?.lat||null,lng:pc?.lng||null,_cidade:ext._cidade||null};
+    const newClient={id:Date.now()+Math.random(),nome:_stripEmoji(nomeFmt),endereco:_stripEmoji(endFinal),complemento:'',tel:ext.telefone||'',tipo:ext.tipo||'coleta',qtd:ext.qtd||0,val:ext.valor||0,valTipo,data:dv,janela:ext.janela||'livre',hi:ext.hi||'',hf:ext.hf||'',obs:_stripEmoji(ext.obs||''),estT:null,conflict:false,cmsg:'',lat:null,lng:null,_cidade:null};
+    // Fire-and-forget: geocodifica em background
+    if(endFinal)preGeocode(newClient);
+    console.log('[TRELLO-IMPORT] processCard total: '+Math.round(performance.now()-_pc0)+'ms — '+card.name.substring(0,30));
+    return newClient;
   }
-  // Processa em lotes de 3 para maior velocidade
-  const BATCH=3;
+  // v4.8.6: INSTRUMENTAÇÃO DE PERFORMANCE DA IMPORTAÇÃO
+  const _impPerf={start:performance.now(),aiTotal:0,batchTimes:[]};
+  console.log('[TRELLO-IMPORT] >>> Iniciando importação de '+cards.length+' cartões');
+  // v4.8.6: Batch de 5 em paralelo (antes era 3) — Anthropic aguenta
+  const BATCH=5;
   for(let i=0;i<cards.length;i+=BATCH){
+    const _batchStart=performance.now();
     const batch=cards.slice(i,i+BATCH);
     const names=batch.map(c=>c.name.split(/\s*[\(\)]\s*/)[0].replace(/^cliente\s*/i,'').trim()).join(', ');
     g('prog-name').textContent=names;
+    console.log('[TRELLO-IMPORT] Batch '+(Math.floor(i/BATCH)+1)+'/'+Math.ceil(cards.length/BATCH)+': '+batch.length+' cards');
     const results=await Promise.allSettled(batch.map(c=>processCard(c)));
     let apiFailed=false;
     for(const r of results){
@@ -4115,11 +4126,20 @@ async function importTC(){
       g('trello-cards').innerHTML='<div class="ab w"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <div><strong>Importação interrompida!</strong><br>A API da Anthropic retornou erro. Verifique se há créditos disponíveis em <a href="https://console.anthropic.com/settings/billing" target="_blank" style="color:var(--pu)">console.anthropic.com</a>.</div></div>';
       break;
     }
+    const _batchEnd=performance.now();
+    _impPerf.batchTimes.push(Math.round(_batchEnd-_batchStart));
+    console.log('[TRELLO-IMPORT] Batch '+(Math.floor(i/BATCH)+1)+' concluído: '+Math.round(_batchEnd-_batchStart)+'ms');
     g('prog-text').textContent='Processando '+(Math.min(i+BATCH,total))+' de '+total+'...';
     g('prog-bar').style.width=Math.round(Math.min(i+BATCH,total)/total*100)+'%';
     renderC();updStats();
   }
   order=clients.map((_,i)=>i);renderC();updStats();updBtns();
+  // v4.8.6: Log final de performance
+  _impPerf.end=performance.now();
+  const _impTotal=Math.round(_impPerf.end-_impPerf.start);
+  console.log('[TRELLO-IMPORT] === TOTAL: '+_impTotal+'ms ('+cards.length+' cartões, '+count+' importados) ===');
+  console.log('[TRELLO-IMPORT] Batches: ['+_impPerf.batchTimes.join(', ')+']ms | Média/batch: '+Math.round(_impPerf.batchTimes.reduce((a,b)=>a+b,0)/_impPerf.batchTimes.length)+'ms');
+  console.log('[TRELLO-IMPORT] Média/cartão: '+Math.round(_impTotal/cards.length)+'ms');
   toast(count+t('t.clients_imported'),'ok');
   g('trello-nav-bar').innerHTML=buildTrelloNavBar();
   g('trello-cards').innerHTML='<div class="ab ok"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> '+count+' cliente(s) importado(s)!</div>';
@@ -7116,6 +7136,6 @@ function rerenderHeatmap(){
   });
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.8.5</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.8.6</div>
 </body>
 </html>
