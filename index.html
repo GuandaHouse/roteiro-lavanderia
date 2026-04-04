@@ -4,6 +4,14 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.7.0 — 04/04/2026 — FEAT: Multi-Import (Excel/CSV) + i18n + Hardening ║
+║  ─────────────────────────────────────────                   ║
+║  GRANDE:                                                               ║
+║  • Multi-Import: upload Excel (.xlsx) e CSV com mapeamento de colunas  ║
+║  • Preview dos dados antes de importar, validação por linha            ║
+║  • Auto-detect de colunas (nome, endereço, telefone, etc.)             ║
+║  • Drag-and-drop + file picker, design M1 consistente                  ║
+║                                                                        ║
 ║  v4.6.9 — 04/04/2026 — FIX: Auto-scroll + ETA + Salvo (raiz corrigida) ║
 ║  ─────────────────────────────────────────                   ║
 ║  MÉDIO:                                                                ║
@@ -801,6 +809,19 @@ body.dark .dash-drawer-toggle{background:rgba(13,11,20,.82);border-color:rgba(25
 .prev-img{width:100%;max-height:170px;object-fit:cover;border-radius:var(--r);border:1px solid var(--bd);margin-top:11px}
 .ai-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--gnd);background:var(--gnl);border:1px solid #86EFAC;padding:3px 9px;border-radius:20px}
 
+/* FILE IMPORT TABLE (v4.7.0) */
+.fi-table{width:100%;border-collapse:collapse;font-size:12px}
+.fi-table th{position:sticky;top:0;background:var(--s2);font-weight:600;color:var(--mu);padding:8px 10px;text-align:left;border-bottom:2px solid var(--bd);white-space:nowrap;font-size:11px}
+.fi-table td{padding:6px 10px;border-bottom:1px solid var(--bd);color:var(--tx);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fi-table tr:hover td{background:var(--pul)}
+.fi-table tr.fi-err td{background:rgba(226,68,92,.06);color:var(--rd)}
+.fi-map-row{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}
+.fi-map-row .fi-col-src{font-size:12px;font-weight:600;color:var(--tx);padding:6px 10px;background:var(--s2);border-radius:var(--r);border:1px solid var(--bd);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fi-map-row .fi-arrow{color:var(--mu);font-size:12px}
+.fi-map-row select{font-size:12px}
+body.dark .fi-table th{background:var(--s2)}
+body.dark .fi-table tr.fi-err td{background:rgba(226,68,92,.12)}
+
 /* CLIENT CARD */
 .cc{background:var(--sf);border:1px solid var(--bd);border-left:3px solid var(--bd);border-radius:12px;padding:12px 14px 12px 13px;display:flex;align-items:center;gap:10px;margin-bottom:8px;cursor:pointer;transition:transform .2s cubic-bezier(.4,0,.2,1),box-shadow .2s ease,background .2s ease,border-color .2s ease;font-size:13px;position:relative;user-select:none;-webkit-user-select:none} /* v4.6.3: backdrop-filter removido — causava tela branca com muitos cards */
 .cc.dragging{opacity:.4;transform:scale(.97);box-shadow:none!important}
@@ -1064,11 +1085,11 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
 
 <nav>
   <div class="logo" onclick="goPage('rota',document.querySelectorAll('.ntab')[0])" style="cursor:pointer"><div class="logo-i"><span class="mot-ico" style="width:15px;height:15px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span></div><span>Roteiro de Coleta</span></div>
-  <button class="ntab on" onclick="goPage('rota',this)">Rota do Dia</button>
-  <button class="ntab" onclick="goPage('hist',this)">Hist&#xF3;rico</button>
-  <button class="ntab" onclick="goPage('dash',this)">Mapa de Clientes</button>
-  <button class="ntab" onclick="goPage('motor',this)">Motorista</button>
-  <button class="ntab" onclick="goPage('cfg',this)">Configura&#xE7;&#xF5;es</button>
+  <button class="ntab on" onclick="goPage('rota',this)" data-i18n="nav.rota">Rota do Dia</button>
+  <button class="ntab" onclick="goPage('hist',this)" data-i18n="nav.hist">Hist&#xF3;rico</button>
+  <button class="ntab" onclick="goPage('dash',this)" data-i18n="nav.dash">Mapa de Clientes</button>
+  <button class="ntab" onclick="goPage('motor',this)" data-i18n="nav.motor">Motorista</button>
+  <button class="ntab" onclick="goPage('cfg',this)" data-i18n="nav.cfg">Configura&#xE7;&#xF5;es</button>
   <div class="nav-r" id="nav-date"></div>
   <div class="theme-toggle-wrap">
     <button class="theme-toggle" onclick="toggleTheme()">
@@ -1085,10 +1106,11 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
 <div class="two-col">
 <div>
   <div class="card">
-    <p class="ct">Adicionar cliente</p>
+    <p class="ct" data-i18n="add.title">Adicionar cliente</p>
     <div class="tabs">
       <button class="tab on" onclick="stab('trello',this)"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span> Importar do Trello</button>
       <button class="tab" onclick="stab('img',this)"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span> Por Imagem</button>
+      <button class="tab" onclick="stab('file',this)"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> Arquivo</button>
       <button class="tab" onclick="stab('man',this)"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span> Manual</button>
     </div>
 
@@ -1146,6 +1168,50 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
       </div>
     </div>
 
+    <!-- FILE IMPORT TAB (v4.7.0) -->
+    <div class="tp" id="tp-file">
+      <div class="upl" id="upl-file" style="position:relative">
+        <input type="file" accept=".xlsx,.xls,.csv,.tsv" id="file-import-in" onchange="onFileImportSelect(event)" style="position:absolute;inset:0;opacity:0;cursor:pointer;z-index:2"/>
+        <div style="font-size:28px;margin-bottom:8px"><span class="mot-ico" style="width:28px;height:28px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span></div>
+        <p style="font-weight:600;font-size:14px;margin-bottom:3px">Arraste ou clique para importar</p>
+        <p style="font-size:12px;color:var(--mu)">Excel (.xlsx), CSV ou TSV</p>
+      </div>
+      <!-- Step 2: Column mapping -->
+      <div id="file-import-map" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div>
+            <p style="font-size:13px;font-weight:600">Mapeamento de colunas</p>
+            <p style="font-size:11px;color:var(--mu)" id="file-import-info"></p>
+          </div>
+          <button class="btn bo" onclick="resetFileImport()" style="font-size:11px;padding:4px 10px">Trocar arquivo</button>
+        </div>
+        <div id="file-import-sheet-sel" style="display:none;margin-bottom:12px">
+          <label style="font-size:12px;font-weight:600;color:var(--mu)">Aba da planilha</label>
+          <select id="file-import-sheet" onchange="onSheetChange()" style="margin-top:4px"></select>
+        </div>
+        <div id="file-col-map" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div style="margin-top:14px;display:flex;gap:8px">
+          <button class="btn bp" onclick="previewFileImport()"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span> Visualizar dados</button>
+        </div>
+      </div>
+      <!-- Step 3: Preview table -->
+      <div id="file-import-preview" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div>
+            <p style="font-size:13px;font-weight:600">Preview da importa&#xE7;&#xE3;o</p>
+            <p style="font-size:11px;color:var(--mu)" id="file-preview-count"></p>
+          </div>
+          <button class="btn bo" onclick="backToMapping()" style="font-size:11px;padding:4px 10px">Voltar</button>
+        </div>
+        <div id="file-preview-table" style="overflow-x:auto;max-height:340px;overflow-y:auto;border:1px solid var(--bd);border-radius:var(--r);margin-bottom:12px"></div>
+        <div id="file-preview-errors" style="display:none;margin-bottom:12px"></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn bp" onclick="executeFileImport()"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> Importar <span id="file-import-count-btn"></span> clientes</button>
+          <button class="btn bo" onclick="backToMapping()">Ajustar colunas</button>
+        </div>
+      </div>
+    </div>
+
     <!-- MANUAL TAB -->
     <div class="tp" id="tp-man"></div>
 
@@ -1189,7 +1255,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
 
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <p class="ct" style="margin:0">Clientes na rota</p>
+      <p class="ct" style="margin:0" data-i18n="cl.title">Clientes na rota</p>
       <div style="display:flex;align-items:center;gap:8px">
         <span id="cc-count" style="font-size:12px;color:var(--mu);font-weight:600"></span>
         <button id="clear-all-btn" class="btn bo" style="display:none;font-size:11px;padding:3px 10px;border-radius:6px;color:var(--rd);border-color:rgba(226,68,92,.25)" onclick="clearAllClients()">Limpar todos</button>
@@ -1207,7 +1273,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
 <!-- SIDEBAR -->
 <div>
   <div class="card">
-    <p class="ct">Resumo do dia</p>
+    <p class="ct" data-i18n="sum.title">Resumo do dia</p>
     <div class="sg">
       <div class="st sa" style="grid-column:1/-1">
         <div class="sl sa">Clientes</div>
@@ -1409,6 +1475,14 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
         <span style="font-size:16px;line-height:1">+</span> Nova tag
       </button>
     </div>
+    <!-- v4.7.0: Language Toggle -->
+    <div class="card">
+      <p class="ct" data-i18n="cfg.lang">Idioma</p>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn" id="lang-pt" onclick="setLang('pt')" style="flex:1;justify-content:center">Portugu&#xEA;s (BR)</button>
+        <button class="btn" id="lang-en" onclick="setLang('en')" style="flex:1;justify-content:center">English</button>
+      </div>
+    </div>
   </div>
   </div>
   <!-- v4.3.4: Sticky save bar at bottom -->
@@ -1522,16 +1596,154 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script>
 let clients=[],order=[],gMap=null,gRoute=null,gMarkers=[],gBaseMarkers=[],hmMap=null,hmHeatLayer=null;
 let imgData=null,ambRes=[],ambSel=-1,histIdx=-1,geoT=null,cfg={},_pendingCoords=null;
 let selBoard=null,selList=null,_tboardsHtml='',_tlistsHtml='';
 
 /* ══════════════════════════════════════════════════════════════
+   v4.7.0: SISTEMA i18n (PT-BR + EN)
+   ══════════════════════════════════════════════════════════════ */
+let _lang=localStorage.getItem('rota_lang')||'pt';
+const _i18n={
+pt:{
+  // Navigation
+  'nav.rota':'Rota do Dia','nav.hist':'Hist\xf3rico','nav.dash':'Mapa de Clientes','nav.motor':'Motorista','nav.cfg':'Configura\xe7\xf5es',
+  // Add client section
+  'add.title':'Adicionar cliente','add.tab.trello':'Importar do Trello','add.tab.img':'Por Imagem','add.tab.file':'Arquivo','add.tab.man':'Manual',
+  'add.data':'Dados do cliente','add.ai':'Preenchido pela IA',
+  // Form labels
+  'form.nome':'Nome *','form.nome.ph':'Nome completo','form.tel':'Telefone','form.tel.ph':'(11) 99999-9999',
+  'form.end':'Endere\xe7o completo *','form.end.ph':'Rua, n\xba, complemento, bairro, cidade','form.cep':'CEP','form.cep.ph':'00000-000',
+  'form.tipo':'Tipo *','form.qtd':'Quantidade','form.valstatus':'Status valor',
+  'form.val':'Valor (R$)','form.val.ph':'0,00','form.medir':'Medir','form.pago':'Pago','form.normal':'Valor (R$)',
+  'form.data':'Data','form.janela':'Janela de hor\xe1rio',
+  'form.livre':'Qualquer hor\xe1rio','form.manha':'Somente manh\xe3 (at\xe9 12h)','form.tarde':'Somente tarde (ap\xf3s 12h)','form.custom':'Hor\xe1rio espec\xedfico',
+  'form.hi':'In\xedcio','form.hf':'Fim','form.obs':'Observa\xe7\xf5es','form.obs.ph':'Port\xe3o azul, ligar antes...',
+  // Buttons
+  'btn.add':'+ Adicionar ao roteiro','btn.clear':'Limpar','btn.clearall':'Limpar todos','btn.save':'Salvar','btn.cancel':'Cancelar','btn.confirm':'Confirmar',
+  'btn.delete':'Excluir','btn.close':'Fechar','btn.back':'Voltar','btn.search':'Buscar',
+  'btn.generate':'Gerar rota','btn.publish':'Publicar rota no cloud','btn.insert':'Inserir cliente na rota ativa',
+  'btn.genimg':'Gerar imagem do roteiro','btn.savecfg':'Salvar configura\xe7\xf5es','btn.undo':'Desfazer',
+  'btn.change':'Trocar','btn.changefile':'Trocar arquivo','btn.preview':'Visualizar dados','btn.adjustcols':'Ajustar colunas',
+  'btn.copylink':'Copiar link','btn.connect.trello':'Conectar com Trello','btn.disconnect':'Desconectar','btn.newtag':'Nova tag',
+  // Client list
+  'cl.title':'Clientes na rota','cl.empty':'Nenhum cliente ainda','cl.search':'Buscar por nome ou endere\xe7o...',
+  // Summary
+  'sum.title':'Resumo do dia','sum.clients':'Clientes','sum.pickups':'Retiradas','sum.deliveries':'Entregas','sum.items':'itens',
+  // Map
+  'map.title':'Rota no mapa','map.hint':'Adicione clientes para ver a rota','map.expand':'Expandir mapa','map.reduce':'Reduzir mapa',
+  'map.panel':'Painel da Rota','map.dist':'Dist\xe2ncia total','map.time':'Tempo estimado','map.done':'Conclu\xeddos','map.last':'Última parada','map.stops':'Paradas',
+  'map.arrival':'Chegada','map.departure':'Partida','map.return':'Retorno','map.remove':'Remover da rota',
+  // Config
+  'cfg.title':'Configura\xe7\xf5es','cfg.route':'Rota padr\xe3o','cfg.base':'Endere\xe7o de partida','cfg.ret':'Endere\xe7o de retorno',
+  'cfg.saida':'Hor\xe1rio de sa\xedda','cfg.retlim':'Limite de retorno','cfg.tempo':'Tempo/parada (min)',
+  'cfg.lunch1':'Pausa almo\xe7o \u2014 in\xedcio','cfg.lunch2':'Pausa almo\xe7o \u2014 fim',
+  'cfg.tags':'Tags (cores dos cart\xf5es)','cfg.tagdesc':'Personalize as categorias e cores dos seus cart\xf5es. Arraste para reordenar.',
+  'cfg.lang':'Idioma','cfg.lang.pt':'Portugu\xeas','cfg.lang.en':'English',
+  // History
+  'hist.title':'Hist\xf3rico de Rotas','hist.desc':'Todas as rotas geradas ficam salvas aqui.',
+  // Dashboard
+  'dash.title':'Concentra\xe7\xe3o de Clientes','dash.conc':'Concentra\xe7\xe3o','dash.rev':'Receita',
+  'dash.top':'Locais mais atendidos','dash.zones':'Distribui\xe7\xe3o por Zona',
+  // Motorista
+  'mot.title':'Roteiro do Motorista','mot.scan':'Escaneie com o celular do motorista',
+  // File import
+  'fi.drag':'Arraste ou clique para importar','fi.types':'Excel (.xlsx), CSV ou TSV','fi.map':'Mapeamento de colunas','fi.preview':'Preview da importa\xe7\xe3o',
+  'fi.sheet':'Aba da planilha','fi.ignore':'\u2014 Ignorar \u2014',
+  // Toasts
+  't.added':' adicionado!','t.removed':'Cliente removido','t.restored':'Rota restaurada!','t.discarded':'Rota descartada',
+  't.published':'Rota publicada no cloud!','t.synced':'Dados offline sincronizados!','t.extracted':'Dados extra\xeddos!',
+  't.optimized':'Rota otimizada gerada!','t.undone':'Altera\xe7\xe3o desfeita','t.imggen':'Imagem gerada!',
+  't.imported':' clientes importados com sucesso!','t.orderupd':'Ordem atualizada \u2014 recalculando rota...',
+  't.inserted':'Cliente inserido na rota: ','t.trelloconn':'Trello conectado com sucesso!','t.trellodisc':'Trello desconectado',
+  // Errors
+  'e.name':'Informe o nome','e.addr':'Informe o endere\xe7o','e.addrinv':'Endere\xe7o parece inv\xe1lido (inclua rua e n\xfamero)',
+  'e.tag':'Selecione pelo menos uma tag','e.route':'Monte uma rota primeiro','e.baseaddr':'Endere\xe7o de partida n\xe3o encontrado',
+  'e.noaddr':'Nenhum endere\xe7o encontrado','e.calc':'Erro ao calcular rota: ',
+  'e.anthropic':'Configure a chave Anthropic','e.extract':'Erro na extra\xe7\xe3o. Verifique a chave Anthropic.',
+  'e.credits':'Erro na API Anthropic \u2014 verifique seus cr\xe9ditos!',
+  'e.trello.cfg':'Configure a chave e token do Trello em Configura\xe7\xf5es',
+  'e.mapname':'Mapeie pelo menos a coluna Nome','e.mapaddr':'Mapeie pelo menos a coluna Endere\xe7o',
+  // Confirms
+  'c.restore':'Restaurar rota?','c.delete':'Excluir cliente?','c.clearroute':'Limpar rota?','c.replace':'Substituir rota atual?',
+  'c.delroute':'Excluir rota?','c.noundo':'Esta a\xe7\xe3o n\xe3o pode ser desfeita.',
+  'c.baseaddr.title':'Endere\xe7o de partida necess\xe1rio',
+  'c.baseaddr.msg':'Para calcular os hor\xe1rios de chegada, o sistema precisa saber de onde o motorista sai. V\xe1 em Configura\xe7\xf5es e preencha o Endere\xe7o de partida.'
+},
+en:{
+  'nav.rota':'Daily Route','nav.hist':'History','nav.dash':'Client Map','nav.motor':'Driver','nav.cfg':'Settings',
+  'add.title':'Add client','add.tab.trello':'Import from Trello','add.tab.img':'By Image','add.tab.file':'File','add.tab.man':'Manual',
+  'add.data':'Client data','add.ai':'Filled by AI',
+  'form.nome':'Name *','form.nome.ph':'Full name','form.tel':'Phone','form.tel.ph':'(11) 99999-9999',
+  'form.end':'Full address *','form.end.ph':'Street, no., complement, neighborhood, city','form.cep':'ZIP','form.cep.ph':'00000-000',
+  'form.tipo':'Type *','form.qtd':'Quantity','form.valstatus':'Value status',
+  'form.val':'Value (R$)','form.val.ph':'0.00','form.medir':'Measure','form.pago':'Paid','form.normal':'Value (R$)',
+  'form.data':'Date','form.janela':'Time window',
+  'form.livre':'Any time','form.manha':'Morning only (until 12h)','form.tarde':'Afternoon only (after 12h)','form.custom':'Specific time',
+  'form.hi':'Start','form.hf':'End','form.obs':'Notes','form.obs.ph':'Blue gate, call first...',
+  'btn.add':'+ Add to route','btn.clear':'Clear','btn.clearall':'Clear all','btn.save':'Save','btn.cancel':'Cancel','btn.confirm':'Confirm',
+  'btn.delete':'Delete','btn.close':'Close','btn.back':'Back','btn.search':'Search',
+  'btn.generate':'Generate route','btn.publish':'Publish route to cloud','btn.insert':'Insert client in active route',
+  'btn.genimg':'Generate route image','btn.savecfg':'Save settings','btn.undo':'Undo',
+  'btn.change':'Change','btn.changefile':'Change file','btn.preview':'Preview data','btn.adjustcols':'Adjust columns',
+  'btn.copylink':'Copy link','btn.connect.trello':'Connect with Trello','btn.disconnect':'Disconnect','btn.newtag':'New tag',
+  'cl.title':'Clients in route','cl.empty':'No clients yet','cl.search':'Search by name or address...',
+  'sum.title':'Daily summary','sum.clients':'Clients','sum.pickups':'Pickups','sum.deliveries':'Deliveries','sum.items':'items',
+  'map.title':'Route on map','map.hint':'Add clients to see the route','map.expand':'Expand map','map.reduce':'Reduce map',
+  'map.panel':'Route Panel','map.dist':'Total distance','map.time':'Estimated time','map.done':'Completed','map.last':'Last stop','map.stops':'Stops',
+  'map.arrival':'Arrival','map.departure':'Departure','map.return':'Return','map.remove':'Remove from route',
+  'cfg.title':'Settings','cfg.route':'Default route','cfg.base':'Departure address','cfg.ret':'Return address',
+  'cfg.saida':'Departure time','cfg.retlim':'Return deadline','cfg.tempo':'Time/stop (min)',
+  'cfg.lunch1':'Lunch break \u2014 start','cfg.lunch2':'Lunch break \u2014 end',
+  'cfg.tags':'Tags (card colors)','cfg.tagdesc':'Customize your card categories and colors. Drag to reorder.',
+  'cfg.lang':'Language','cfg.lang.pt':'Portugu\xeas','cfg.lang.en':'English',
+  'hist.title':'Route History','hist.desc':'All generated routes are saved here.',
+  'dash.title':'Client Concentration','dash.conc':'Concentration','dash.rev':'Revenue',
+  'dash.top':'Most served locations','dash.zones':'Zone Distribution',
+  'mot.title':'Driver Itinerary','mot.scan':'Scan with driver\'s phone',
+  'fi.drag':'Drag or click to import','fi.types':'Excel (.xlsx), CSV or TSV','fi.map':'Column mapping','fi.preview':'Import preview',
+  'fi.sheet':'Spreadsheet sheet','fi.ignore':'\u2014 Ignore \u2014',
+  't.added':' added!','t.removed':'Client removed','t.restored':'Route restored!','t.discarded':'Route discarded',
+  't.published':'Route published to cloud!','t.synced':'Offline data synced!','t.extracted':'Data extracted!',
+  't.optimized':'Optimized route generated!','t.undone':'Change undone','t.imggen':'Image generated!',
+  't.imported':' clients imported successfully!','t.orderupd':'Order updated \u2014 recalculating route...',
+  't.inserted':'Client inserted in route: ','t.trelloconn':'Trello connected successfully!','t.trellodisc':'Trello disconnected',
+  'e.name':'Enter name','e.addr':'Enter address','e.addrinv':'Address seems invalid (include street and number)',
+  'e.tag':'Select at least one tag','e.route':'Create a route first','e.baseaddr':'Departure address not found',
+  'e.noaddr':'No address found','e.calc':'Error calculating route: ',
+  'e.anthropic':'Configure Anthropic key','e.extract':'Extraction error. Check Anthropic key.',
+  'e.credits':'Anthropic API error \u2014 check your credits!',
+  'e.trello.cfg':'Configure Trello key and token in Settings',
+  'e.mapname':'Map at least the Name column','e.mapaddr':'Map at least the Address column',
+  'c.restore':'Restore route?','c.delete':'Delete client?','c.clearroute':'Clear route?','c.replace':'Replace current route?',
+  'c.delroute':'Delete route?','c.noundo':'This action cannot be undone.',
+  'c.baseaddr.title':'Departure address required',
+  'c.baseaddr.msg':'To calculate arrival times, the system needs to know where the driver departs from. Go to Settings and fill in the Departure Address.'
+}
+};
+function t(key,vars){const s=(_i18n[_lang]||_i18n.pt)[key]||(_i18n.pt)[key]||key;if(!vars)return s;return Object.entries(vars).reduce((r,[k,v])=>r.replace('{'+k+'}',v),s);}
+function setLang(lang){_lang=lang;localStorage.setItem('rota_lang',lang);applyI18n();updateLangBtns();toast(_lang==='en'?'Language changed to English':'Idioma alterado para Portugu\xeas','ok');}
+function updateLangBtns(){const pt=document.getElementById('lang-pt'),en=document.getElementById('lang-en');if(pt)pt.className=_lang==='pt'?'btn bp':'btn bo';if(en)en.className=_lang==='en'?'btn bp':'btn bo';}
+function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const k=el.getAttribute('data-i18n');const txt=t(k);if(el.tagName==='INPUT'||el.tagName==='TEXTAREA'){el.placeholder=txt;}else if(el.tagName==='OPTION'){el.textContent=txt;}else{
+  // Preserve child elements (icons etc) — only replace text nodes
+  const firstChild=el.firstChild;
+  if(firstChild&&firstChild.nodeType===3){firstChild.textContent=txt;}
+  else if(!el.querySelector('*')){el.textContent=txt;}
+  else{const textNodes=Array.from(el.childNodes).filter(n=>n.nodeType===3);if(textNodes.length){textNodes[textNodes.length-1].textContent=' '+txt;}}}});
+  document.querySelectorAll('[data-i18n-ph]').forEach(el=>{el.placeholder=t(el.getAttribute('data-i18n-ph'));});
+}
+// ═══════════════ END i18n ═══════════════
+
+/* ══════════════════════════════════════════════════════════════
    v4.3.3: SISTEMA DE TAGS CONFIGUR\xc1VEIS
    Usu\xe1rio pode personalizar cores e r\xf3tulos por tipo de servi\xe7o.
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
+// v4.7.0: Safe JSON parse — protege contra localStorage corrompido
+function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
+
 const TAG_PALETTE=['#6B9E8A','#6B8DB5','#B89B7A','#9B8EC4','#C27878','#8EA86B','#6B8E9E','#B5859B','#787878','#9E8B78','#6B9E9E','#8E889E'];
 const DEFAULT_TAGS=[
   {id:'coleta',label:'Coleta',color:'#6B9E8A'},
@@ -1539,7 +1751,7 @@ const DEFAULT_TAGS=[
   {id:'devolucao',label:'Devolu\xe7\xe3o',color:'#B89B7A'},
   {id:'retirada',label:'Retirada',color:'#9B8EC4'}
 ];
-let _tags=JSON.parse(localStorage.getItem('rota_tags')||'null')||DEFAULT_TAGS.map(t=>({...t}));
+let _tags=safeJsonParse('rota_tags',null)||DEFAULT_TAGS.map(t=>({...t}));
 function _saveTags(){localStorage.setItem('rota_tags',JSON.stringify(_tags));}
 function _getTagColor(tipo){if(!tipo)return 'rgba(108,92,231,.18)';const t=_tags.find(t=>t.id===tipo);return t?t.color:'rgba(108,92,231,.18)';}
 function _getTagLabel(tipo){if(!tipo)return '';const t=_tags.find(t=>t.id===tipo);return t?t.label:'';}
@@ -2014,7 +2226,7 @@ function setCloudStatus(state,msg){
 }
 
 async function cloudPublish(){
-  if(!clients.length||!order.length){toast('Monte uma rota primeiro','err');return;}
+  if(!clients.length||!order.length){toast(t('e.route'),'err');return;}
   const btn=document.getElementById('publish-btn');
   if(btn)btn.disabled=true;
   try{
@@ -2035,7 +2247,7 @@ async function cloudPublish(){
     if(data.ok){
       _cloudVersion=data.version;
       _cloudHash=data.hash;
-      toast('Rota publicada no cloud!','ok');
+      toast(t('t.published'),'ok');
       setCloudStatus('synced','Rota online e sincronizada em tempo real');
     } else {
       toast('Erro ao publicar: '+(data.error||'desconhecido'),'err');
@@ -2066,8 +2278,10 @@ async function cloudLoad(routeId){
   }
 }
 
+let _cloudPolling=false; // v4.7.0: guard contra race condition em polls concorrentes
 async function cloudPoll(){
-  if(!_currentRouteId)return;
+  if(!_currentRouteId||_cloudPolling)return;
+  _cloudPolling=true;
   // v4.3.2: Processar fila offline a cada poll
   if(_offlineQueue.length)_processOfflineQueue();
   try{
@@ -2108,11 +2322,11 @@ async function cloudPoll(){
     }
   }catch(e){
     setCloudStatus('offline','Reconectando...');
-  }
+  }finally{_cloudPolling=false;} // v4.7.0: libera lock
 }
 
 // v4.3.2: Fila offline resiliente — ações do motorista são salvas localmente e sincronizam quando voltar a conexão
-let _offlineQueue=JSON.parse(localStorage.getItem('rota_offline_queue')||'[]');
+let _offlineQueue=safeJsonParse('rota_offline_queue',[]);
 let _offlineSyncing=false;
 
 function _saveOfflineQueue(){
@@ -2215,7 +2429,7 @@ function startGestorPolling(){
    SMART CLIENT INSERTION
    ══════════════════════════════════════════════════════════════ */
 function openSmartInsert(){
-  if(!clients.length){toast('Monte uma rota primeiro','err');return;}
+  if(!clients.length){toast(t('e.route'),'err');return;}
   ['si-nome','si-cep','si-end','si-tel','si-obs','si-val','si-hi','si-hf'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('si-qtd').value='';
   initTagMultiSelect('si-tipo',[]);
@@ -2562,6 +2776,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   setTimeout(()=>{preloadDashData();},2000);
   // v4.3.3: Inicializar tags configur\xe1veis e atualizar selects
   renderTagsConfig();updateTagSelects();initPreferredTab();initCustomSelects();
+  // v4.7.0: Apply i18n + language toggle active state
+  applyI18n();updateLangBtns();
   if(!cfg.tkey||!cfg.ttoken){const el=g('trello-nocred');if(el)el.style.display='block';const s1=g('trello-step1');if(s1)s1.style.display='none';}
   document.querySelectorAll('.mbg').forEach(m=>{let downOnBg=false;m.addEventListener('mousedown',e=>{downOnBg=e.target===m;});m.addEventListener('click',e=>{if(e.target===m&&downOnBg)m.classList.remove('on');downOnBg=false;});});
   document.addEventListener('paste',e=>{
@@ -2604,12 +2820,14 @@ function restoreActiveRoute(){
   if(!saved)return false;
   try{
     const data=JSON.parse(saved);
-    if(!data.clients||!data.clients.length)return false;
+    // v4.7.0: Validação robusta dos dados restaurados
+    if(!Array.isArray(data.clients)||!data.clients.length)return false;
+    if(!data.clients.every(c=>c&&typeof c.nome==='string'&&typeof c.endereco==='string')){console.warn('[RESTORE] Dados corrompidos');localStorage.removeItem('rota_ativa');return false;}
     const savedDate=data.savedAt?new Date(data.savedAt):null;
     const label=savedDate?savedDate.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' '+savedDate.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
     showConfirm('Restaurar rota?','Voc\u00ea tem uma rota salva com '+data.clients.length+' cliente(s)'+(label?' de '+label:'')+'. Deseja restaurar?',()=>{
       clients=data.clients;order=data.order||clients.map((_,i)=>i);
-      renderC();updStats();updBtns();toast('Rota restaurada!','ok');
+      renderC();updStats();updBtns();toast(t('t.restored'),'ok');
       // v4.6.9: Rebuild OSRM matrix em background para ETAs funcionarem no drag
       _rebuildCachedMatrix();
     },()=>{localStorage.removeItem('rota_ativa');toast('Rota descartada','');},'Restaurar'); // v4.6.5: Cancelar limpa rota_ativa — não pergunta de novo
@@ -2676,7 +2894,7 @@ function toggleEye(fid,btn){
 }
 
 function loadCfg(){
-  cfg=JSON.parse(localStorage.getItem('rota_cfg')||'{}');
+  cfg=safeJsonParse('rota_cfg',{});
   ['saida','ret','tempo','base','retaddr','al1','al2','tkey','ttoken','akey','gkey'].forEach(k=>{if(cfg[k]&&g('cfg-'+k))g('cfg-'+k).value=cfg[k];});
   // v4.6.2: routePriority config load removido
 }
@@ -2786,6 +3004,7 @@ function stab(n,el){
   el.classList.add('on');
   if(n==='man')g('cform').style.display='block';
   else if(n==='trello')g('cform').style.display='none';
+  else if(n==='file')g('cform').style.display='none'; // v4.7.0: file tab has its own flow
   // v4.3.9: Save preferred tab
   localStorage.setItem('rota_preferred_tab',n);
 }
@@ -2794,7 +3013,7 @@ function initPreferredTab(){
   const pref=localStorage.getItem('rota_preferred_tab');
   if(pref){
     const tabs=document.querySelectorAll('.tab');
-    const tabMap={trello:0,img:1,man:2};
+    const tabMap={trello:0,img:1,file:2,man:3}; // v4.7.0: file tab added
     const idx=tabMap[pref];
     if(idx!==undefined&&tabs[idx]){
       stab(pref,tabs[idx]);
@@ -2810,7 +3029,7 @@ function updateTabPins(){
     if(existing)existing.remove();
   });
   if(pref){
-    const tabMap={trello:0,img:1,man:2};
+    const tabMap={trello:0,img:1,file:2,man:3}; // v4.7.0: file tab added
     const idx=tabMap[pref];
     const tabs=document.querySelectorAll('.tab');
     if(idx!==undefined&&tabs[idx]){
@@ -2861,6 +3080,324 @@ function processFile(f){
 }
 function clearImg(){imgData=null;g('upl').style.display='';g('img-prev').style.display='none';g('file-in').value='';}
 
+// ═══════════════════════════════════════════
+// v4.7.0: MULTI-IMPORT (Excel / CSV / TSV)
+// ═══════════════════════════════════════════
+let _fileImportWB=null; // SheetJS workbook
+let _fileImportData=[]; // parsed rows (array of objects)
+let _fileImportCols=[]; // detected column headers
+let _fileImportMap={}; // user column mapping {field: colName}
+let _fileImportPreviewRows=[]; // validated rows ready to import
+
+const _FI_FIELDS=[
+  {key:'nome',label:'Nome',required:true,aliases:['nome','name','cliente','client','razao','razão','razao social','razão social']},
+  {key:'endereco',label:'Endereço',required:true,aliases:['endereco','endereço','endereco completo','endereço completo','address','logradouro','rua','end']},
+  {key:'cep',label:'CEP',required:false,aliases:['cep','zip','zipcode','codigo postal','código postal']},
+  {key:'tel',label:'Telefone',required:false,aliases:['telefone','tel','fone','phone','celular','whatsapp','wpp','contato']},
+  {key:'tipo',label:'Tipo (tag)',required:false,aliases:['tipo','type','servico','serviço','tag','categoria']},
+  {key:'qtd',label:'Quantidade',required:false,aliases:['qtd','quantidade','qty','quantity','quant','pecas','peças','itens','items']},
+  {key:'val',label:'Valor (R$)',required:false,aliases:['valor','val','value','preco','preço','price','total']},
+  {key:'obs',label:'Observações',required:false,aliases:['obs','observacao','observação','observacoes','observações','notes','notas','info','complemento','comp']},
+  {key:'data',label:'Data',required:false,aliases:['data','date','dia','agendamento']},
+  {key:'janela',label:'Janela',required:false,aliases:['janela','horario','horário','window','periodo','período','turno']}
+];
+
+function onFileImportSelect(e){
+  const f=e.target.files[0];
+  if(!f)return;
+  parseImportFile(f);
+}
+
+function parseImportFile(file){
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(ext==='csv'||ext==='tsv'){
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const txt=e.target.result;
+      const sep=ext==='tsv'?'\t':detectCSVSeparator(txt);
+      const rows=parseCSVText(txt,sep);
+      if(rows.length<2){toast('Arquivo vazio ou sem dados','err');return;}
+      _fileImportCols=rows[0].map(c=>(c||'').toString().trim());
+      _fileImportData=rows.slice(1).map(r=>{
+        const obj={};
+        _fileImportCols.forEach((c,i)=>{obj[c]=r[i]!==undefined?(r[i]||'').toString().trim():'';});
+        return obj;
+      }).filter(r=>Object.values(r).some(v=>v));
+      _fileImportWB=null;
+      showColumnMapping(file.name);
+    };
+    reader.readAsText(file,'UTF-8');
+  }else{
+    // Excel
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{
+        _fileImportWB=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+        loadSheetData(_fileImportWB.SheetNames[0]);
+        showColumnMapping(file.name);
+      }catch(err){
+        toast('Erro ao ler arquivo Excel: '+err.message,'err');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+function detectCSVSeparator(txt){
+  const firstLine=txt.split(/\r?\n/)[0]||'';
+  const semiCount=(firstLine.match(/;/g)||[]).length;
+  const commaCount=(firstLine.match(/,/g)||[]).length;
+  const tabCount=(firstLine.match(/\t/g)||[]).length;
+  if(tabCount>=semiCount&&tabCount>=commaCount)return '\t';
+  if(semiCount>=commaCount)return ';';
+  return ',';
+}
+
+function parseCSVText(txt,sep){
+  const rows=[];let row=[];let cell='';let inQ=false;
+  for(let i=0;i<txt.length;i++){
+    const c=txt[i];
+    if(inQ){
+      if(c==='"'&&txt[i+1]==='"'){cell+='"';i++;}
+      else if(c==='"'){inQ=false;}
+      else{cell+=c;}
+    }else{
+      if(c==='"'){inQ=true;}
+      else if(c===sep){row.push(cell);cell='';}
+      else if(c==='\n'||c==='\r'){
+        if(c==='\r'&&txt[i+1]==='\n')i++;
+        row.push(cell);cell='';
+        if(row.some(v=>v.trim()))rows.push(row);
+        row=[];
+      }else{cell+=c;}
+    }
+  }
+  row.push(cell);
+  if(row.some(v=>v.trim()))rows.push(row);
+  return rows;
+}
+
+function loadSheetData(sheetName){
+  if(!_fileImportWB)return;
+  const ws=_fileImportWB.Sheets[sheetName];
+  const json=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  if(json.length<2){toast('Aba vazia','err');return;}
+  _fileImportCols=json[0].map(c=>(c||'').toString().trim());
+  _fileImportData=json.slice(1).map(r=>{
+    const obj={};
+    _fileImportCols.forEach((c,i)=>{obj[c]=r[i]!==undefined?(r[i]||'').toString().trim():'';});
+    return obj;
+  }).filter(r=>Object.values(r).some(v=>v));
+}
+
+function showColumnMapping(fileName){
+  g('upl-file').style.display='none';
+  g('file-import-map').style.display='block';
+  g('file-import-preview').style.display='none';
+  g('file-import-info').textContent=fileName+' \u2014 '+_fileImportData.length+' linhas encontradas';
+  // Sheet selector for Excel
+  if(_fileImportWB&&_fileImportWB.SheetNames.length>1){
+    g('file-import-sheet-sel').style.display='block';
+    const sel=g('file-import-sheet');
+    sel.innerHTML=_fileImportWB.SheetNames.map(s=>'<option value="'+s+'">'+s+'</option>').join('');
+  }else{
+    g('file-import-sheet-sel').style.display='none';
+  }
+  // Auto-detect column mapping
+  autoDetectColumns();
+  renderColumnMap();
+}
+
+function onSheetChange(){
+  loadSheetData(g('file-import-sheet').value);
+  g('file-import-info').textContent=g('file-import-sheet').value+' \u2014 '+_fileImportData.length+' linhas';
+  autoDetectColumns();
+  renderColumnMap();
+}
+
+function autoDetectColumns(){
+  _fileImportMap={};
+  _FI_FIELDS.forEach(field=>{
+    const match=_fileImportCols.find(col=>{
+      const norm=col.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+      return field.aliases.some(a=>norm===a||norm.includes(a));
+    });
+    if(match)_fileImportMap[field.key]=match;
+  });
+}
+
+function renderColumnMap(){
+  const container=g('file-col-map');
+  const sample=_fileImportData[0]||{};
+  container.innerHTML=_FI_FIELDS.map(field=>{
+    const opts=['<option value="">\u2014 Ignorar \u2014</option>'];
+    _fileImportCols.forEach(col=>{
+      const sel=_fileImportMap[field.key]===col?' selected':'';
+      const preview=sample[col]?(sample[col].toString().substring(0,30)):'';
+      opts.push('<option value="'+col.replace(/"/g,'&quot;')+'"'+sel+'>'+col+(preview?' ('+preview+')':'')+'</option>');
+    });
+    return '<div class="fi-map-row">'+
+      '<span class="fi-col-src">'+(field.required?'\u2731 ':'')+field.label+'</span>'+
+      '<span class="fi-arrow">\u2192</span>'+
+      '<select onchange="onColMapChange(\''+field.key+'\',this.value)">'+opts.join('')+'</select>'+
+    '</div>';
+  }).join('');
+}
+
+function onColMapChange(fieldKey,colName){
+  if(colName)_fileImportMap[fieldKey]=colName;
+  else delete _fileImportMap[fieldKey];
+}
+
+function previewFileImport(){
+  if(!_fileImportMap.nome){toast('Mapeie pelo menos a coluna Nome','err');return;}
+  if(!_fileImportMap.endereco){toast('Mapeie pelo menos a coluna Endere\xE7o','err');return;}
+  // Build preview rows
+  _fileImportPreviewRows=[];
+  const errors=[];
+  _fileImportData.forEach((row,i)=>{
+    const nome=(row[_fileImportMap.nome]||'').trim();
+    const endereco=(row[_fileImportMap.endereco]||'').trim();
+    if(!nome&&!endereco)return; // skip empty
+    const r={
+      _row:i+2,
+      nome:titleCase(nome),
+      endereco:titleCase(endereco),
+      cep:_fileImportMap.cep?(row[_fileImportMap.cep]||'').toString().replace(/\D/g,''):'',
+      tel:_fileImportMap.tel?fmtTel((row[_fileImportMap.tel]||'').toString()):'',
+      tipo:_fileImportMap.tipo?normalizeTipo((row[_fileImportMap.tipo]||'').toString()):['coleta'],
+      qtd:_fileImportMap.qtd?Math.max(0,parseInt(row[_fileImportMap.qtd])||0):0,
+      val:_fileImportMap.val?Math.max(0,parseFloat((row[_fileImportMap.val]||'0').toString().replace(',','.'))||0):0,
+      obs:_fileImportMap.obs?(row[_fileImportMap.obs]||'').toString():'',
+      data:_fileImportMap.data?parseImportDate((row[_fileImportMap.data]||'').toString()):new Date().toISOString().split('T')[0],
+      janela:_fileImportMap.janela?parseJanela((row[_fileImportMap.janela]||'').toString()):'livre',
+      _valid:true,_err:''
+    };
+    // Validate
+    if(!r.nome){r._valid=false;r._err='Nome vazio';}
+    else if(!r.endereco){r._valid=false;r._err='Endere\xE7o vazio';}
+    else if(r.endereco.length<5){r._valid=false;r._err='Endere\xE7o muito curto';}
+    if(!r._valid)errors.push('Linha '+(i+2)+': '+r._err);
+    _fileImportPreviewRows.push(r);
+  });
+  if(!_fileImportPreviewRows.length){toast('Nenhum dado v\xE1lido encontrado','err');return;}
+  // Show preview
+  g('file-import-map').style.display='none';
+  g('file-import-preview').style.display='block';
+  const validCount=_fileImportPreviewRows.filter(r=>r._valid).length;
+  const errCount=_fileImportPreviewRows.length-validCount;
+  g('file-preview-count').textContent=validCount+' v\xE1lidos'+(errCount?' \u2022 '+errCount+' com problemas':'');
+  g('file-import-count-btn').textContent='('+validCount+')';
+  // Render table
+  let html='<table class="fi-table"><thead><tr><th>#</th><th>Nome</th><th>Endere\xE7o</th><th>Tel</th><th>Tipo</th><th>Qtd</th><th>Valor</th>';
+  if(_fileImportMap.obs)html+='<th>Obs</th>';
+  html+='<th></th></tr></thead><tbody>';
+  _fileImportPreviewRows.forEach((r,i)=>{
+    const cls=r._valid?'':'fi-err';
+    html+='<tr class="'+cls+'"><td>'+(i+1)+'</td><td>'+esc(r.nome)+'</td><td>'+esc(r.endereco)+'</td><td>'+esc(r.tel)+'</td><td>'+esc(Array.isArray(r.tipo)?r.tipo.join(', '):r.tipo)+'</td><td>'+r.qtd+'</td><td>'+fmtBRL(r.val)+'</td>';
+    if(_fileImportMap.obs)html+='<td>'+esc(r.obs||'')+'</td>';
+    html+='<td>'+(r._valid?'\u2705':'\u274C '+esc(r._err))+'</td></tr>';
+  });
+  html+='</tbody></table>';
+  g('file-preview-table').innerHTML=html;
+  // Errors box
+  if(errors.length){
+    g('file-preview-errors').style.display='block';
+    g('file-preview-errors').innerHTML='<div class="ab w" style="font-size:12px"><strong>'+errors.length+' linhas com problemas</strong> (ser\xE3o ignoradas na importa\xE7\xE3o):<br>'+errors.slice(0,5).map(e=>esc(e)).join('<br>')+(errors.length>5?'<br>...e mais '+(errors.length-5):'')+'</div>';
+  }else{
+    g('file-preview-errors').style.display='none';
+  }
+}
+
+function parseImportDate(str){
+  if(!str)return new Date().toISOString().split('T')[0];
+  // Try DD/MM/YYYY
+  const br=/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/.exec(str.trim());
+  if(br){
+    let y=parseInt(br[3]);if(y<100)y+=2000;
+    return y+'-'+br[2].padStart(2,'0')+'-'+br[1].padStart(2,'0');
+  }
+  // Try YYYY-MM-DD
+  const iso=/^(\d{4})-(\d{2})-(\d{2})/.exec(str.trim());
+  if(iso)return iso[1]+'-'+iso[2]+'-'+iso[3];
+  // Excel serial
+  const num=parseFloat(str);
+  if(!isNaN(num)&&num>40000&&num<60000){
+    const d=new Date((num-25569)*86400*1000);
+    return d.toISOString().split('T')[0];
+  }
+  return new Date().toISOString().split('T')[0];
+}
+
+function parseJanela(str){
+  const s=str.toLowerCase().trim();
+  if(s.includes('manh'))return 'manha';
+  if(s.includes('tard'))return 'tarde';
+  if(/\d{1,2}:\d{2}/.test(s))return 'custom';
+  return 'livre';
+}
+
+function backToMapping(){
+  g('file-import-preview').style.display='none';
+  g('file-import-map').style.display='block';
+}
+
+function resetFileImport(){
+  _fileImportWB=null;_fileImportData=[];_fileImportCols=[];_fileImportMap={};_fileImportPreviewRows=[];
+  g('upl-file').style.display='';
+  g('file-import-map').style.display='none';
+  g('file-import-preview').style.display='none';
+  g('file-import-in').value='';
+}
+
+function executeFileImport(){
+  const valid=_fileImportPreviewRows.filter(r=>r._valid);
+  if(!valid.length){toast('Nenhum dado v\xE1lido para importar','err');return;}
+  const today=new Date().toISOString().split('T')[0];
+  let count=0;
+  valid.forEach(r=>{
+    clients.push({
+      id:Date.now()+Math.random(),
+      nome:r.nome,
+      endereco:r.endereco,
+      cep:r.cep||'',
+      complemento:'',
+      tel:r.tel||'',
+      tipo:Array.isArray(r.tipo)?r.tipo:normalizeTipo(r.tipo),
+      qtd:r.qtd||0,
+      val:r.val||0,
+      valTipo:r.val>0?'normal':'medir',
+      data:r.data||today,
+      janela:r.janela||'livre',
+      hi:'',hf:'',
+      obs:r.obs||'',
+      estT:null,conflict:false,cmsg:'',lat:null,lng:null
+    });
+    count++;
+  });
+  order=clients.map((_,i)=>i);
+  renderC();updStats();updBtns();
+  toast(count+t('t.imported'),'ok');
+  resetFileImport();
+}
+
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// Drag and drop for file import area
+(function initFileImportDnD(){
+  document.addEventListener('DOMContentLoaded',()=>{
+    const upl=g('upl-file');
+    if(!upl)return;
+    upl.addEventListener('dragover',e=>{e.preventDefault();upl.classList.add('drag');});
+    upl.addEventListener('dragleave',()=>{upl.classList.remove('drag');});
+    upl.addEventListener('drop',e=>{
+      e.preventDefault();upl.classList.remove('drag');
+      if(e.dataTransfer.files[0])parseImportFile(e.dataTransfer.files[0]);
+    });
+  });
+})();
+// ═══════════════ END MULTI-IMPORT ═══════════════
+
 async function extractImg(){
   if(!cfg.akey){toast('Configure a chave Anthropic','err');return;}
   if(!imgData)return;
@@ -2889,7 +3426,7 @@ async function extractImg(){
     if(ext.hf)g('f-hf').value=ext.hf;
     g('ai-badge').style.display='inline-flex';
     if(ext.endereco)schedGeo();
-    toast('Dados extraidos!','ok');
+    toast(t('t.extracted'),'ok');
   }catch(e){toast('Erro na extracao. Verifique a chave Anthropic.','err');}
   finally{g('ext-btn').disabled=false;g('espin').style.display='none';g('elbl').textContent='\u2728 Extrair com IA';}
 }
@@ -3157,7 +3694,7 @@ function connectTrelloOAuth(){
           popup.close();
           clearInterval(checkPopup);
           checkTrelloConnection();
-          toast('Trello conectado com sucesso!','ok');
+          toast(t('t.trelloconn'),'ok');
         }
       }
     }catch(e){/* cross-origin — esperado enquanto ainda está no Trello */}
@@ -3198,11 +3735,11 @@ window.addEventListener('load',()=>{setTimeout(checkTrelloConnection,500);});
   if(hash.includes('token=')){
     const token=hash.match(/token=([^&]+)/)?.[1];
     if(token){
-      const c=JSON.parse(localStorage.getItem('rota_cfg')||'{}');
+      const c=safeJsonParse('rota_cfg',{});
       c.ttoken=token;
       localStorage.setItem('rota_cfg',JSON.stringify(c));
       window.location.hash='';
-      toast('Trello conectado com sucesso!','ok');
+      toast(t('t.trelloconn'),'ok');
     }
   }
 })();
@@ -3214,7 +3751,7 @@ function saveTrelloSelection(){
   }
 }
 function loadTrelloSelection(){
-  const saved=JSON.parse(localStorage.getItem('rota_trello')||'null');
+  const saved=safeJsonParse('rota_trello',null);
   if(saved?.board&&saved?.list){
     selBoard=saved.board;selList=saved.list;
     // v4.6.5: Restaurar data selecionada (se existir e não for futura demais)
@@ -3336,10 +3873,10 @@ function showConfirm(title,msg,onOk,onCancel,okLabel){
 }
 function addClient(){
   const nome=titleCase(v('f-nome')),end=titleCase(v('f-end')),tipos=getFormTags('f-tipo');
-  if(!nome){toast('Informe o nome','err');shakeField('f-nome');return;}
-  if(!end){toast('Informe o endere\xE7o','err');shakeField('f-end');return;}
-  if(end.length<10||!/\d/.test(end)){toast('Endere\xE7o parece inv\xE1lido (inclua rua e n\xFAmero)','err');return;}
-  if(!tipos.length){toast('Selecione pelo menos uma tag','err');return;}
+  if(!nome){toast(t('e.name'),'err');shakeField('f-nome');return;}
+  if(!end){toast(t('e.addr'),'err');shakeField('f-end');return;}
+  if(end.length<10||!/\d/.test(end)){toast(t('e.addrinv'),'err');return;}
+  if(!tipos.length){toast(t('e.tag'),'err');return;}
   const qtd=parseInt(v('f-qtd'))||0;
   if(qtd<0){toast('Quantidade n\xe3o pode ser negativa','err');return;}
   const valTipo=g('f-valtipo')?.value||'normal';
@@ -3360,7 +3897,7 @@ function removeC(id){
   const c=clients.find(x=>x.id===id);if(!c)return;
   showConfirm('Excluir cliente?','Remover <strong>'+c.nome+'</strong> da rota?',()=>{
     clients=clients.filter(x=>x.id!==id);order=clients.map((_,i)=>i);renderC();updStats();updBtns();if(!clients.length)resetMap();
-    toast('Cliente removido','');
+    toast(t('t.removed'),'');
   });
 }
 // v4.6.5: Limpar todos os clientes da rota de uma vez
@@ -3774,7 +4311,7 @@ async function _rebuildCachedMatrix(){
     const baseAddr=cfg.base;
     if(!baseAddr)return;
     const geoResp=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(baseAddr+', Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
-    if(geoResp.status!=='OK'||!geoResp.results[0])return;
+    if(geoResp.status!=='OK'||!geoResp.results[0]?.geometry?.location)return; // v4.7.0: null-safe
     const baseLoc=geoResp.results[0].geometry.location;
     const baseCoords={lat:baseLoc.lat,lng:baseLoc.lng};
     let retCoords=baseCoords;
@@ -4150,6 +4687,7 @@ async function multiStrategyOptimize(geocoded,geocodedIdx,baseAddr,retAddr){
     const res=await new Promise((ok,err)=>new google.maps.DirectionsService().route({
       origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:true,region:'BR'
     },(r,s)=>s==='OK'?ok(r):err(new Error(s))));
+    if(!res?.routes?.[0]?.waypoint_order)throw new Error('No routes'); // v4.7.0
     return res.routes[0].waypoint_order;
   }});
 
@@ -4202,6 +4740,7 @@ async function multiStrategyOptimize(geocoded,geocodedIdx,baseAddr,retAddr){
     const res=await new Promise((ok,err)=>new google.maps.DirectionsService().route({
       origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:true,region:'BR'
     },(r,s)=>s==='OK'?ok(r):err(new Error(s))));
+    if(!res?.routes?.[0]?.waypoint_order)throw new Error('No routes'); // v4.7.0
     let best=[...res.routes[0].waypoint_order];
     // 2-opt swaps
     let improved=true;let iter=0;
@@ -4906,7 +5445,7 @@ async function calcRoute(){
     const urgMsg=urgCount?' ('+urgCount+' com janela de hor\xe1rio priorit\xe1ria)':'';
     renderC();updStats();
     saveHist();
-    toast('Rota otimizada gerada!'+urgMsg,'ok');
+    toast(t('t.optimized')+urgMsg,'ok');
   }catch(e){toast('Erro ao calcular rota: '+e.message,'err');console.error(e);}
   finally{g('rp').classList.remove('on');g('route-btn').disabled=!clients.length;}
 }
@@ -5021,7 +5560,7 @@ async function genImage(){
     link.download='roteiro-'+new Date().toISOString().split('T')[0]+'.png';
     link.href=canvas.toDataURL('image/png');
     link.click();
-    toast('Imagem gerada!','ok');
+    toast(t('t.imggen'),'ok');
     saveHist();
   }catch(e){toast('Erro ao gerar imagem: '+e.message,'err');console.error(e);}
   finally{
@@ -5114,7 +5653,7 @@ function genPDF_unused(){
   saveHist();toast('PDF gerado!','ok');
 }
 
-function getHist(){return JSON.parse(localStorage.getItem('rota_hist')||'[]');}
+function getHist(){return safeJsonParse('rota_hist',[]);}
 function saveHist(){
   const hist=getHist();const today=new Date().toISOString().split('T')[0];
   const entry={date:today,savedAt:new Date().toISOString(),clients:JSON.parse(JSON.stringify(clients)),order:[...order]};
@@ -5783,7 +6322,7 @@ function removeCFromSidebar(id){
     renderC();updStats();updBtns();
     if(mapIsFullscreen)updateMapSidebar();
     if(!clients.length)resetMap();
-    toast('Cliente removido','');
+    toast(t('t.removed'),'');
   });
 }
 
@@ -5897,7 +6436,7 @@ function showSkeletonLoading(containerId,count){
 
 
 // ====== v4.5.1: ROUTE LEARNING SYSTEM ======
-let _routeLearnings=JSON.parse(localStorage.getItem('rota_learnings')||'[]');
+let _routeLearnings=safeJsonParse('rota_learnings',[]);
 function saveRouteLearning(beforeOrder,afterOrder,improvement){
   // Save the pattern: which reordering improved the route
   const pattern={timestamp:Date.now(),before:beforeOrder.slice(0,8),after:afterOrder.slice(0,8),
@@ -5973,7 +6512,7 @@ function rerenderHeatmap(){
 <script>
 (function(){
   try{
-    var c=JSON.parse(localStorage.getItem('rota_cfg')||'{}');
+    var c=safeJsonParse('rota_cfg',{});
     var k=c.gkey||'';
     if(k){
       var s=document.createElement('script');
@@ -5984,6 +6523,6 @@ function rerenderHeatmap(){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.6.9</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.7.0</div>
 </body>
 </html>
