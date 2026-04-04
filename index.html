@@ -4,6 +4,8 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v5.0.0 — 04/04/2026 — FEAT: Sistema de Contas + Login + Google OAuth + Sync       ║
+║  v4.9.3 — 04/04/2026 — FIX: cards mapa = reflexo exato + modais responsivos 375px ║
 ║  v4.9.2 — 04/04/2026 — FIX: auto-restore silencioso + donuts histórico +          ║
 ║         gestor polling saveHist + null-safety buildChartsHTML                     ║
 ║  v4.9.1 — 04/04/2026 — FIX: geocoding cidade no sufixo + bairro solto no parser  ║
@@ -1271,6 +1273,9 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
 
 /* ── 480px and below: extra refinements for small phones ── */
 @media(max-width:480px){
+  /* v4.9.3: Modais responsivos — nunca estouram em 375px */
+  .modal{max-width:calc(100vw - 32px)!important}
+  .completion-card{max-width:calc(100vw - 32px)!important}
   .logo-i{width:26px;height:26px;border-radius:6px;font-size:13px}
   .theme-toggle{width:34px;height:18px;border-radius:9px}
   .theme-toggle .knob{width:14px;height:14px}
@@ -1323,11 +1328,81 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
 
 /* ── Prevent horizontal scroll globally ── */
 html,body{overflow-x:hidden;max-width:100vw}
+
+/* v5.0.0: AUTH */
+.auth-screen{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--bg);overflow-y:auto;padding:20px}
+.auth-container{width:100%;max-width:400px;padding:0 16px}
+.auth-logo{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:32px}
+.auth-logo .logo-i{width:40px;height:40px;font-size:18px;border-radius:10px}
+.auth-logo span{font-size:20px;font-weight:700;color:var(--tx);letter-spacing:-.02em}
+.auth-card{background:var(--bg);border:1px solid var(--bd);border-radius:16px;padding:28px 24px;box-shadow:0 8px 32px rgba(28,31,59,.08)}
+body.dark .auth-card{box-shadow:0 8px 32px rgba(0,0,0,.3)}
+.auth-card h2{font-size:20px;font-weight:700;color:var(--tx);margin-bottom:20px;text-align:center}
+.auth-social{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:11px 16px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;margin-bottom:10px;font-family:inherit}
+.auth-social:hover{background:var(--sf);border-color:var(--pu)}
+.auth-social svg{width:18px;height:18px;flex-shrink:0}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:var(--mu);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--bd)}
+.auth-input{width:100%;padding:11px 14px;border:1px solid var(--bd);border-radius:10px;font-size:14px;color:var(--tx);background:var(--bg);outline:none;transition:border-color .2s;margin-bottom:10px;box-sizing:border-box;font-family:inherit}
+.auth-input:focus{border-color:var(--pu);box-shadow:0 0 0 3px rgba(108,92,231,.1)}
+.auth-input::placeholder{color:var(--mu);opacity:.6}
+.auth-btn{width:100%;padding:12px 16px;border-radius:10px;border:none;background:var(--pu);color:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;font-family:inherit;margin-top:4px}
+.auth-btn:hover{opacity:.9;transform:translateY(-1px)}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.auth-footer{text-align:center;margin-top:16px;font-size:13px;color:var(--mu)}
+.auth-footer a{color:var(--pu);font-weight:600;cursor:pointer;text-decoration:none}
+.auth-error{background:var(--rl);color:var(--rd);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:500;margin-bottom:12px;display:none}
+.auth-skip{display:block;text-align:center;margin-top:20px;font-size:12px;color:var(--mu);cursor:pointer;text-decoration:none;opacity:.7}
+.auth-skip:hover{opacity:1}
+.auth-account{display:flex;align-items:center;gap:14px;padding:14px 0}
+.auth-avatar{width:40px;height:40px;border-radius:50%;background:var(--pu);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0}
+.auth-user-info{flex:1;min-width:0}
+.auth-user-name{font-weight:700;font-size:14px;color:var(--tx)}
+.auth-user-email{font-size:12px;color:var(--mu)}
+.auth-provider-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:var(--sf);color:var(--mu)}
 </style>
 </head>
 <body>
 <!-- v4.8.7: Aplica dark ao body IMEDIATAMENTE (complementa o script do head) -->
 <script>if(document.documentElement.classList.contains('dark'))document.body.classList.add('dark');</script>
+
+<!-- v5.0.0: AUTH SCREEN -->
+<div id="auth-screen" class="auth-screen" style="display:none">
+<div class="auth-container">
+<div class="auth-logo"><div class="logo-i"><span class="mot-ico" style="width:18px;height:18px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span></div><span>Roteiro de Coleta</span></div>
+<div id="auth-login-form" class="auth-card">
+<h2>Entrar</h2><div id="auth-login-error" class="auth-error"></div>
+<button class="auth-social google" onclick="_authGoogle()"><svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Entrar com Google</button>
+<button class="auth-social facebook" onclick="_authFacebook()"><svg viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> Entrar com Facebook</button>
+<div class="auth-divider"><span>ou</span></div>
+<input class="auth-input" type="email" id="auth-email" placeholder="Email" autocomplete="email" onkeydown="if(event.key==='Enter')document.getElementById('auth-pass').focus()"/>
+<input class="auth-input" type="password" id="auth-pass" placeholder="Senha" autocomplete="current-password" onkeydown="if(event.key==='Enter')_authLoginSubmit()"/>
+<button class="auth-btn" id="auth-login-btn" onclick="_authLoginSubmit()">Entrar</button>
+<div class="auth-footer"><a onclick="_authForgot()">Esqueci minha senha</a></div>
+<div class="auth-footer" style="margin-top:10px">Novo por aqui? <a onclick="_authShowRegister()">Criar conta</a></div>
+<a class="auth-skip" onclick="_authSkip()">Continuar sem conta</a>
+</div>
+<div id="auth-register-form" class="auth-card" style="display:none">
+<h2>Criar conta</h2><div id="auth-reg-error" class="auth-error"></div>
+<button class="auth-social google" onclick="_authGoogle()"><svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Criar com Google</button>
+<div class="auth-divider"><span>ou</span></div>
+<input class="auth-input" type="text" id="auth-reg-name" placeholder="Nome completo" autocomplete="name"/>
+<input class="auth-input" type="email" id="auth-reg-email" placeholder="Email" autocomplete="email"/>
+<input class="auth-input" type="password" id="auth-reg-pass" placeholder="Senha (min. 8 caracteres)" autocomplete="new-password"/>
+<input class="auth-input" type="password" id="auth-reg-pass2" placeholder="Confirmar senha" autocomplete="new-password" onkeydown="if(event.key==='Enter')_authRegisterSubmit()"/>
+<button class="auth-btn" id="auth-reg-btn" onclick="_authRegisterSubmit()">Criar conta</button>
+<div class="auth-footer" style="margin-top:12px">Ja tem conta? <a onclick="_authShowLogin()">Entrar</a></div>
+<a class="auth-skip" onclick="_authSkip()">Continuar sem conta</a>
+</div>
+<div id="auth-forgot-form" class="auth-card" style="display:none">
+<h2>Recuperar senha</h2><div id="auth-forgot-error" class="auth-error"></div>
+<p style="font-size:13px;color:var(--mu);margin-bottom:14px;text-align:center">Digite seu email e enviaremos um link para redefinir sua senha.</p>
+<input class="auth-input" type="email" id="auth-forgot-email" placeholder="Email" autocomplete="email" onkeydown="if(event.key==='Enter')_authForgotSubmit()"/>
+<button class="auth-btn" onclick="_authForgotSubmit()">Enviar link</button>
+<div class="auth-footer" style="margin-top:12px"><a onclick="_authShowLogin()">Voltar ao login</a></div>
+</div>
+</div>
+</div>
 
 <nav>
   <div class="logo" onclick="goPage('rota',document.querySelectorAll('.ntab')[0])" style="cursor:pointer"><div class="logo-i"><span class="mot-ico" style="width:15px;height:15px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span></div><span>Roteiro de Coleta</span></div>
@@ -1715,6 +1790,13 @@ html,body{overflow-x:hidden;max-width:100vw}
           <div class="inp-wrap"><input type="password" id="cfg-gkey" placeholder="Chave Google Maps"/><button class="eye-btn" onclick="toggleEye('cfg-gkey')"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span></button></div></div>
       </div>
       
+    </div>
+    <!-- v5.0.0: Conta -->
+    <div class="card" id="cfg-account-card" style="display:none">
+      <p class="ct">Conta</p>
+      <div class="auth-account"><div class="auth-avatar" id="cfg-avatar">?</div><div class="auth-user-info"><div class="auth-user-name" id="cfg-user-name">---</div><div class="auth-user-email" id="cfg-user-email">---</div></div></div>
+      <div id="cfg-auth-providers" style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px"></div>
+      <button class="btn bo bsm" style="width:100%;justify-content:center;color:var(--rd);border-color:rgba(226,68,92,.25)" onclick="_authLogout()">Sair da conta</button>
     </div>
     <!-- v4.3.3: Tags configur\xe1veis -->
     <div class="card">
@@ -3227,32 +3309,96 @@ function initCustomSelects(){
     document.querySelectorAll('.csel-dropdown.open').forEach(d=>{d.classList.remove('open');d.previousElementSibling.classList.remove('open');});
   });
 }
-document.addEventListener('DOMContentLoaded',()=>{
-  const now=new Date();
-  const dateStr=now.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+/* ══════════════════════════════════════════════════════════════
+   v5.0.0: SISTEMA DE CONTAS + AUTH + SYNC
+   ══════════════════════════════════════════════════════════════ */
+let _authUser=null,_authToken=null;
+const _AUTH_KEY='rota_auth';
+
+function _authGetSession(){try{const r=localStorage.getItem(_AUTH_KEY);if(!r)return null;const d=JSON.parse(r);if(!d||!d.token||!d.user||!d.user.id)return null;if(d.expiresAt&&Date.now()>d.expiresAt){localStorage.removeItem(_AUTH_KEY);return null;}return d;}catch(e){return null;}}
+function _authSaveSession(u,t){_authUser=u;_authToken=t;localStorage.setItem(_AUTH_KEY,JSON.stringify({user:u,token:t,expiresAt:Date.now()+(30*86400000)}));_authUpdateConfigUI();}
+function _authClearSession(){_authUser=null;_authToken=null;localStorage.removeItem(_AUTH_KEY);_authUpdateConfigUI();}
+function _authShowScreen(){document.getElementById('auth-screen').style.display='flex';document.querySelector('nav').style.display='none';document.querySelectorAll('.page').forEach(p=>p.style.display='none');}
+function _authHideScreen(){document.getElementById('auth-screen').style.display='none';document.querySelector('nav').style.display='';}
+function _authShowLogin(){document.getElementById('auth-login-form').style.display='';document.getElementById('auth-register-form').style.display='none';document.getElementById('auth-forgot-form').style.display='none';const e=document.getElementById('auth-login-error');if(e)e.style.display='none';}
+function _authShowRegister(){document.getElementById('auth-login-form').style.display='none';document.getElementById('auth-register-form').style.display='';document.getElementById('auth-forgot-form').style.display='none';const e=document.getElementById('auth-reg-error');if(e)e.style.display='none';}
+function _authForgot(){document.getElementById('auth-login-form').style.display='none';document.getElementById('auth-register-form').style.display='none';document.getElementById('auth-forgot-form').style.display='';const em=document.getElementById('auth-email').value;if(em)document.getElementById('auth-forgot-email').value=em;}
+function _authShowError(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block';}
+function _authSkip(){localStorage.setItem('rota_auth_skipped','1');_authHideScreen();_initApp();}
+
+async function _authLoginSubmit(){
+  const email=document.getElementById('auth-email').value.trim().toLowerCase(),pass=document.getElementById('auth-pass').value;
+  if(!email||!email.includes('@')){_authShowError('auth-login-error','Digite um email valido');return;}
+  if(!pass||pass.length<6){_authShowError('auth-login-error','Senha deve ter no minimo 6 caracteres');return;}
+  const btn=document.getElementById('auth-login-btn');btn.disabled=true;btn.textContent='Entrando...';
+  try{const res=await fetch(WORKER_URL+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});const data=await res.json();
+  if(data.ok&&data.token){_authSaveSession(data.user,data.token);_authHideScreen();await _syncPull();_initApp();toast('Bem-vindo de volta!','ok');}
+  else _authShowError('auth-login-error',data.error||'Email ou senha incorretos');
+  }catch(e){_authShowError('auth-login-error','Sem conexao. Tente novamente.');}finally{btn.disabled=false;btn.textContent='Entrar';}
+}
+async function _authRegisterSubmit(){
+  const name=document.getElementById('auth-reg-name').value.trim(),email=document.getElementById('auth-reg-email').value.trim().toLowerCase(),pass=document.getElementById('auth-reg-pass').value,pass2=document.getElementById('auth-reg-pass2').value;
+  if(!name||name.length<2){_authShowError('auth-reg-error','Digite seu nome');return;}
+  if(!email||!email.includes('@')){_authShowError('auth-reg-error','Digite um email valido');return;}
+  if(!pass||pass.length<8){_authShowError('auth-reg-error','Senha deve ter no minimo 8 caracteres');return;}
+  if(pass!==pass2){_authShowError('auth-reg-error','As senhas nao coincidem');return;}
+  const btn=document.getElementById('auth-reg-btn');btn.disabled=true;btn.textContent='Criando conta...';
+  try{const res=await fetch(WORKER_URL+'/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password:pass})});const data=await res.json();
+  if(data.ok&&data.token){_authSaveSession(data.user,data.token);_authHideScreen();await _syncPush();_initApp();toast('Conta criada com sucesso!','ok');}
+  else _authShowError('auth-reg-error',data.error||'Erro ao criar conta');
+  }catch(e){_authShowError('auth-reg-error','Sem conexao. Tente novamente.');}finally{btn.disabled=false;btn.textContent='Criar conta';}
+}
+async function _authForgotSubmit(){
+  const email=document.getElementById('auth-forgot-email').value.trim().toLowerCase();
+  if(!email||!email.includes('@')){_authShowError('auth-forgot-error','Digite um email valido');return;}
+  try{await fetch(WORKER_URL+'/api/auth/forgot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+  document.getElementById('auth-forgot-form').innerHTML='<h2>Email enviado</h2><p style="text-align:center;color:var(--mu);font-size:13px;margin-bottom:16px">Se existir uma conta com este email, voce recebera um link para redefinir a senha.</p><div class="auth-footer"><a onclick="_authShowLogin()">Voltar ao login</a></div>';
+  }catch(e){_authShowError('auth-forgot-error','Sem conexao. Tente novamente.');}
+}
+
+// Google OAuth
+function _authGoogle(){if(!window.google?.accounts?.id){const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.onload=()=>_initGoogleAuth();s.onerror=()=>_authShowError('auth-login-error','Erro ao carregar Google.');document.head.appendChild(s);}else _initGoogleAuth();}
+function _initGoogleAuth(){const cid=localStorage.getItem('rota_google_client_id')||'';if(!cid){_authShowError('auth-login-error','Google OAuth nao configurado. Use email/senha.');return;}google.accounts.id.initialize({client_id:cid,callback:_handleGoogleCred,auto_select:false});google.accounts.id.prompt();}
+async function _handleGoogleCred(r){if(!r.credential)return;try{const res=await fetch(WORKER_URL+'/api/auth/google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:r.credential})});const d=await res.json();if(d.ok&&d.token){_authSaveSession(d.user,d.token);_authHideScreen();if(d.isNew)await _syncPush();else await _syncPull();_initApp();toast(d.isNew?'Conta criada com Google!':'Bem-vindo de volta!','ok');}else _authShowError('auth-login-error',d.error||'Erro com Google');}catch(e){_authShowError('auth-login-error','Sem conexao.');}}
+
+// Facebook OAuth
+function _authFacebook(){const aid=localStorage.getItem('rota_fb_app_id')||'';if(!aid){_authShowError('auth-login-error','Facebook Login nao configurado. Use email/senha.');return;}if(!window.FB){window.fbAsyncInit=function(){FB.init({appId:aid,cookie:true,xfbml:false,version:'v19.0'});_doFBLogin();};const s=document.createElement('script');s.src='https://connect.facebook.net/pt_BR/sdk.js';s.onerror=()=>_authShowError('auth-login-error','Erro ao carregar Facebook.');document.head.appendChild(s);}else _doFBLogin();}
+function _doFBLogin(){FB.login(async function(r){if(!r.authResponse)return;try{const res=await fetch(WORKER_URL+'/api/auth/facebook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accessToken:r.authResponse.accessToken})});const d=await res.json();if(d.ok&&d.token){_authSaveSession(d.user,d.token);_authHideScreen();if(d.isNew)await _syncPush();else await _syncPull();_initApp();toast(d.isNew?'Conta criada com Facebook!':'Bem-vindo de volta!','ok');}else _authShowError('auth-login-error',d.error||'Erro com Facebook');}catch(e){_authShowError('auth-login-error','Sem conexao.');}},{scope:'email,public_profile'});}
+
+function _authLogout(){showConfirm('Sair da conta','Tem certeza que deseja sair? Seus dados locais serao mantidos.',()=>{_authClearSession();toast('Voce saiu da conta','ok');});}
+
+function _authUpdateConfigUI(){const card=document.getElementById('cfg-account-card');if(!card)return;if(_authUser){card.style.display='';document.getElementById('cfg-user-name').textContent=_authUser.name||'Usuario';document.getElementById('cfg-user-email').textContent=_authUser.email||'';document.getElementById('cfg-avatar').textContent=(_authUser.name||'U').charAt(0).toUpperCase();document.getElementById('cfg-auth-providers').innerHTML=_authUser.provider==='google'?'<span class="auth-provider-badge">Google</span>':_authUser.provider==='facebook'?'<span class="auth-provider-badge">Facebook</span>':'<span class="auth-provider-badge">Email</span>';}else card.style.display='none';}
+
+// Sync
+let _syncTimer=null;
+function _authHeaders(){return _authToken?{'Authorization':'Bearer '+_authToken,'Content-Type':'application/json'}:{'Content-Type':'application/json'};}
+async function _syncPull(){if(!_authToken)return;try{const res=await fetch(WORKER_URL+'/api/user/sync',{headers:_authHeaders()});if(!res.ok)return;const data=await res.json();if(!data.ok||!data.data)return;const d=data.data;if(d.cfg){Object.keys(d.cfg).forEach(k=>{if(d.cfg[k]!==undefined)cfg[k]=d.cfg[k];});localStorage.setItem('rota_cfg',JSON.stringify(cfg));loadCfg();}if(d.tags&&Array.isArray(d.tags)){localStorage.setItem('rota_tags',JSON.stringify(d.tags));renderTagsConfig();updateTagSelects();}if(d.hist&&Array.isArray(d.hist)){const local=getHist();const cd=new Set(d.hist.map(h=>h.date));const merged=[...d.hist,...local.filter(h=>!cd.has(h.date))].sort((a,b)=>b.date.localeCompare(a.date));try{localStorage.setItem('rota_hist',JSON.stringify(merged.slice(0,90)));}catch(e){}renderHist();}console.log('[SYNC] Pull completo');}catch(e){console.warn('[SYNC] Pull falhou:',e.message);}}
+async function _syncPush(){if(!_authToken)return;try{await fetch(WORKER_URL+'/api/user/sync',{method:'POST',headers:_authHeaders(),body:JSON.stringify({cfg,tags:safeJsonParse('rota_tags',[]),hist:getHist().slice(0,30),lang:_lang||'pt',theme:localStorage.getItem('rota_theme')||'light'})});console.log('[SYNC] Push completo');}catch(e){console.warn('[SYNC] Push falhou:',e.message);}}
+function _syncPushDebounced(){if(!_authToken)return;clearTimeout(_syncTimer);_syncTimer=setTimeout(_syncPush,5000);}
+
+let _appInitialized=false;
+function _initApp(){
+  if(_appInitialized)return;_appInitialized=true;
+  const now=new Date();const dateStr=now.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
   document.getElementById('nav-date').textContent=dateStr;
-  // v4.7.9: Populate mobile date banner (visible when nav-r hidden)
   const mobDate=document.getElementById('mobile-date');if(mobDate)mobDate.textContent=dateStr;
   document.getElementById('td').value=now.toISOString().split('T')[0];
   document.getElementById('f-data').value=now.toISOString().split('T')[0];
   loadCfg();renderHist();loadTrelloSelection();
-  // v4.9.2: Auto-restore silencioso — sem modal, sem perguntar (decisão Philip)
   if(clients.length===0&&!_isMotoristaMode)restoreActiveRoute();
-  // v4.6.3: Restore active tab from previous session (não no modo motorista)
   const savedTab=localStorage.getItem('rota_active_tab');
-  if(savedTab&&savedTab!=='rota'&&!_isMotoristaMode){
-    const tabMap={hist:1,dash:2,motor:3,cfg:4};
-    const tabIdx=tabMap[savedTab];
-    const ntabs=document.querySelectorAll('.ntab');
-    if(tabIdx!==undefined&&ntabs[tabIdx]){goPage(savedTab,ntabs[tabIdx]);}
-  }
-  // v4.3.9: Pre-load bairros data in background
+  if(savedTab&&savedTab!=='rota'&&!_isMotoristaMode){const tm={hist:1,dash:2,motor:3,cfg:4};const ti=tm[savedTab];const nt=document.querySelectorAll('.ntab');if(ti!==undefined&&nt[ti])goPage(savedTab,nt[ti]);}
   setTimeout(()=>{preloadDashData();},2000);
-  // v4.3.3: Inicializar tags configur\xe1veis e atualizar selects
   renderTagsConfig();updateTagSelects();initPreferredTab();initCustomSelects();
-  // v4.7.0: Apply i18n + language toggle active state
   applyI18n();updateLangBtns();
   if(!cfg.tkey||!cfg.ttoken){const el=g('trello-nocred');if(el)el.style.display='block';const s1=g('trello-step1');if(s1)s1.style.display='none';}
+  _authUpdateConfigUI();
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  // v5.0.0: Auth gate
+  if(_isMotoristaMode){_initApp();}
+  else{const s=_authGetSession();if(s){_authUser=s.user;_authToken=s.token;_authHideScreen();_initApp();_syncPull().catch(()=>{});}else if(localStorage.getItem('rota_auth_skipped')==='1'){_initApp();}else{_authShowScreen();}}
   document.querySelectorAll('.mbg').forEach(m=>{let downOnBg=false;m.addEventListener('mousedown',e=>{downOnBg=e.target===m;});m.addEventListener('click',e=>{if(e.target===m&&downOnBg)m.classList.remove('on');downOnBg=false;});});
   document.addEventListener('paste',e=>{
     const img=Array.from(e.clipboardData.items).find(i=>i.type.startsWith('image/'));
@@ -3395,6 +3541,7 @@ function saveCfg(){
   localStorage.setItem('rota_cfg',JSON.stringify(cfg));
   // v4.3.3: Salvar tags configuráveis
   _saveTags();
+  _syncPushDebounced();
   // v4.3.1: Resetar âncora de geocodificação quando muda endereço base
   _geoAnchor=null;
   // v4.3.7: Feedback visual — esconde barra 3s após salvar
@@ -5647,13 +5794,15 @@ function updateMapSidebar(){
   html+='<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:8px">'+t('map.stops')+'</div>';
   // v4.3.5: Cart\xf5es com multi-tags + drag and drop
   html+='<div id="ms-client-list">';
+  // v4.9.3: Sidebar card = reflexo EXATO do card da tela inicial (decisão Philip)
   order.forEach((idx,stop)=>{
     const c=clients[idx];
     const isDone=!!c._motDone;
     const tipos=normalizeTipo(c.tipo);
     const primaryColor=tipos.length?_getTagColor(tipos[0]):'rgba(108,92,231,.18)';
     const bw=tagBorderWidth(tipos);
-    const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';
+    const vd=c.valTipo==='medir'?t('form.medir'):c.valTipo==='pago'?t('form.pago'):c.val?'R$ '+fmtBRL(c.val):'';
+    const jl={livre:'',manha:t('card.until_noon'),tarde:t('card.after_noon'),custom:c.hi+'\u2013'+c.hf}[c.janela]||'';
     const tagChips=renderTagChips(tipos);
     const borderStyle=tipos.length<=1?'border-left:3px solid '+primaryColor:'border-left:none';
     html+='<div class="ms-client'+(isDone?' done':'')+'" data-msstop="'+stop+'" data-clientid="'+c.id+'" style="'+borderStyle+';display:flex;align-items:center;gap:8px;cursor:grab;position:relative;'+(tipos.length>1?'padding-left:'+(12+bw)+'px;overflow:hidden':'')+'">'
@@ -5661,14 +5810,19 @@ function updateMapSidebar(){
       +'<span class="ms-client-num" style="background:'+primaryColor+'">'+(stop+1)+'</span>'
       +'<div style="flex:1;min-width:0">'
         +'<div style="display:flex;align-items:center;justify-content:space-between;gap:4px">'
-          +'<div style="font-weight:600;font-size:13px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.nome+'</div>'
+          +'<div style="font-weight:600;font-size:13px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_stripEmoji(c.nome)+'</div>'
           +(tagChips?'<div style="display:flex;gap:2px;flex-wrap:wrap;flex-shrink:0">'+tagChips+'</div>':'')
         +'</div>'
-        +'<div style="font-size:11px;color:var(--mu);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.endereco+(c.complemento?' \u2014 '+c.complemento:'')+'</div>'
+        +(c.endereco?'<div style="font-size:11px;color:var(--mu);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+fmtEnderecoComCidade(c)+'</div>':'')
         +'<div style="display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap">'
-          +(c.estT?'<span style="font-size:10px;color:var(--pu);font-weight:600">'+t('card.arrival')+': '+c.estT+'</span>':'')
+          +(c.tel?'<span style="font-size:10px;color:var(--mu)">'+_icoPhone+' '+c.tel+'</span>':'')
+          +(c.qtd?'<span style="font-size:10px;color:var(--mu)">'+c.qtd+' '+(cfg._itemLabel||'item')+(c.qtd>1?'s':'')+'</span>':'')
           +(vd?'<span style="font-size:10px;color:var(--mu)">'+vd+'</span>':'')
+          +(jl?'<span style="font-size:10px;color:var(--mu)">'+jl+'</span>':'')
+          +(c.estT?'<span style="font-size:10px;color:var(--pu);font-weight:600">'+t('card.arrival')+' '+c.estT+'</span>':'')
         +'</div>'
+        +(c.obs?'<div style="font-size:11px;color:var(--mu);margin-top:3px;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_stripEmoji(c.obs)+'</div>':'')
+        +(c.conflict?'<div style="font-size:11px;color:var(--rd);margin-top:2px;font-weight:500">'+_icoAlert+' '+c.cmsg+'</div>':'')
       +'</div>'
       +'<button class="ms-client-del" onclick="event.stopPropagation();removeCFromSidebar('+c.id+')" title="Remover da rota">\u2715</button>'
     +'</div>';
@@ -7404,6 +7558,6 @@ function rerenderHeatmap(){
   });
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.9.2</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v5.0.0</div>
 </body>
 </html>
