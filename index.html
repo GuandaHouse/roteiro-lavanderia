@@ -3787,9 +3787,11 @@ function _haversineKm(lat1,lon1,lat2,lon2){
 
 // Etapa 2: Funções de avaliação
 function _clientDeadlineSec(c){
-  if(c.janela==='manha')return 12*3600;
-  if(c.janela==='custom'&&c.hf)return ts(c.hf);
-  if(c.janela==='tarde')return 24*3600; // deadline é no fim, mas start é 12h
+  // v4.6.7: Margem de segurança de 30min — OSRM subestima tempos em SP vs Google Directions
+  const MARGEM=30*60; // 30 minutos
+  if(c.janela==='manha')return 12*3600-MARGEM;
+  if(c.janela==='custom'&&c.hf)return ts(c.hf)-MARGEM;
+  if(c.janela==='tarde')return 24*3600;
   return 24*3600;
 }
 function _clientStartSec(c){
@@ -3991,11 +3993,18 @@ async function optimizeRouteV2(geocodedIdx,baseCoords,retCoords){
   const ciEval=_evalOrder(ciOrder,matrix,0,gcIdx);
   console.log('[OPT-v2] NN: '+Math.round(nnEval.totalTravel/60)+'min, '+nnEval.violations+' violações');
   console.log('[OPT-v2] CI: '+Math.round(ciEval.totalTravel/60)+'min, '+ciEval.violations+' violações');
-  // Melhor inicial (menos violações, depois menor tempo)
-  const bestInit=ciEval.violations<nnEval.violations?ciOrder:
-    ciEval.violations===nnEval.violations&&ciEval.totalTravel<nnEval.totalTravel?ciOrder:nnOrder;
-  // Simulated Annealing
-  const saOrder=_runSA(bestInit,matrix,gcIdx);
+  // v4.6.7: Rodar SA nos DOIS seeds e pegar o melhor resultado global
+  // (evita que um seed com menos km mas posição arriscada para clientes críticos domine)
+  const saFromNN=_runSA(nnOrder,matrix,gcIdx);
+  const saFromCI=_runSA(ciOrder,matrix,gcIdx);
+  const saEvalNN=_evalOrder(saFromNN,matrix,0,gcIdx);
+  const saEvalCI=_evalOrder(saFromCI,matrix,0,gcIdx);
+  console.log('[OPT-v2] SA-NN: '+Math.round(saEvalNN.totalTravel/60)+'min, '+saEvalNN.violations+' violações');
+  console.log('[OPT-v2] SA-CI: '+Math.round(saEvalCI.totalTravel/60)+'min, '+saEvalCI.violations+' violações');
+  // Escolher: menos violações primeiro, depois menor travel
+  const saOrder=saEvalNN.violations<saEvalCI.violations?saFromNN:
+    saEvalCI.violations<saEvalNN.violations?saFromCI:
+    saEvalNN.totalTravel<=saEvalCI.totalTravel?saFromNN:saFromCI;
   const saEval=_evalOrder(saOrder,matrix,0,gcIdx);
   console.log('[OPT-v2] SA: '+Math.round(saEval.totalTravel/60)+'min, '+saEval.violations+' violações');
   // Mapear de volta para índices globais (array clients[])
