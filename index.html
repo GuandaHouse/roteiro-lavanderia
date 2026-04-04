@@ -4,6 +4,8 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.9.2 — 04/04/2026 — FIX: auto-restore silencioso + donuts histórico +          ║
+║         gestor polling saveHist + null-safety buildChartsHTML                     ║
 ║  v4.9.1 — 04/04/2026 — FIX: geocoding cidade no sufixo + bairro solto no parser  ║
 ║  v4.9.0 — 04/04/2026 — FIX: motorista pula modal restaurar, vai direto pro cloud ║
 ║  v4.8.9 — 04/04/2026 — FIX: parser complemento + formatação endereço estruturada ║
@@ -2935,6 +2937,9 @@ function startGestorPolling(){
           clients=route.clients;order=route.order;
           if(route.cfg){cfg.base=route.cfg.base||cfg.base;cfg.retaddr=route.cfg.retaddr||cfg.retaddr;cfg.saida=route.cfg.saida||cfg.saida;cfg.ret=route.cfg.ret||cfg.ret;cfg.tempo=route.cfg.tempo||cfg.tempo;}
           renderMotor();
+          // v4.9.2: Gestor polling PRECISA salvar histórico — sem isso, dados do motorista não persistem nos donuts
+          saveHist();
+          autoSaveRoute();
           toast(t('msg.driver_update'),'ok');
         }
       }
@@ -3231,8 +3236,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('td').value=now.toISOString().split('T')[0];
   document.getElementById('f-data').value=now.toISOString().split('T')[0];
   loadCfg();renderHist();loadTrelloSelection();
-  // v4.6.3: Restore active route if saved
-  // v4.9.0: Motorista NUNCA vê modal restaurar — carrega direto do cloud
+  // v4.9.2: Auto-restore silencioso — sem modal, sem perguntar (decisão Philip)
   if(clients.length===0&&!_isMotoristaMode)restoreActiveRoute();
   // v4.6.3: Restore active tab from previous session (não no modo motorista)
   const savedTab=localStorage.getItem('rota_active_tab');
@@ -3282,7 +3286,8 @@ function autoSaveRoute(){
   clearTimeout(_autoSaveTimer);
   _autoSaveTimer=setTimeout(()=>{
     if(clients.length>0){
-      localStorage.setItem('rota_ativa',JSON.stringify({clients:clients,order:order,savedAt:new Date().toISOString()}));
+      // v4.9.2: Salvar estado cloud junto — sem isso, refresh perde conexão cloud e donuts do histórico ficam zerados
+      localStorage.setItem('rota_ativa',JSON.stringify({clients:clients,order:order,savedAt:new Date().toISOString(),routeId:_currentRouteId||null,cloudVersion:_cloudVersion||0,cloudHash:_cloudHash||null}));
     } else {
       localStorage.removeItem('rota_ativa');
     }
@@ -3296,14 +3301,15 @@ function restoreActiveRoute(){
     // v4.7.0: Validação robusta dos dados restaurados
     if(!Array.isArray(data.clients)||!data.clients.length)return false;
     if(!data.clients.every(c=>c&&typeof c.nome==='string'&&typeof c.endereco==='string')){console.warn('[RESTORE] Dados corrompidos');localStorage.removeItem('rota_ativa');return false;}
-    const savedDate=data.savedAt?new Date(data.savedAt):null;
-    const label=savedDate?savedDate.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' '+savedDate.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
-    showConfirm(t('confirm.restore_title'),t('confirm.restore_msg',{n:data.clients.length,date:label||''}),()=>{
-      clients=data.clients;order=data.order||clients.map((_,i)=>i);
-      renderC();updStats();updBtns();toast(t('t.restored'),'ok');
-      // v4.6.9: Rebuild OSRM matrix em background para ETAs funcionarem no drag
-      _rebuildCachedMatrix();
-    },()=>{localStorage.removeItem('rota_ativa');toast(t('t.discarded'),'');},'Restaurar'); // v4.6.5: Cancelar limpa rota_ativa — não pergunta de novo
+    // v4.9.2: AUTO-RESTORE SILENCIOSO — sem modal, sem perguntar
+    // Decisão do Philip: refresh preserva tudo automaticamente. Limpar = botão "Limpar todos".
+    clients=data.clients;order=data.order||clients.map((_,i)=>i);
+    // v4.9.2: Restaurar estado cloud (routeId, version, hash) — permite polling retomar
+    if(data.routeId){_currentRouteId=data.routeId;_cloudVersion=data.cloudVersion||0;_cloudHash=data.cloudHash||null;startGestorPolling();setCloudStatus('synced','Rota online e sincronizada em tempo real');console.log('[RESTORE] Cloud state restaurado: route='+_currentRouteId+' v'+_cloudVersion);}
+    renderC();updStats();updBtns();
+    // v4.6.9: Rebuild OSRM matrix em background para ETAs funcionarem no drag
+    _rebuildCachedMatrix();
+    console.log('[RESTORE] Rota restaurada silenciosamente: '+clients.length+' clientes');
     return true;
   }catch(e){return false;}
 }
@@ -6871,10 +6877,12 @@ function buildDonutLegend(segments){
 }
 function buildChartsHTML(clientsList,orderList){
   const total=orderList.length;if(!total)return '';
+  // v4.9.2: null-safety — evita crash se índice inválido no order
+  const _gc=i=>{const c=clientsList[i];return c||null;};
   // 1) Status
-  const done=orderList.filter(i=>clientsList[i]._motStatus==='coletado'||clientsList[i]._motStatus==='entregue').length;
-  const ausente=orderList.filter(i=>clientsList[i]._motStatus==='ausente').length;
-  const reagendar=orderList.filter(i=>clientsList[i]._motStatus==='reagendar').length;
+  const done=orderList.filter(i=>{const c=_gc(i);return c&&(c._motStatus==='coletado'||c._motStatus==='entregue');}).length;
+  const ausente=orderList.filter(i=>{const c=_gc(i);return c&&c._motStatus==='ausente';}).length;
+  const reagendar=orderList.filter(i=>{const c=_gc(i);return c&&c._motStatus==='reagendar';}).length;
   const pendente=total-done-ausente-reagendar;
   const statusSegs=[
     {value:done,color:'var(--tx)',label:t('mot.status_coletado')},
@@ -6884,10 +6892,10 @@ function buildChartsHTML(clientsList,orderList){
   ];
   const pctDone=total?Math.round((done+ausente+reagendar)/total*100):0;
   // 2) Pagamento
-  const pixPago=orderList.filter(i=>clientsList[i]._motPay==='Pix (pago)').length;
-  const pixCobrar=orderList.filter(i=>clientsList[i]._motPay==='Pix (cobrar)').length;
-  const cartao=orderList.filter(i=>clientsList[i]._motPay==='Cart\xe3o').length;
-  const dinheiro=orderList.filter(i=>clientsList[i]._motPay==='Dinheiro').length;
+  const pixPago=orderList.filter(i=>{const c=_gc(i);return c&&c._motPay==='Pix (pago)';}).length;
+  const pixCobrar=orderList.filter(i=>{const c=_gc(i);return c&&c._motPay==='Pix (cobrar)';}).length;
+  const cartao=orderList.filter(i=>{const c=_gc(i);return c&&c._motPay==='Cart\xe3o';}).length;
+  const dinheiro=orderList.filter(i=>{const c=_gc(i);return c&&c._motPay==='Dinheiro';}).length;
   const semPay=total-pixPago-pixCobrar-cartao-dinheiro;
   const paySegs=[
     {value:pixPago,color:'var(--tx)',label:t('mot.pix_paid')},
@@ -6900,7 +6908,7 @@ function buildChartsHTML(clientsList,orderList){
   // 3) Recebido vs A Cobrar
   let recebido=0,aCobrar=0;
   orderList.forEach(i=>{
-    const c=clientsList[i];
+    const c=_gc(i);if(!c)return;
     const v=parseFloat(c.val)||0;
     if(!v||c.valTipo==='pago'||c.valTipo==='medir')return;
     if(c._motPay==='Pix (cobrar)')aCobrar+=v;
@@ -7396,6 +7404,6 @@ function rerenderHeatmap(){
   });
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.9.1</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.9.2</div>
 </body>
 </html>
