@@ -11,6 +11,7 @@
 ║  ALTO:                                                                 ║
 ║  • Cancelar restauração limpa rota_ativa do localStorage               ║
 ║  • Botão "Limpar todos" na Rota do Dia (com confirmação + quantidade)  ║
+║  • Data do Trello persiste no localStorage (F5 não reseta para hoje)   ║
 ║  MÉDIO:                                                                ║
 ║  • Indicador "Salvo" reposicionado (top: 140px)                        ║
 ║                                                                        ║
@@ -2882,6 +2883,7 @@ async function trelloBuscarCartoes(){
   if(!dateVal){toast('Selecione uma data','warn');return;}
   // Sincroniza o campo principal de data
   g('td').value=dateVal;
+  saveTrelloSelection(); // v4.6.5: Persiste data selecionada
   g('trello-btn').disabled=true;g('tspin').style.display='';g('tlbl').textContent='Buscando...';
   g('trello-cards').innerHTML='';
   try{await trelloSelectList(selList.id,selList.name);}
@@ -3148,11 +3150,19 @@ window.addEventListener('load',()=>{setTimeout(checkTrelloConnection,500);});
 })();
 
 function saveTrelloSelection(){
-  if(selBoard&&selList)localStorage.setItem('rota_trello',JSON.stringify({board:selBoard,list:selList}));
+  if(selBoard&&selList){
+    const dateVal=v('td')||'';
+    localStorage.setItem('rota_trello',JSON.stringify({board:selBoard,list:selList,date:dateVal})); // v4.6.5: persiste data selecionada
+  }
 }
 function loadTrelloSelection(){
   const saved=JSON.parse(localStorage.getItem('rota_trello')||'null');
-  if(saved?.board&&saved?.list){selBoard=saved.board;selList=saved.list;showTrelloQuickPanel();}
+  if(saved?.board&&saved?.list){
+    selBoard=saved.board;selList=saved.list;
+    // v4.6.5: Restaurar data selecionada (se existir e não for futura demais)
+    if(saved.date){g('td').value=saved.date;}
+    showTrelloQuickPanel();
+  }
 }
 function showTrelloQuickPanel(){
   if(!selBoard||!selList)return;
