@@ -4,12 +4,16 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  v4.6.8 — 04/04/2026 — UX: Auto-scroll + ETA fix + Salvo position      ║
+║  v4.6.9 — 04/04/2026 — FIX: Auto-scroll + ETA + Salvo (raiz corrigida) ║
 ║  ─────────────────────────────────────────                   ║
 ║  MÉDIO:                                                                ║
-║  • Auto-scroll durante drag: tela rola ao arrastar card pra borda      ║
-║  • ETAs recalculam corretamente após drag-and-drop (lastValidNode)     ║
-║  • Indicador "Salvo" reposicionado na navbar (não sobrepõe mais)       ║
+║  • Auto-scroll: usa window.scrollBy (body overflow:hidden auto)        ║
+║  • ETAs: rebuild OSRM matrix ao restaurar rota + gen counter           ║
+║  • Salvo: indicador fixo abaixo do nav, centralizado, sem sobrepor     ║
+║                                                                        ║
+║  v4.6.8 — 04/04/2026 — UX: Auto-scroll + ETA fix + Salvo position     ║
+║  ─────────────────────────────────────────                   ║
+║  (corrigido na v4.6.9 — implementação original não funcionou)          ║
 ║                                                                        ║
 ║  v4.6.7 — 03/04/2026 — MOTOR V2.1: Penalidade reforçada + prioridade   ║
 ║  ─────────────────────────────────────────                   ║
@@ -699,8 +703,8 @@ body.dark .hm-mode-opt:hover:not(.active){background:rgba(255,255,255,.06)}
 .hist-card .hc-tag{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:20px;line-height:1.6;flex-shrink:0}
 /* v4.4.1: Bairro hover highlight (styles in drawer section above) */
 /* v4.4.0: Sync feedback indicator */
-.sync-indicator{position:fixed;top:8px;right:180px;z-index:300;display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;pointer-events:none;transition:all .4s cubic-bezier(.4,0,.2,1);opacity:0;transform:translateY(-8px)} /* v4.6.8: posicionado na navbar ao lado da data, sem sobrepor */
-.sync-indicator.show{opacity:1;transform:translateY(0)}
+.sync-indicator{position:fixed;top:58px;left:50%;transform:translateX(-50%) translateY(-8px);z-index:201;display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;pointer-events:none;transition:all .4s cubic-bezier(.4,0,.2,1);opacity:0;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.08)} /* v4.6.9: fixo abaixo do nav, centralizado, sem sobrepor */
+.sync-indicator.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .sync-indicator.ok{background:rgba(34,197,94,.12);color:#16a34a;border:1px solid rgba(34,197,94,.2)}
 .sync-indicator.saving{background:rgba(108,92,231,.12);color:var(--pu);border:1px solid rgba(108,92,231,.2)}
 .sync-indicator.err{background:rgba(239,68,68,.12);color:#dc2626;border:1px solid rgba(239,68,68,.2)}
@@ -2606,6 +2610,8 @@ function restoreActiveRoute(){
     showConfirm('Restaurar rota?','Voc\u00ea tem uma rota salva com '+data.clients.length+' cliente(s)'+(label?' de '+label:'')+'. Deseja restaurar?',()=>{
       clients=data.clients;order=data.order||clients.map((_,i)=>i);
       renderC();updStats();updBtns();toast('Rota restaurada!','ok');
+      // v4.6.9: Rebuild OSRM matrix em background para ETAs funcionarem no drag
+      _rebuildCachedMatrix();
     },()=>{localStorage.removeItem('rota_ativa');toast('Rota descartada','');},'Restaurar'); // v4.6.5: Cancelar limpa rota_ativa — não pergunta de novo
     return true;
   }catch(e){return false;}
@@ -3609,18 +3615,12 @@ function startDrag(stopIdx,x,y,isTouch){
 let _dragScrollRAF=null;
 function _dragAutoScroll(clientY){
   const SCROLL_ZONE=80; // pixels da borda que ativam scroll
-  const SCROLL_SPEED=8; // pixels por frame
-  const clist=g('clist');
-  if(!clist)return;
-  const rect=clist.getBoundingClientRect();
-  // Scroll do container de cards se existir overflow, senão scroll da janela
-  const scrollEl=clist.scrollHeight>clist.clientHeight?clist:document.documentElement;
-  if(clientY<rect.top+SCROLL_ZONE&&clientY>rect.top-20){
-    // Perto do topo — scroll pra cima
-    scrollEl.scrollTop-=SCROLL_SPEED;
+  const SCROLL_SPEED=10; // pixels por frame
+  // v4.6.9: body tem overflow:hidden auto — usar window.scrollBy que funciona independente do container
+  if(clientY<SCROLL_ZONE+60){ // 60px = altura aprox da navbar fixa
+    window.scrollBy(0,-SCROLL_SPEED);
   }else if(clientY>window.innerHeight-SCROLL_ZONE){
-    // Perto do fundo da janela — scroll pra baixo
-    scrollEl.scrollTop+=SCROLL_SPEED;
+    window.scrollBy(0,SCROLL_SPEED);
   }else{return;} // Fora das zonas de scroll
   _dragScrollRAF=requestAnimationFrame(()=>_dragAutoScroll(clientY));
 }
@@ -3763,6 +3763,33 @@ function showOptSavings(bestResult,worstResult){
 // Fluxo: Matriz OSRM → Heurísticas construtivas → SA refinement
 // ═══════════════════════════════════════════════════════════════
 let _cachedMatrix=null; // Cache da matriz para recálculos rápidos
+
+// v4.6.9: Rebuild da matriz OSRM em background (para ETAs no drag após restaurar rota)
+async function _rebuildCachedMatrix(){
+  if(_cachedMatrix)return; // já tem
+  const geocodedIdx=order.filter(i=>clients[i]&&clients[i].lat&&clients[i].lng);
+  if(geocodedIdx.length<2)return;
+  try{
+    // Geocodificar endereço base via Google Geocoding API
+    const baseAddr=cfg.base;
+    if(!baseAddr)return;
+    const geoResp=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(baseAddr+', Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
+    if(geoResp.status!=='OK'||!geoResp.results[0])return;
+    const baseLoc=geoResp.results[0].geometry.location;
+    const baseCoords={lat:baseLoc.lat,lng:baseLoc.lng};
+    let retCoords=baseCoords;
+    if(cfg.retaddr&&cfg.retaddr!==baseAddr){
+      const retResp=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(cfg.retaddr+', Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
+      if(retResp.status==='OK'&&retResp.results[0]){const rl=retResp.results[0].geometry.location;retCoords={lat:rl.lat,lng:rl.lng};}
+    }
+    const allCoords=[baseCoords,...geocodedIdx.map(i=>({lat:clients[i].lat,lng:clients[i].lng})),retCoords];
+    const gcIdx={};
+    geocodedIdx.forEach((ci,i)=>{gcIdx[ci]=i+1;});
+    const matrix=await buildTimeMatrix(allCoords);
+    _cachedMatrix={matrix,gcIdx,allCoords};
+    console.log('[CACHE] Matriz OSRM reconstruída para '+geocodedIdx.length+' clientes');
+  }catch(e){console.warn('[CACHE] Falha ao reconstruir matriz:',e.message);}
+}
 
 // Etapa 1: Construir matriz de tempos reais (OSRM → Google → Haversine)
 async function buildTimeMatrix(allCoords){
@@ -4269,8 +4296,10 @@ function calcOrderDistance(order,geocoded){
   return d;
 }
 
+let _recalcGen=0; // v4.6.9: generation counter para evitar resultados stale
 async function recalcRouteFromOrder(){
   if(!gMap||!order.length)return;
+  const gen=++_recalcGen; // captura geração atual
   const geocoded=order.filter(i=>clients[i].lat&&clients[i].lng).map(i=>clients[i]);
   if(geocoded.length<2)return;
   const baseAddr=cfg.base;
@@ -4281,6 +4310,8 @@ async function recalcRouteFromOrder(){
       origin:baseAddr,destination:retAddr,waypoints,
       travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR'
     },(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
+    // v4.6.9: Se outra chamada já disparou, descartar este resultado stale
+    if(gen!==_recalcGen){console.log('[ROTA] Descartando resultado stale (gen '+gen+' vs '+_recalcGen+')');return;}
     if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>{if(m.map)m.map=null;});gMarkers=[];gBaseMarkers.forEach(m=>{if(m.map)m.map=null;});gBaseMarkers=[];
     gRoute=new google.maps.DirectionsRenderer({map:gMap,directions:dirResult,suppressMarkers:true,polylineOptions:{strokeColor:'#6C5CE7',strokeWeight:4,strokeOpacity:0.8}});
     const legs=dirResult.routes[0].legs;
@@ -4309,10 +4340,10 @@ async function recalcRouteFromOrder(){
     const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds,{top:40,bottom:40,left:40,right:40});google.maps.event.addListenerOnce(gMap,'idle',()=>{if(gMap.getZoom()>16)gMap.setZoom(16);if(gMap.getZoom()<10)gMap.setZoom(10);});if(geocoded.length===1)gMap.setZoom(15);
     const legsDur=legs.map(l=>({duration:l.duration.value}));
     estimateTimesOSRM(legsDur);
-    const totalKm=legs.reduce((s,l)=>s+l.distance.value,0)/1000;
-    const totalMin=legs.reduce((s,l)=>s+l.duration.value,0)/60;
-    console.log('[ROTA MANUAL] Rota recalculada: '+totalKm.toFixed(1)+'km | '+totalMin.toFixed(0)+'min');
-    renderC();
+    _routeTotalKm=legs.reduce((s,l)=>s+l.distance.value,0)/1000;
+    _routeTotalMin=legs.reduce((s,l)=>s+l.duration.value,0)/60;
+    console.log('[ROTA MANUAL] Rota recalculada: '+_routeTotalKm.toFixed(1)+'km | '+_routeTotalMin.toFixed(0)+'min');
+    renderC();updStats();
   }catch(e){console.error('[ROTA MANUAL] Erro ao recalcular:',e);}
 }
 
@@ -4545,8 +4576,10 @@ function initMapSidebarDragDrop(){
         pushRouteState(); // v4.6.2: save state before reorder for undo
         const item=order.splice(msDrag.stop,1)[0];
         order.splice(to,0,item);
-        renderC();recalcRouteFromOrder();updateMapSidebar();updateUndoBtn();
-        toast('Ordem da rota atualizada','ok');
+        // v4.6.9: Recalcular ETAs via cache (instantâneo) + Google Directions (async)
+        if(recalcETAsFromCache()){renderC();toast('Ordem atualizada — recalculando rota...','ok');}
+        else{renderC();toast('Ordem da rota atualizada','ok');}
+        recalcRouteFromOrder();updateMapSidebar();updateUndoBtn();
       }
     }
     msDrag=null;
@@ -5781,6 +5814,7 @@ let _syncIndicatorTimer=null;
 function showSyncIndicator(state,msg){
   let el=document.getElementById('sync-ind');
   if(!el){
+    // v4.6.9: Fallback — normalmente já existe no body
     el=document.createElement('div');
     el.id='sync-ind';
     el.className='sync-indicator';
