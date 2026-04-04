@@ -4,6 +4,7 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.8.0 — 04/04/2026 — PERF: parallel geocoding + pre-geocoding       ║
 ║  v4.7.9 — 04/04/2026 — FIX: mobile date, touch targets, donut legend  ║
 ║  v4.7.8 — 04/04/2026 — Mobile: nuclear !important anti-overflow fix    ║
 ║  v4.7.3 — 04/04/2026 — FIX: drag UX (click vs drag, map autoscroll)    ║
@@ -3822,6 +3823,7 @@ function executeFileImport(){
       obs:r.obs||'',
       estT:null,conflict:false,cmsg:'',lat:null,lng:null
     });
+    preGeocode(clients[clients.length-1]); // v4.8.0: pre-geocoding em background
     count++;
   });
   order=clients.map((_,i)=>i);
@@ -4337,7 +4339,9 @@ function addClient(){
     if(hi&&hf&&hi>=hf){toast(t('err.time_order'),'err');return;}
   }
   const cep=v('f-cep').replace(/\D/g,'');
-  clients.push({id:Date.now()+Math.random(),nome,endereco:end,cep,complemento:'',tel:v('f-tel'),tipo:tipos,qtd,val,valTipo,data:v('f-data')||new Date().toISOString().split('T')[0],janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null});
+  const newClient={id:Date.now()+Math.random(),nome,endereco:end,cep,complemento:'',tel:v('f-tel'),tipo:tipos,qtd,val,valTipo,data:v('f-data')||new Date().toISOString().split('T')[0],janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null};
+  clients.push(newClient);
+  preGeocode(newClient); // v4.8.0: geocodificar em background imediatamente
   order=clients.map((_,i)=>i);
   resetForm();clearImg();renderC();updStats();updBtns();
   toast(nome+t('t.added'),'ok');
@@ -5587,6 +5591,16 @@ function initGoogleMaps(){
 }
 function initLeafMap(){}
 const _geoCache={};
+// v4.8.0: Pre-geocoding — geocodifica cliente em background assim que adicionado
+function preGeocode(client){
+  if(!client||!client.endereco||(client.lat&&client.lng))return;
+  // Fire-and-forget: não bloqueia a UI
+  nominatim(client.endereco).then(r=>{
+    if(r){client.lat=r.lat;client.lng=r.lng;if(r.cidade)client._cidade=r.cidade;
+      console.log('[PRE-GEO] '+client.nome+' geocodificado em background');
+    }
+  }).catch(()=>{});
+}
 // v4.3.1: Geocodificação dinâmica baseada no endereço de partida do usuário
 // Âncora = endereço base configurado. Bounds = raio de ~80km ao redor da âncora.
 let _geoAnchor=null; // {lat,lng,state,city} — resolvido a partir de cfg.base
@@ -5716,15 +5730,19 @@ async function calcRoute(){
   try{
     // v4.3.3: Resolver \xe2ncora geogr\xe1fica antes de calcular rota
     await _resolveGeoAnchor();
-    // Geocode all clients without coords
+    // v4.8.0: Geocode clients in parallel batches (5 at a time) instead of sequential
     const notFound=[];
-    for(const c of clients){
-      if(!c.lat||!c.lng){
-        const r=await nominatim(c.endereco);
-        if(r){c.lat=r.lat;c.lng=r.lng;if(r.cidade)c._cidade=r.cidade;}
-        else notFound.push(c.nome);
-        await new Promise(res=>setTimeout(res,200)); // v4.7.4: delay SÓ para requests reais (Nominatim rate limit)
-      }
+    const needGeo=clients.filter(c=>!c.lat||!c.lng);
+    const GEO_BATCH=5;
+    for(let b=0;b<needGeo.length;b+=GEO_BATCH){
+      const batch=needGeo.slice(b,b+GEO_BATCH);
+      const results=await Promise.all(batch.map(c=>nominatim(c.endereco).catch(()=>null)));
+      results.forEach((r,i)=>{
+        if(r){batch[i].lat=r.lat;batch[i].lng=r.lng;if(r.cidade)batch[i]._cidade=r.cidade;}
+        else notFound.push(batch[i].nome);
+      });
+      // Rate limit: 200ms pause between batches (not between each client)
+      if(b+GEO_BATCH<needGeo.length)await new Promise(res=>setTimeout(res,200));
     }
     if(notFound.length)toast(t('err.addr_not_found')+': '+notFound.join(', '),'warn');
     const geocodedIdx=[];
@@ -5744,12 +5762,11 @@ async function calcRoute(){
     // ── v4.6.6: MOTOR DE OTIMIZAÇÃO v2 — VRPTW com SA ──
     _routeMode=getRouteMode();
     _routeResults={time:null,distance:null};
-    // Resolver coordenadas da base e retorno
+    // v4.8.0: Resolver base e retorno em PARALELO
     let baseCoords,retCoords;
-    const baseGeo=await nominatim(baseAddr);
+    const [baseGeo,retGeo]=await Promise.all([nominatim(baseAddr),nominatim(retAddr)]);
     if(baseGeo){baseCoords={lat:baseGeo.lat,lng:baseGeo.lng};}
     else{toast(t('err.start_addr'),'err');return;}
-    const retGeo=await nominatim(retAddr);
     retCoords=retGeo?{lat:retGeo.lat,lng:retGeo.lng}:{...baseCoords};
     // Otimizar via motor v2 (matriz + heurísticas + SA)
     toast(t('msg.optimizing'),'');
@@ -7006,6 +7023,6 @@ function rerenderHeatmap(){
   });
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.7.9</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.8.0</div>
 </body>
 </html>
