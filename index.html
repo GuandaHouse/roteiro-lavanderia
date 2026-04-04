@@ -541,6 +541,7 @@ body.dark .theme-toggle .moon{opacity:1;color:#c4b5fd;transform:rotate(0deg)}
 
 /* CARD */
 .card{background:var(--sf);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--bd);border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(108,92,231,.03),0 4px 12px rgba(108,92,231,.02);transition:transform .25s cubic-bezier(.4,0,.2,1),box-shadow .25s cubic-bezier(.4,0,.2,1),background .4s ease,border-color .4s ease}
+.card:last-child{margin-bottom:0}
 .card:hover{transform:translateY(-2px);box-shadow:0 4px 8px rgba(108,92,231,.04),0 12px 32px rgba(108,92,231,.06)}
 body.dark .card{box-shadow:none}
 body.dark .card:hover{background:rgba(255,255,255,.06);box-shadow:0 4px 8px rgba(0,0,0,.15),0 12px 32px rgba(0,0,0,.2)}
@@ -601,7 +602,8 @@ textarea{resize:vertical;min-height:56px}
 .mot-chart-item{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;min-width:100px}
 .mot-chart-item svg{width:120px;height:120px}
 @media(max-width:600px){.mot-chart-item svg{width:90px;height:90px}.mot-charts{gap:10px;padding:16px 10px}}
-@media(max-width:480px){.mot-charts{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;gap:12px;padding:16px 12px}.mot-chart-item{flex:0 0 auto;min-width:auto;width:calc(50% - 6px);scroll-snap-align:start}.mot-chart-item svg{width:80px;height:80px}.mot-chart-legend span{font-size:9px}}
+@media(max-width:480px){.mot-charts{flex-direction:row;flex-wrap:wrap;gap:10px;padding:14px 10px;overflow:hidden}.mot-chart-item{flex:1 1 calc(33.3% - 8px);min-width:0;width:auto}.mot-chart-item svg{width:72px;height:72px}.mot-chart-legend span{font-size:9px}}
+@media(max-width:375px){.mot-charts{gap:6px;padding:12px 6px}.mot-chart-item svg{width:64px;height:64px}.mot-chart-legend span{font-size:8px}}
 .mot-chart-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);text-align:center}
 .mot-chart-legend{display:flex;flex-wrap:wrap;gap:4px 10px;justify-content:center;margin-top:2px}
 .mot-chart-legend span{font-size:10px;color:var(--mu);display:flex;align-items:center;gap:4px}
@@ -1157,6 +1159,8 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   .tabs{gap:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none}
   .tabs::-webkit-scrollbar{display:none}
   .tab{padding:8px 10px;font-size:11px;white-space:nowrap;flex-shrink:0}
+  /* v4.7.6: Em 375px, tabs icon-only pra caber tudo */
+  @media(max-width:375px){.tab span[data-i18n]{display:none}.tab{padding:8px 12px;justify-content:center}}
 
   /* Motorist cards */
   .mot-card .mc-name{font-size:16px;padding:8px 14px 0}
@@ -1214,11 +1218,20 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   /* Map sidebar fullscreen */
   .map-sidebar{min-width:0!important}
 
-  /* v4.7.6: Títulos centralizados no mobile */
+  /* v4.7.6: Títulos centralizados no mobile — TODOS os h1/h2 de página */
   .ph{text-align:center}
   .ph h2{font-size:18px}
   .ph p{font-size:13px}
   .ct{text-align:center}
+  /* Motorista page header: flex→column centered */
+  .mot-page-header{flex-direction:column!important;align-items:center!important;gap:4px}
+  /* Catch-all: qualquer h2 dentro de .page */
+  .page>h2,.page>.ph h2,.page h2:first-child{text-align:center}
+
+  /* v4.7.6: Card meta items não truncam */
+  .cm{flex-wrap:wrap}
+  .cm span{white-space:nowrap}
+  .et{white-space:nowrap}
 
   /* File import table */
   .fi-table{font-size:11px}
@@ -1240,8 +1253,9 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   /* Pages */
   .page{padding:60px 14px 20px;overflow-x:hidden}
 
-  /* Prevent horizontal overflow — v4.7.5: .sg/.st usam box-sizing em vez de overflow:hidden */
-  .page,.card,.cc,.mot-card,.hist-card{max-width:100%;overflow:hidden}
+  /* Prevent horizontal overflow — v4.7.6: .cc sem overflow:hidden (cortava badge/botão X) */
+  .page,.card,.mot-card,.hist-card{max-width:100%;overflow:hidden}
+  .cc{max-width:100%;box-sizing:border-box;overflow:visible}
   .sg,.st{max-width:100%;box-sizing:border-box}
 
   /* Map fullscreen mobile */
@@ -1557,7 +1571,7 @@ html,body{overflow-x:hidden;max-width:100vw}
         </button>
       </div>
     </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+    <div class="mot-page-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
       <div class="ph" style="margin:0"><h2 data-i18n="mot.title">Roteiro do Motorista</h2></div>
       <span id="motor-date" style="font-size:13px;color:var(--mu);font-family:'DM Mono',monospace;font-weight:500"></span>
     </div>
@@ -3368,7 +3382,7 @@ function goPage(p,el){if(_isMotoristaMode)return;window.scrollTo(0,0);window.scr
   if(mapIsFullscreen&&p!=='rota'){toggleMapFullscreen();}
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(x=>x.classList.remove('on'));
-  g('page-'+p).classList.add('on');el.classList.add('on');
+  g('page-'+p).classList.add('on');if(el)el.classList.add('on');
   // v4.6.3: Persist active tab
   localStorage.setItem('rota_active_tab',p);
   // v4.3.7: Botão salvar só visível na aba Configurações
@@ -4408,7 +4422,7 @@ function renderC(){
           +(c.qtd?'<span>'+c.qtd+' '+(cfg._itemLabel||'item')+(c.qtd>1?'s':'')+'</span>':'')
           +(vd?'<span>'+vd+'</span>':'')
           +(jl?'<span>'+jl+'</span>':'')
-          +(c.estT?'<span class="et '+(c.conflict?'late':'')+'">'+t('card.arrival')+': '+c.estT+'</span>':'')
+          +(c.estT?'<span class="et '+(c.conflict?'late':'')+'">'+t('card.arrival')+' '+c.estT+'</span>':'')
         +'</div>'
         +(c.obs?'<div style="font-size:12px;color:var(--mu);margin-top:3px;font-style:italic">'+c.obs+'</div>':'')
         +(c.conflict?'<div class="cmsg">'+_icoAlert+' '+c.cmsg+'</div>':'')
@@ -4746,8 +4760,24 @@ async function _rebuildCachedMatrix(){
 }
 
 // Etapa 1: Construir matriz de tempos reais (OSRM → Google → Haversine)
+/* v4.7.6: Cache de time matrix em sessionStorage */
+function _matrixCacheKey(allCoords){
+  return 'tmx_'+allCoords.map(c=>c.lat.toFixed(5)+','+c.lng.toFixed(5)).join('|');
+}
 async function buildTimeMatrix(allCoords){
   const N=allCoords.length;
+  // v4.7.6: Verificar cache antes de fetch
+  const cacheKey=_matrixCacheKey(allCoords);
+  try{
+    const cached=sessionStorage.getItem(cacheKey);
+    if(cached){
+      const data=JSON.parse(cached);
+      if(data.durations&&data.distances){
+        console.log('[MATRIX] Cache hit — '+N+'x'+N);
+        return data;
+      }
+    }
+  }catch(e){}
   // Tentar OSRM Table API primeiro (gratuito)
   try{
     const coordStr=allCoords.map(c=>c.lng+','+c.lat).join(';');
@@ -4757,7 +4787,9 @@ async function buildTimeMatrix(allCoords){
     const data=await resp.json();
     if(data.code==='Ok'&&data.durations&&data.distances){
       console.log('[MATRIX] OSRM Table API OK — '+N+'x'+N);
-      return {durations:data.durations,distances:data.distances,source:'osrm'};
+      const r1={durations:data.durations,distances:data.distances,source:'osrm'};
+      try{sessionStorage.setItem(cacheKey,JSON.stringify(r1));}catch(e){}
+      return r1;
     }
     throw new Error('OSRM code: '+(data.code||'unknown'));
   }catch(e){
@@ -4772,7 +4804,9 @@ async function buildTimeMatrix(allCoords){
       const data=await resp.json();
       if(data.durations&&data.distances){
         console.log('[MATRIX] Worker proxy OK — '+N+'x'+N);
-        return {durations:data.durations,distances:data.distances,source:'worker-proxy'};
+        const r2={durations:data.durations,distances:data.distances,source:'worker-proxy'};
+        try{sessionStorage.setItem(cacheKey,JSON.stringify(r2));}catch(e){}
+        return r2;
       }
     }
   }catch(e){
@@ -5123,164 +5157,8 @@ function animateRouteTransition(){
   }
 }
 
-// --- Multi-Strategy Optimizer ---
-// Generates multiple route permutations and picks the best
-async function multiStrategyOptimize(geocoded,geocodedIdx,baseAddr,retAddr){
-  const strategies=[];
+/* v4.7.6: multiStrategyOptimize removido — código morto, substituído por optimizeRouteV2 (VRPTW+SA) */
 
-  // Strategy 1: Google optimized (original)
-  strategies.push({name:'google-optimized',fn:async()=>{
-    const waypoints=geocoded.map(c=>_waypointFor(c));
-    const res=await new Promise((ok,err)=>new google.maps.DirectionsService().route({
-      origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:true,region:'BR'
-    },(r,s)=>s==='OK'?ok(r):err(new Error(s))));
-    if(!res?.routes?.[0]?.waypoint_order)throw new Error('No routes'); // v4.7.0
-    return res.routes[0].waypoint_order;
-  }});
-
-  // Strategy 2: Nearest neighbor from start
-  strategies.push({name:'nearest-neighbor',fn:async()=>{
-    const visited=new Set();const order=[];
-    let current={lat:geocoded[0]?.lat||0,lng:geocoded[0]?.lng||0};
-    // Try to get base coords
-    const baseGeo=await nominatim(baseAddr);
-    if(baseGeo)current={lat:baseGeo.lat,lng:baseGeo.lng};
-    for(let i=0;i<geocoded.length;i++){
-      let bestDist=Infinity,bestIdx=-1;
-      geocoded.forEach((c,j)=>{
-        if(visited.has(j))return;
-        const d=haversine(current.lat,current.lng,c.lat,c.lng);
-        if(d<bestDist){bestDist=d;bestIdx=j;}
-      });
-      if(bestIdx>=0){visited.add(bestIdx);order.push(bestIdx);current={lat:geocoded[bestIdx].lat,lng:geocoded[bestIdx].lng};}
-    }
-    return order;
-  }});
-
-  // Strategy 3: Reverse nearest neighbor (from last point back)
-  strategies.push({name:'reverse-nn',fn:async()=>{
-    const visited=new Set();const order=[];
-    let current={lat:geocoded[geocoded.length-1]?.lat||0,lng:geocoded[geocoded.length-1]?.lng||0};
-    for(let i=0;i<geocoded.length;i++){
-      let bestDist=Infinity,bestIdx=-1;
-      geocoded.forEach((c,j)=>{
-        if(visited.has(j))return;
-        const d=haversine(current.lat,current.lng,c.lat,c.lng);
-        if(d<bestDist){bestDist=d;bestIdx=j;}
-      });
-      if(bestIdx>=0){visited.add(bestIdx);order.push(bestIdx);current={lat:geocoded[bestIdx].lat,lng:geocoded[bestIdx].lng};}
-    }
-    return order.reverse();
-  }});
-
-  // Strategy 4: Priority by time windows (tightest deadlines first)
-  strategies.push({name:'deadline-priority',fn:async()=>{
-    const items=geocoded.map((c,i)=>({i,deadline:clientDeadlineMin(c)}));
-    items.sort((a,b)=>a.deadline-b.deadline);
-    return items.map(x=>x.i);
-  }});
-
-  // Strategy 5: 2-opt improvement on Google result
-  strategies.push({name:'2-opt',fn:async()=>{
-    // Start with google optimized
-    const waypoints=geocoded.map(c=>_waypointFor(c));
-    const res=await new Promise((ok,err)=>new google.maps.DirectionsService().route({
-      origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:true,region:'BR'
-    },(r,s)=>s==='OK'?ok(r):err(new Error(s))));
-    if(!res?.routes?.[0]?.waypoint_order)throw new Error('No routes'); // v4.7.0
-    let best=[...res.routes[0].waypoint_order];
-    // 2-opt swaps
-    let improved=true;let iter=0;
-    while(improved&&iter<50){
-      improved=false;iter++;
-      for(let i=0;i<best.length-1;i++){
-        for(let j=i+1;j<best.length;j++){
-          const newOrder=[...best];
-          // Reverse segment between i and j
-          const seg=newOrder.slice(i,j+1).reverse();
-          for(let k=0;k<seg.length;k++)newOrder[i+k]=seg[k];
-          // Compare total distance
-          const distOld=calcOrderDistance(best,geocoded);
-          const distNew=calcOrderDistance(newOrder,geocoded);
-          if(distNew<distOld){best=newOrder;improved=true;}
-        }
-      }
-    }
-    return best;
-  }});
-
-  // Run all strategies, evaluate each
-  const results=[];
-  for(const strat of strategies){
-    try{
-      const wpOrder=await strat.fn();
-      if(!wpOrder||!wpOrder.length)continue;
-      // Get Google route for this order (to get actual driving times)
-      const orderedWp=wpOrder.map(gi=>_waypointFor(geocoded[gi]));
-      const dirResult=await new Promise((ok,err)=>new google.maps.DirectionsService().route({
-        origin:baseAddr,destination:retAddr,waypoints:orderedWp,
-        travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR'
-      },(r,s)=>s==='OK'?ok(r):err(new Error(s))));
-      const legs=dirResult.routes[0].legs;
-      const totalKm=legs.reduce((s,l)=>s+l.distance.value,0)/1000;
-      const totalMin=legs.reduce((s,l)=>s+l.duration.value,0)/60;
-      // Calculate last stop time
-      const saidaMin=ts(cfg.saida||'10:00')/60;
-      const tempo=(cfg.tempo||10);
-      let curMin=saidaMin*60;
-      for(let i=0;i<legs.length-1;i++){curMin+=legs[i].duration.value/60+tempo;}
-      const lastStopMin=curMin;
-
-      // v4.6.5: Simular tempos de chegada e contar violações de janela
-      let simCur=ts(cfg.saida||'10:00');
-      const simTempo=(cfg.tempo||10)*60;
-      const simAl1=cfg.al1,simAl2=cfg.al2;
-      let twViolations=0;
-      for(let i=0;i<legs.length-1;i++){
-        simCur+=legs[i].duration.value;
-        if(simAl1&&simAl2){const s=ts(simAl1),e=ts(simAl2);if(simCur>=s&&simCur<e)simCur=e;}
-        const ci=geocoded[wpOrder[i]];
-        if(ci){
-          if(ci.janela==='manha'&&simCur>ts('12:00'))twViolations++;
-          else if(ci.janela==='tarde'&&simCur<ts('12:00'))twViolations++;
-          else if(ci.janela==='custom'&&ci.hi&&ci.hf&&(simCur<ts(ci.hi)||simCur>ts(ci.hf)))twViolations++;
-        }
-        simCur+=simTempo;
-      }
-      results.push({name:strat.name,wpOrder,dirResult,legs,totalKm,totalMin,lastStopMin,twViolations,
-        order:wpOrder.map(gi=>geocodedIdx[gi])});
-      console.log('[OPTIMIZER] '+strat.name+': '+totalKm.toFixed(1)+'km | '+totalMin.toFixed(0)+'min | \xDAltima: '+Math.floor(lastStopMin/60)+':'+String(Math.round(lastStopMin%60)).padStart(2,'0'));
-    }catch(e){console.warn('[OPTIMIZER] '+strat.name+' falhou:',e.message);}
-  }
-
-  if(!results.length)return null;
-
-  // v4.6.5: Sort by priority — violações de janela são critério primário
-  const mode=getRouteMode();
-  const byTime=[...results].sort((a,b)=>{const v=a.twViolations-b.twViolations;if(v)return v;return a.lastStopMin-b.lastStopMin;});
-  const byDist=[...results].sort((a,b)=>{const v=a.twViolations-b.twViolations;if(v)return v;return a.totalKm-b.totalKm;});
-
-  // Cache both best results
-  _routeResults.time=byTime[0]||null;
-  _routeResults.distance=byDist[0]||null;
-
-  const best=mode==='distance'?byDist[0]:byTime[0];
-  const worst=mode==='distance'?byDist[byDist.length-1]:byTime[byTime.length-1];
-
-  console.log('[OPTIMIZER] Melhor ('+mode+'): '+best.name+' — '+best.totalKm.toFixed(1)+'km | '+best.totalMin.toFixed(0)+'min | Viola\xe7\xf5es: '+best.twViolations);
-  results.forEach(r=>console.log('  '+r.name+': '+r.totalKm.toFixed(1)+'km | '+r.totalMin.toFixed(0)+'min | Viola\xe7\xf5es: '+r.twViolations));
-
-  return {best,worst,byTime,byDist};
-}
-
-function calcOrderDistance(order,geocoded){
-  let d=0;
-  for(let i=0;i<order.length-1;i++){
-    const a=geocoded[order[i]],b=geocoded[order[i+1]];
-    if(a&&b)d+=haversine(a.lat,a.lng,b.lat,b.lng);
-  }
-  return d;
-}
 
 let _recalcGen=0; // v4.6.9: generation counter para evitar resultados stale
 async function recalcRouteFromOrder(){
