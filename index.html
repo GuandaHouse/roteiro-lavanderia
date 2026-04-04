@@ -2087,7 +2087,7 @@ pt:{
   'msg.gen_image':'Gerando imagem...','msg.link_copied':'Link copiado!',
   'msg.client_updated':'Cliente atualizado!','msg.addr_confirmed':'Endere\xe7o confirmado!',
   'msg.publish_first':'Publique a rota no cloud primeiro','msg.driver_update':'Atualiza\xe7\xe3o do motorista recebida',
-  'msg.new_client':'Novo cliente adicionado:','msg.status_removed':'{name}: status removido',
+  'msg.new_day':'Novo dia! Rota anterior salva no hist\xf3rico.','msg.new_client':'Novo cliente adicionado:','msg.status_removed':'{name}: status removido',
   'msg.completed_client':'{name}: conclu\xedddo!','msg.editing':'{name}: editando...',
   // Error messages dynamic
   'err.publish':'Erro ao publicar:','err.connection':'Erro de conex\xe3o:',
@@ -2263,7 +2263,7 @@ en:{
   'msg.gen_image':'Generating image...','msg.link_copied':'Link copied!',
   'msg.client_updated':'Client updated!','msg.addr_confirmed':'Address confirmed!',
   'msg.publish_first':'Publish route to cloud first','msg.driver_update':'Driver update received',
-  'msg.new_client':'New client added:','msg.status_removed':'{name}: status removed',
+  'msg.new_day':'New day! Previous route saved to history.','msg.new_client':'New client added:','msg.status_removed':'{name}: status removed',
   'msg.completed_client':'{name}: completed!','msg.editing':'{name}: editing...',
   'err.publish':'Error publishing:','err.connection':'Connection error:',
   'err.fill_required':'Fill in name and address','err.addr_invalid':'Invalid address (minimum 10 characters + number)',
@@ -3395,6 +3395,25 @@ async function _syncPull(){if(!_authToken)return;try{const res=await fetch(WORKE
 async function _syncPush(){if(!_authToken)return;try{await fetch(WORKER_URL+'/api/user/sync',{method:'POST',headers:_authHeaders(),body:JSON.stringify({cfg,tags:safeJsonParse('rota_tags',[]),hist:getHist().slice(0,30),lang:_lang||'pt',theme:localStorage.getItem('rota_theme')||'light'})});console.log('[SYNC] Push completo');}catch(e){console.warn('[SYNC] Push falhou:',e.message);}}
 function _syncPushDebounced(){if(!_authToken)return;clearTimeout(_syncTimer);_syncTimer=setTimeout(_syncPush,5000);}
 
+// v5.0.1: Auto-limpeza da rota ao virar o dia
+function _autoClearIfNewDay(){
+  const today=new Date().toISOString().split('T')[0];
+  const lastDate=localStorage.getItem('rota_last_date');
+  localStorage.setItem('rota_last_date',today);
+  if(!lastDate||lastDate===today||clients.length===0)return;
+  // Dia virou e há clientes da rota anterior — salvar no histórico com a data correta
+  const hist=getHist();
+  const entry={date:lastDate,savedAt:new Date().toISOString(),clients:JSON.parse(JSON.stringify(clients)),order:[...order]};
+  const i=hist.findIndex(h=>h.date===lastDate);
+  if(i>=0)hist[i]=entry;else hist.unshift(entry);
+  try{localStorage.setItem('rota_hist',JSON.stringify(hist.slice(0,90)));}catch(e){}
+  // Limpar rota ativa silenciosamente
+  clients=[];order=[];localStorage.removeItem('rota_ativa');
+  _currentRouteId=null;_cloudVersion=0;_cloudHash='';
+  renderC();updStats();updBtns();resetMap();renderHist();
+  setTimeout(()=>toast(t('msg.new_day'),'ok'),500);
+}
+
 let _appInitialized=false;
 function _initApp(){
   if(_appInitialized)return;_appInitialized=true;
@@ -3405,6 +3424,8 @@ function _initApp(){
   document.getElementById('f-data').value=now.toISOString().split('T')[0];
   loadCfg();renderHist();loadTrelloSelection();
   if(clients.length===0&&!_isMotoristaMode)restoreActiveRoute();
+  // v5.0.1: Auto-limpeza da rota ao virar o dia
+  if(!_isMotoristaMode)_autoClearIfNewDay();
   const savedTab=localStorage.getItem('rota_active_tab');
   if(savedTab&&savedTab!=='rota'&&!_isMotoristaMode){const tm={hist:1,dash:2,motor:3,cfg:4};const ti=tm[savedTab];const nt=document.querySelectorAll('.ntab');if(ti!==undefined&&nt[ti])goPage(savedTab,nt[ti]);}
   setTimeout(()=>{preloadDashData();},2000);
