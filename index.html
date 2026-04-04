@@ -4,6 +4,13 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.6.8 — 04/04/2026 — UX: Auto-scroll + ETA fix + Salvo position      ║
+║  ─────────────────────────────────────────                   ║
+║  MÉDIO:                                                                ║
+║  • Auto-scroll durante drag: tela rola ao arrastar card pra borda      ║
+║  • ETAs recalculam corretamente após drag-and-drop (lastValidNode)     ║
+║  • Indicador "Salvo" reposicionado na navbar (não sobrepõe mais)       ║
+║                                                                        ║
 ║  v4.6.7 — 03/04/2026 — MOTOR V2.1: Penalidade reforçada + prioridade   ║
 ║  ─────────────────────────────────────────                   ║
 ║  ALTO:                                                                 ║
@@ -692,7 +699,7 @@ body.dark .hm-mode-opt:hover:not(.active){background:rgba(255,255,255,.06)}
 .hist-card .hc-tag{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:20px;line-height:1.6;flex-shrink:0}
 /* v4.4.1: Bairro hover highlight (styles in drawer section above) */
 /* v4.4.0: Sync feedback indicator */
-.sync-indicator{position:fixed;top:140px;right:16px;z-index:300;display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;pointer-events:none;transition:all .4s cubic-bezier(.4,0,.2,1);opacity:0;transform:translateY(-8px)} /* v4.6.5: top 140px — afastado da data no header */
+.sync-indicator{position:fixed;top:8px;right:180px;z-index:300;display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;pointer-events:none;transition:all .4s cubic-bezier(.4,0,.2,1);opacity:0;transform:translateY(-8px)} /* v4.6.8: posicionado na navbar ao lado da data, sem sobrepor */
 .sync-indicator.show{opacity:1;transform:translateY(0)}
 .sync-indicator.ok{background:rgba(34,197,94,.12);color:#16a34a;border:1px solid rgba(34,197,94,.2)}
 .sync-indicator.saving{background:rgba(108,92,231,.12);color:var(--pu);border:1px solid rgba(108,92,231,.2)}
@@ -3598,6 +3605,25 @@ function startDrag(stopIdx,x,y,isTouch){
     document.addEventListener('mouseup',onDragEnd);
   }
 }
+// v4.6.8: Auto-scroll durante drag
+let _dragScrollRAF=null;
+function _dragAutoScroll(clientY){
+  const SCROLL_ZONE=80; // pixels da borda que ativam scroll
+  const SCROLL_SPEED=8; // pixels por frame
+  const clist=g('clist');
+  if(!clist)return;
+  const rect=clist.getBoundingClientRect();
+  // Scroll do container de cards se existir overflow, senão scroll da janela
+  const scrollEl=clist.scrollHeight>clist.clientHeight?clist:document.documentElement;
+  if(clientY<rect.top+SCROLL_ZONE&&clientY>rect.top-20){
+    // Perto do topo — scroll pra cima
+    scrollEl.scrollTop-=SCROLL_SPEED;
+  }else if(clientY>window.innerHeight-SCROLL_ZONE){
+    // Perto do fundo da janela — scroll pra baixo
+    scrollEl.scrollTop+=SCROLL_SPEED;
+  }else{return;} // Fora das zonas de scroll
+  _dragScrollRAF=requestAnimationFrame(()=>_dragAutoScroll(clientY));
+}
 function onDragMove(e){
   if(!dragState)return;
   e.preventDefault();
@@ -3605,6 +3631,9 @@ function onDragMove(e){
   const y=touch.clientY,x=touch.clientX;
   dragState.ghost.style.top=(y-dragState.offsetY)+'px';
   dragState.ghost.style.left=(x-dragState.offsetX)+'px';
+  // v4.6.8: Auto-scroll quando arrastar perto das bordas
+  if(_dragScrollRAF)cancelAnimationFrame(_dragScrollRAF);
+  _dragAutoScroll(y);
   // Determinar sobre qual card estamos
   const cards=[...document.querySelectorAll('.cc[data-stop]')];
   cards.forEach(c=>c.classList.remove('drag-over-top','drag-over-bottom'));
@@ -3630,6 +3659,8 @@ function onDragMove(e){
 }
 function onDragEnd(e){
   if(!dragState)return;
+  // v4.6.8: Parar auto-scroll
+  if(_dragScrollRAF){cancelAnimationFrame(_dragScrollRAF);_dragScrollRAF=null;}
   document.removeEventListener('mousemove',onDragMove);
   document.removeEventListener('mouseup',onDragEnd);
   document.removeEventListener('touchmove',onDragMove);
@@ -4021,22 +4052,32 @@ function recalcETAsFromCache(){
   const tempoSec=(cfg.tempo||10)*60;
   const al1=cfg.al1,al2=cfg.al2;
   let cur=saidaSec;
-  const geocodedOrder=order.filter(i=>clients[i].lat&&clients[i].lng);
-  for(let i=0;i<geocodedOrder.length;i++){
-    const idx=geocodedOrder[i];
-    if(!gcIdx.hasOwnProperty(idx))continue;
-    const fromNode=i===0?0:gcIdx[geocodedOrder[i-1]];
+  // v4.6.8: Recalcular ETAs para TODOS os clientes na ordem atual
+  // Rastrear último nó válido para não perder referência quando um client é skipado
+  let lastValidNode=0; // 0 = base
+  for(let i=0;i<order.length;i++){
+    const idx=order[i];
+    const c=clients[idx];
+    if(!c.lat||!c.lng||!gcIdx.hasOwnProperty(idx)){
+      // Cliente sem coordenadas — limpar ETA
+      c.estT=null;c.conflict=false;c.cmsg='';
+      continue;
+    }
     const toNode=gcIdx[idx];
-    const travel=matrix.durations[fromNode][toNode];
+    const travel=matrix.durations[lastValidNode][toNode];
+    if(typeof travel!=='number'||isNaN(travel)){
+      c.estT=null;c.conflict=false;c.cmsg='';
+      continue;
+    }
     cur+=travel;
     if(al1&&al2){const s1=ts(al1),s2=ts(al2);if(cur>=s1&&cur<s2)cur=s2;}
-    const c=clients[idx];
     c.estT=st2(cur);c.conflict=false;c.cmsg='';
     if(c.janela==='manha'&&cur>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
     else if(c.janela==='tarde'&&cur<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
     else if(c.janela==='custom'&&c.hi&&c.hf&&(cur<ts(c.hi)||cur>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
     if(cur>retSec){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
     cur+=tempoSec;
+    lastValidNode=toNode;
   }
   return true;
 }
@@ -5909,6 +5950,6 @@ function rerenderHeatmap(){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.6.7</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.6.8</div>
 </body>
 </html>
