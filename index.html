@@ -4,6 +4,17 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.6.6 — 03/04/2026 — MOTOR V2: VRPTW + Simulated Annealing          ║
+║  ─────────────────────────────────────────                   ║
+║  CRÍTICO:                                                              ║
+║  • Motor de otimização v2: matriz OSRM → NN + CI → Simulated Annealing║
+║  • 3 operadores SA: 2-opt, Or-opt, Swap com penalidade adaptativa      ║
+║  • Fallback cascata: OSRM → Worker proxy → Haversine × 1.4            ║
+║  ALTO:                                                                 ║
+║  • calcRoute() usa ordem do SA, Google Directions só renderiza mapa    ║
+║  • Drag-and-drop recalcula ETAs instantaneamente via cache da matriz   ║
+║  • Cache _cachedMatrix persiste para recálculos rápidos                ║
+║                                                                        ║
 ║  v4.6.5 — 03/04/2026 — Time Windows + Clear All + Restore Fix         ║
 ║  ─────────────────────────────────────────                   ║
 ║  CRÍTICO:                                                              ║
@@ -3603,9 +3614,10 @@ function onDragEnd(e){
       pushRouteState(); // v4.6.2: save state before reorder for undo
       const item=order.splice(from,1)[0];
       order.splice(to,0,item);
-      renderC();
+      // v4.6.6: Recalcular ETAs instantaneamente via cache, depois refinar com Google
+      if(recalcETAsFromCache()){renderC();toast('Ordem atualizada — recalculando rota...','ok');}
+      else{renderC();}
       recalcRouteFromOrder();updateUndoBtn();
-      toast('Ordem da rota atualizada','ok');
     }
   }
   dragState=null;
@@ -3680,6 +3692,300 @@ function showOptSavings(bestResult,worstResult){
   if(msg){el.querySelector('.opt-savings-text').textContent=msg;el.classList.add('show');}
   else el.classList.remove('show');
 }
+
+// ═══════════════════════════════════════════════════════════════
+// v4.6.6: MOTOR DE OTIMIZAÇÃO v2 — VRPTW com Simulated Annealing
+// Fluxo: Matriz OSRM → Heurísticas construtivas → SA refinement
+// ═══════════════════════════════════════════════════════════════
+let _cachedMatrix=null; // Cache da matriz para recálculos rápidos
+
+// Etapa 1: Construir matriz de tempos reais (OSRM → Google → Haversine)
+async function buildTimeMatrix(allCoords){
+  const N=allCoords.length;
+  // Tentar OSRM Table API primeiro (gratuito)
+  try{
+    const coordStr=allCoords.map(c=>c.lng+','+c.lat).join(';');
+    const url='https://router.project-osrm.org/table/v1/driving/'+coordStr+'?annotations=duration,distance';
+    const resp=await fetch(url);
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    const data=await resp.json();
+    if(data.code==='Ok'&&data.durations&&data.distances){
+      console.log('[MATRIX] OSRM Table API OK — '+N+'x'+N);
+      return {durations:data.durations,distances:data.distances,source:'osrm'};
+    }
+    throw new Error('OSRM code: '+(data.code||'unknown'));
+  }catch(e){
+    console.warn('[MATRIX] OSRM falhou:',e.message,'→ tentando proxy Worker...');
+  }
+  // Tentar proxy via Cloudflare Worker
+  try{
+    const coordStr=allCoords.map(c=>c.lng+','+c.lat).join(';');
+    const workerUrl='https://roteiro-lavanderia.nigel-guandalini.workers.dev/osrm-proxy?coords='+encodeURIComponent(coordStr);
+    const resp=await fetch(workerUrl);
+    if(resp.ok){
+      const data=await resp.json();
+      if(data.durations&&data.distances){
+        console.log('[MATRIX] Worker proxy OK — '+N+'x'+N);
+        return {durations:data.durations,distances:data.distances,source:'worker-proxy'};
+      }
+    }
+  }catch(e){
+    console.warn('[MATRIX] Worker proxy falhou:',e.message);
+  }
+  // Fallback: Haversine × fator urbano
+  console.log('[MATRIX] Usando fallback haversine × 1.4');
+  const durs=[],dists=[];
+  for(let i=0;i<N;i++){
+    durs[i]=[];dists[i]=[];
+    for(let j=0;j<N;j++){
+      const km=_haversineKm(allCoords[i].lat,allCoords[i].lng,allCoords[j].lat,allCoords[j].lng);
+      dists[i][j]=km*1000;
+      durs[i][j]=(km*1.4/25)*3600; // fator urbano SP: ×1.4, 25km/h média
+    }
+  }
+  return {durations:durs,distances:dists,source:'haversine'};
+}
+function _haversineKm(lat1,lon1,lat2,lon2){
+  const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// Etapa 2: Funções de avaliação
+function _clientDeadlineSec(c){
+  if(c.janela==='manha')return 12*3600;
+  if(c.janela==='custom'&&c.hf)return ts(c.hf);
+  if(c.janela==='tarde')return 24*3600; // deadline é no fim, mas start é 12h
+  return 24*3600;
+}
+function _clientStartSec(c){
+  if(c.janela==='tarde')return 12*3600;
+  if(c.janela==='custom'&&c.hi)return ts(c.hi);
+  return 0;
+}
+function _evalOrder(order,matrix,alpha,gcIdx){
+  // gcIdx mapeia índice local (0..N-1) para índice na matriz (1..N)
+  // matrix index 0 = base, N+1 = retorno
+  const saidaSec=ts(cfg.saida||'10:00');
+  const retSec=ts(cfg.ret||'17:00');
+  const tempoSec=(cfg.tempo||10)*60;
+  const al1=cfg.al1,al2=cfg.al2;
+  let cur=saidaSec,totalTravel=0,violations=0,violTime=0;
+  const arrivals=[];
+  for(let i=0;i<order.length;i++){
+    const fromNode=i===0?0:gcIdx[order[i-1]];
+    const toNode=gcIdx[order[i]];
+    const travel=matrix.durations[fromNode][toNode];
+    cur+=travel;totalTravel+=travel;
+    // Pausa almoço
+    if(al1&&al2){const s1=ts(al1),s2=ts(al2);if(cur>=s1&&cur<s2)cur=s2;}
+    arrivals.push({idx:order[i],arrival:cur});
+    // Verificar janela
+    const c=clients[order[i]];
+    const dl=_clientDeadlineSec(c);
+    const st=_clientStartSec(c);
+    if(cur>dl){violations++;violTime+=(cur-dl);}
+    if(cur<st){violTime+=(st-cur);} // chegou cedo demais para "tarde"
+    cur+=tempoSec;
+  }
+  // Retorno
+  const lastNode=gcIdx[order[order.length-1]];
+  const retNode=matrix.durations.length-1;
+  const travelRet=matrix.durations[lastNode][retNode];
+  cur+=travelRet;totalTravel+=travelRet;
+  const cost=totalTravel+alpha*violTime;
+  return {cost,totalTravel,violations,violTime,lastArrival:cur,arrivals};
+}
+
+// Etapa 3: Heurística — Nearest Neighbor com prioridade de deadline
+function _nnDeadline(matrix,gcIdx){
+  const N=clients.length;
+  const visited=new Set();const order=[];
+  // Urgentes primeiro (nearest entre eles)
+  const urgent=[];
+  for(let i=0;i<N;i++){if(clients[i].janela!=='livre')urgent.push(i);}
+  let curNode=0; // base
+  const urgSet=new Set(urgent);
+  while(urgSet.size>0){
+    let best=Infinity,bestId=-1;
+    for(const u of urgSet){
+      const d=matrix.durations[curNode][gcIdx[u]];
+      if(d<best){best=d;bestId=u;}
+    }
+    order.push(bestId);visited.add(bestId);urgSet.delete(bestId);
+    curNode=gcIdx[bestId];
+  }
+  while(visited.size<N){
+    let best=Infinity,bestId=-1;
+    for(let i=0;i<N;i++){
+      if(visited.has(i))continue;
+      const d=matrix.durations[curNode][gcIdx[i]];
+      if(d<best){best=d;bestId=i;}
+    }
+    if(bestId>=0){order.push(bestId);visited.add(bestId);curNode=gcIdx[bestId];}
+    else break;
+  }
+  return order;
+}
+
+// Etapa 3b: Heurística — Cheapest Insertion com time windows
+function _cheapestInsertTW(matrix,gcIdx){
+  const N=clients.length;const alpha=2000;
+  // Começar com o mais urgente
+  let urgIdx=0,minDl=_clientDeadlineSec(clients[0]);
+  for(let i=1;i<N;i++){const dl=_clientDeadlineSec(clients[i]);if(dl<minDl){minDl=dl;urgIdx=i;}}
+  const order=[urgIdx];const inserted=new Set([urgIdx]);
+  while(inserted.size<N){
+    let bestCost=Infinity,bestC=-1,bestPos=-1;
+    for(let c=0;c<N;c++){
+      if(inserted.has(c))continue;
+      for(let pos=0;pos<=order.length;pos++){
+        const test=[...order];test.splice(pos,0,c);
+        const r=_evalOrder(test,matrix,alpha,gcIdx);
+        if(r.cost<bestCost){bestCost=r.cost;bestC=c;bestPos=pos;}
+      }
+    }
+    if(bestC>=0){order.splice(bestPos,0,bestC);inserted.add(bestC);}
+    else break;
+  }
+  return order;
+}
+
+// Etapa 4: Simulated Annealing
+function _sa2opt(order){
+  const n=order.length;
+  let i=Math.floor(Math.random()*n),j=Math.floor(Math.random()*n);
+  while(j===i)j=Math.floor(Math.random()*n);
+  const[lo,hi]=i<j?[i,j]:[j,i];
+  const r=[...order];const seg=r.slice(lo,hi+1).reverse();
+  for(let k=0;k<seg.length;k++)r[lo+k]=seg[k];
+  return r;
+}
+function _saOrOpt(order){
+  const n=order.length;if(n<3)return _saSwap(order);
+  const segLen=Math.min(1+Math.floor(Math.random()*3),n-1);
+  const from=Math.floor(Math.random()*(n-segLen));
+  let to=Math.floor(Math.random()*(n-segLen));
+  while(to===from)to=Math.floor(Math.random()*(n-segLen));
+  const r=[...order];const seg=r.splice(from,segLen);
+  const ins=to>from?to-segLen+1:to;
+  r.splice(Math.max(0,Math.min(ins,r.length)),0,...seg);
+  return r;
+}
+function _saSwap(order){
+  const n=order.length;
+  let i=Math.floor(Math.random()*n),j=Math.floor(Math.random()*n);
+  while(j===i)j=Math.floor(Math.random()*n);
+  const r=[...order];[r[i],r[j]]=[r[j],r[i]];return r;
+}
+function _saPerturb(order){
+  const r=Math.random();
+  if(r<0.33)return _sa2opt(order);
+  if(r<0.66)return _saOrOpt(order);
+  return _saSwap(order);
+}
+
+function _runSA(initialOrder,matrix,gcIdx){
+  const N=initialOrder.length;
+  let alpha=1000;
+  let current=[...initialOrder];
+  let currentEval=_evalOrder(current,matrix,alpha,gcIdx);
+  let best=[...current],bestEval={...currentEval};
+  // Calibrar T0 (aceitar ~80% piores)
+  const deltas=[];
+  for(let i=0;i<200;i++){
+    const nb=_saPerturb(current);
+    const nbE=_evalOrder(nb,matrix,alpha,gcIdx);
+    const d=nbE.cost-currentEval.cost;
+    if(d>0)deltas.push(d);
+  }
+  const avgD=deltas.length>0?deltas.reduce((a,b)=>a+b,0)/deltas.length:1000;
+  let T=-avgD/Math.log(0.8);
+  const cool=0.997,iterPerT=5*N;
+  let noImprove=0,maxNoImprove=800,iter=0;
+  while(T>0.01&&noImprove<maxNoImprove){
+    for(let i=0;i<iterPerT;i++){
+      const nb=_saPerturb(current);
+      const nbE=_evalOrder(nb,matrix,alpha,gcIdx);
+      const delta=nbE.cost-currentEval.cost;
+      if(delta<0||Math.random()<Math.exp(-delta/T)){
+        current=nb;currentEval=nbE;
+        if(currentEval.cost<bestEval.cost){
+          best=[...current];bestEval={...currentEval};noImprove=0;
+        }
+      }
+    }
+    // Penalidade adaptativa
+    const check=_evalOrder(best,matrix,0,gcIdx);
+    if(check.violations>0)alpha*=1.2;
+    else alpha=Math.max(alpha*0.9,500);
+    currentEval=_evalOrder(current,matrix,alpha,gcIdx);
+    bestEval=_evalOrder(best,matrix,alpha,gcIdx);
+    T*=cool;noImprove++;iter++;
+  }
+  console.log('[SA] '+iter+' ciclos, T='+T.toFixed(2)+', alpha='+alpha.toFixed(0)+', violations='+_evalOrder(best,matrix,0,gcIdx).violations);
+  return best;
+}
+
+// Etapa 5: Função principal do motor v2
+async function optimizeRouteV2(geocodedIdx,baseCoords,retCoords){
+  // Construir array de coordenadas: [base, ...clientes geocodificados, retorno]
+  const geocoded=geocodedIdx.map(i=>clients[i]);
+  const allCoords=[baseCoords,...geocoded.map(c=>({lat:c.lat,lng:c.lng})),retCoords];
+  // gcIdx mapeia índice no array clients → índice na matriz
+  const gcIdx={};
+  geocodedIdx.forEach((ci,i)=>{gcIdx[ci]=i+1;}); // +1 porque 0=base
+  // Construir matriz
+  const matrix=await buildTimeMatrix(allCoords);
+  _cachedMatrix={matrix,gcIdx,allCoords}; // Cache para recálculos
+  // Rodar duas heurísticas construtivas
+  const nnOrder=_nnDeadline(matrix,gcIdx);
+  const ciOrder=_cheapestInsertTW(matrix,gcIdx);
+  const nnEval=_evalOrder(nnOrder,matrix,0,gcIdx);
+  const ciEval=_evalOrder(ciOrder,matrix,0,gcIdx);
+  console.log('[OPT-v2] NN: '+Math.round(nnEval.totalTravel/60)+'min, '+nnEval.violations+' violações');
+  console.log('[OPT-v2] CI: '+Math.round(ciEval.totalTravel/60)+'min, '+ciEval.violations+' violações');
+  // Melhor inicial (menos violações, depois menor tempo)
+  const bestInit=ciEval.violations<nnEval.violations?ciOrder:
+    ciEval.violations===nnEval.violations&&ciEval.totalTravel<nnEval.totalTravel?ciOrder:nnOrder;
+  // Simulated Annealing
+  const saOrder=_runSA(bestInit,matrix,gcIdx);
+  const saEval=_evalOrder(saOrder,matrix,0,gcIdx);
+  console.log('[OPT-v2] SA: '+Math.round(saEval.totalTravel/60)+'min, '+saEval.violations+' violações');
+  // Mapear de volta para índices globais (array clients[])
+  const finalOrder=saOrder; // já são índices globais de clients[]
+  return {order:finalOrder,eval:saEval,matrix,gcIdx};
+}
+
+// Recálculo rápido de ETAs usando matriz cacheada (para drag-and-drop)
+function recalcETAsFromCache(){
+  if(!_cachedMatrix)return false;
+  const{matrix,gcIdx}=_cachedMatrix;
+  const saidaSec=ts(cfg.saida||'10:00');
+  const retSec=ts(cfg.ret||'17:00');
+  const tempoSec=(cfg.tempo||10)*60;
+  const al1=cfg.al1,al2=cfg.al2;
+  let cur=saidaSec;
+  const geocodedOrder=order.filter(i=>clients[i].lat&&clients[i].lng);
+  for(let i=0;i<geocodedOrder.length;i++){
+    const idx=geocodedOrder[i];
+    if(!gcIdx.hasOwnProperty(idx))continue;
+    const fromNode=i===0?0:gcIdx[geocodedOrder[i-1]];
+    const toNode=gcIdx[idx];
+    const travel=matrix.durations[fromNode][toNode];
+    cur+=travel;
+    if(al1&&al2){const s1=ts(al1),s2=ts(al2);if(cur>=s1&&cur<s2)cur=s2;}
+    const c=clients[idx];
+    c.estT=st2(cur);c.conflict=false;c.cmsg='';
+    if(c.janela==='manha'&&cur>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
+    else if(c.janela==='tarde'&&cur<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
+    else if(c.janela==='custom'&&c.hi&&c.hf&&(cur<ts(c.hi)||cur>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
+    if(cur>retSec){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
+    cur+=tempoSec;
+  }
+  return true;
+}
+// ═══════════════════════════════════════════════════════════════
 
 // --- Apply route result to UI ---
 function applyRouteResult(result){
@@ -4397,81 +4703,79 @@ async function calcRoute(){
     const retAddr=cfg.retaddr||baseAddr;
     const saidaMin=ts(cfg.saida||'10:00')/60; // horário de saída em minutos
     const tempoParada=cfg.tempo||10; // minutos por parada
-    // ── v4.5.0: MULTI-STRATEGY OPTIMIZER ──
+    // ── v4.6.6: MOTOR DE OTIMIZAÇÃO v2 — VRPTW com SA ──
     _routeMode=getRouteMode();
     _routeResults={time:null,distance:null};
-    const optResult=await multiStrategyOptimize(geocoded,geocodedIdx,baseAddr,retAddr);
-    let finalWpOrder,dirResult;
-    if(optResult&&optResult.best){
-      finalWpOrder=optResult.best.wpOrder;
-      dirResult=optResult.best.dirResult;
-      // Show savings indicator
-      setTimeout(()=>showOptSavings(optResult.best,optResult.worst),500);
-    } else {
-      // Fallback: Google optimize
-      const waypoints=geocoded.map(c=>_waypointFor(c));
-      dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:true,region:'BR'},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
-      finalWpOrder=dirResult.routes[0].waypoint_order;
+    // Resolver coordenadas da base e retorno
+    let baseCoords,retCoords;
+    const baseGeo=await nominatim(baseAddr);
+    if(baseGeo){baseCoords={lat:baseGeo.lat,lng:baseGeo.lng};}
+    else{toast('Endere\xe7o de partida n\xe3o encontrado','err');return;}
+    const retGeo=await nominatim(retAddr);
+    retCoords=retGeo?{lat:retGeo.lat,lng:retGeo.lng}:{...baseCoords};
+    // Otimizar via motor v2 (matriz + heurísticas + SA)
+    toast('Otimizando rota (motor v2)...','');
+    const optV2=await optimizeRouteV2(geocodedIdx,baseCoords,retCoords);
+    // Aplicar ordem otimizada
+    const noCoords=[];
+    for(let i=0;i<clients.length;i++){if(!clients[i].lat||!clients[i].lng)noCoords.push(i);}
+    order=optV2.order.concat(noCoords);
+    // Chamar Google Directions UMA VEZ com a ordem já otimizada (só pra renderizar mapa + ETAs exatos)
+    const orderedGeo=order.filter(i=>clients[i].lat&&clients[i].lng).map(i=>clients[i]);
+    const waypoints=orderedGeo.map(c=>_waypointFor(c));
+    let dirResult;
+    try{
+      dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR'},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
+    }catch(dirErr){
+      console.warn('[ROTA] Google Directions falhou:',dirErr.message,'→ usando estimativas da matriz');
+      // Usar ETAs da matriz cacheada
+      recalcETAsFromCache();
+      renderC();updStats();saveHist();
+      const urgCount=geocoded.filter(c=>clientDeadlineMin(c)<24*60).length;
+      toast('Rota otimizada! (sem mapa — Directions indispon\xEDvel)'+(urgCount?' ('+urgCount+' com janela)':''),'ok');
+      return; // Pular renderização do mapa
     }
-    // Log detalhado da rota final
+    // Renderizar mapa com resultado do Google
     const legs=dirResult.routes[0].legs;
     const totalDistKm=legs.reduce((s,l)=>s+l.distance.value,0)/1000;
     const totalDurMin=legs.reduce((s,l)=>s+l.duration.value,0)/60;
-    console.log('[ROTA FINAL] Distância total:',totalDistKm.toFixed(1)+'km | Duração total:',totalDurMin.toFixed(0)+'min');
-    console.log('[ROTA FINAL] Percurso:');
-    legs.forEach((l,i)=>{
-      const from=i===0?'BASE':geocoded[finalWpOrder[i-1]].nome;
-      const to=i===legs.length-1?'RETORNO':geocoded[finalWpOrder[i]].nome;
-      console.log('  '+(i+1)+'. '+from+' → '+to+': '+l.distance.text+' ('+l.duration.text+')');
-    });
-    // Mapear para ordem global (índices no array clients[])
-    const newOrder=finalWpOrder.map(gi=>geocodedIdx[gi]);
-    const noCoords=[];
-    for(let i=0;i<clients.length;i++){if(!clients[i].lat||!clients[i].lng)noCoords.push(i);}
-    order=newOrder.concat(noCoords);
-    // Renderizar mapa
+    console.log('[ROTA v2] Dist\xe2ncia:',totalDistKm.toFixed(1)+'km | Dura\xe7\xe3o:',totalDurMin.toFixed(0)+'min | Viola\xe7\xf5es SA:',optV2.eval.violations);
     if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>{if(m.map)m.map=null;});gMarkers=[];gBaseMarkers.forEach(m=>{if(m.map)m.map=null;});gBaseMarkers=[];
     gRoute=new google.maps.DirectionsRenderer({map:gMap,directions:dirResult,suppressMarkers:true,polylineOptions:{strokeColor:'#6C5CE7',strokeWeight:4,strokeOpacity:0.8}});
     // Atualizar coordenadas com posições resolvidas pelo Google
-    finalWpOrder.forEach((gi,pos)=>{
+    orderedGeo.forEach((c,pos)=>{
       if(legs[pos]&&legs[pos].end_location){
-        geocoded[gi].lat=legs[pos].end_location.lat();
-        geocoded[gi].lng=legs[pos].end_location.lng();
+        c.lat=legs[pos].end_location.lat();
+        c.lng=legs[pos].end_location.lng();
       }
     });
-    // v4.3.1: Salvar estatísticas da rota
     _routeTotalKm=totalDistKm;_routeTotalMin=totalDurMin;
-    // Markers (AdvancedMarkerElement) — v4.3.5: InfoWindow com dados completos + fechar ao clicar fora
-    finalWpOrder.forEach((gi,pos)=>{const c=geocoded[gi];
+    // Markers
+    orderedGeo.forEach((c,pos)=>{
       const tipos=normalizeTipo(c.tipo);const fillColor=tipos.length?_getTagColor(tipos[0]):'#787878';
-      // v4.5.0: Detectar urgência via deadline do cliente (janela apertada)
       const dlMin=clientDeadlineMin(c);const isUrg=dlMin<24*60;
       const mk=createAdvMarker({position:{lat:c.lat,lng:c.lng},map:gMap,label:String(pos+1),fillColor,strokeColor:isUrg?'#FF6B35':'#fff',strokeWeight:isUrg?3:2,onClick:()=>{openMarkerInfoWindow(mk,c,pos);}});
       gMarkers.push(mk);
     });
-    // v4.3.5: Marcadores de partida e retorno com ícone de prédio
+    // Marcadores base/retorno
     const origin=legs[0].start_location;
     const destination=legs[legs.length-1].end_location;
     if(origin&&destination){
       if(origin.lat()===destination.lat()&&origin.lng()===destination.lng()){
-        const mkBase=createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida / Retorno',type:'ambos'});
-        gBaseMarkers.push(mkBase);
+        gBaseMarkers.push(createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida / Retorno',type:'ambos'}));
       } else {
-        const mkStart=createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida',type:'partida'});
-        const mkEnd=createBaseMarker({position:{lat:destination.lat(),lng:destination.lng()},map:gMap,title:'Retorno',type:'retorno'});
-        gBaseMarkers.push(mkStart,mkEnd);
+        gBaseMarkers.push(createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida',type:'partida'}));
+        gBaseMarkers.push(createBaseMarker({position:{lat:destination.lat(),lng:destination.lng()},map:gMap,title:'Retorno',type:'retorno'}));
       }
     }
-    // Fechar InfoWindow ao clicar no mapa (fora do marcador)
     gMap.addListener('click',()=>{if(_activeInfoWindow){_activeInfoWindow.close();_activeInfoWindow=null;}});
-    const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds,{top:40,bottom:40,left:40,right:40});google.maps.event.addListenerOnce(gMap,'idle',()=>{if(gMap.getZoom()>16)gMap.setZoom(16);if(gMap.getZoom()<10)gMap.setZoom(10);});if(geocoded.length===1)gMap.setZoom(15);
+    const bnds=new google.maps.LatLngBounds();orderedGeo.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds,{top:40,bottom:40,left:40,right:40});google.maps.event.addListenerOnce(gMap,'idle',()=>{if(gMap.getZoom()>16)gMap.setZoom(16);if(gMap.getZoom()<10)gMap.setZoom(10);});if(orderedGeo.length===1)gMap.setZoom(15);
+    // ETAs via Google Directions (precisos)
     const legsDur=legs.map(l=>({duration:l.duration.value}));
     estimateTimesOSRM(legsDur);
-    // v4.5.0: Contar clientes com janela urgente para mensagem
     const urgCount=geocoded.filter(c=>clientDeadlineMin(c)<24*60).length;
     const urgMsg=urgCount?' ('+urgCount+' com janela de hor\xe1rio priorit\xe1ria)':'';
     renderC();updStats();
-    // v4.3.7: Salvar no histórico quando rota é gerada (corrige histórico e mapa de calor)
     saveHist();
     toast('Rota otimizada gerada!'+urgMsg,'ok');
   }catch(e){toast('Erro ao calcular rota: '+e.message,'err');console.error(e);}
@@ -5550,6 +5854,6 @@ function rerenderHeatmap(){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.6.5</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.6.6</div>
 </body>
 </html>
