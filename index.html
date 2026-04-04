@@ -4,6 +4,12 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.6.4 — 03/04/2026 — ViaCEP Smart Merge                             ║
+║  ─────────────────────────────────────────                   ║
+║  ALTO:                                                                 ║
+║  • ViaCEP preserva número digitado pelo usuário ao resolver endereço   ║
+║  • Toast contextual: "Endereço atualizado" vs "Adicione o número"      ║
+║                                                                        ║
 ║  v4.6.3 — 03/04/2026 — Stability + Auto-Save + Audit Fixes            ║
 ║  ─────────────────────────────────────────                   ║
 ║  CRÍTICO:                                                              ║
@@ -1419,7 +1425,7 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   </div>
 </div>
 
-<div class="mbg" id="confirm-modal"><div class="modal" style="max-width:380px"><h2 id="confirm-title">Confirmar</h2><p id="confirm-msg" style="font-size:14px;color:var(--mu);margin-bottom:4px"></p><div class="ma"><button class="btn bo" onclick="closeModal('confirm-modal')">Cancelar</button><button class="btn br" id="confirm-ok" onclick="">Excluir</button></div></div></div>
+<div class="mbg" id="confirm-modal"><div class="modal" style="max-width:380px"><h2 id="confirm-title">Confirmar</h2><p id="confirm-msg" style="font-size:14px;color:var(--mu);margin-bottom:4px"></p><div class="ma"><button class="btn bo" id="confirm-cancel" onclick="closeModal('confirm-modal')">Cancelar</button><button class="btn bp" id="confirm-ok" onclick="">Confirmar</button></div></div></div>
 
 <!-- COMPLETION SUMMARY OVERLAY -->
 <div class="completion-overlay" id="completion-overlay">
@@ -1671,10 +1677,25 @@ function applyCepToAddress(data,endEl,statusEl,prefix){
   if(data.bairro)parts.push(data.bairro);
   const cidade=data.localidade?(data.localidade+(data.uf?', '+data.uf:'')):'';
   if(cidade)parts.push(cidade);
-  const addr=parts.join(', ');
-  if(addr&&endEl){
+  const addrBase=parts.join(', ');
+  if(addrBase&&endEl){
+    const currentVal=endEl.value.trim();
+    let finalAddr=addrBase;
+    let preserved=false;
+    // v4.6.4: Se o usu\u00e1rio j\u00e1 digitou um n\u00famero no endere\u00e7o, preservar
+    if(currentVal&&data.logradouro){
+      const numMatch=currentVal.match(/,\s*(\d+[A-Za-z]?(?:\s*[-\/]\s*\d+[A-Za-z]?)?)\s*[-,\s]/);
+      if(numMatch){
+        const pp=[];
+        pp.push(data.logradouro+', '+numMatch[1]);
+        if(data.bairro)pp.push(data.bairro);
+        if(cidade)pp.push(cidade);
+        finalAddr=pp.join(' - ');
+        preserved=true;
+      }
+    }
     _cepFilling=true;
-    endEl.value=addr;
+    endEl.value=finalAddr;
     endEl.dispatchEvent(new Event('input',{bubbles:true}));
     _cepFilling=false;
     if(statusEl){
@@ -1682,13 +1703,15 @@ function applyCepToAddress(data,endEl,statusEl,prefix){
       statusEl.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> '+(data.logradouro||'')+' \u2014 '+(data.bairro||'')+', '+(data.localidade||'');
       setTimeout(()=>{if(statusEl)statusEl.innerHTML='';},5000);
     }
-    toast('Endere\u00e7o preenchido via CEP. Adicione o n\u00famero.','ok');
+    if(preserved){
+      toast('Endere\u00e7o atualizado via CEP.','ok');
+    }else{
+      toast('Endere\u00e7o preenchido via CEP. Adicione o n\u00famero.','ok');
+      endEl.focus();
+      endEl.setSelectionRange(endEl.value.length,endEl.value.length);
+    }
     // v4.3.9: Flash verde
     endEl.classList.remove('cep-flash');void endEl.offsetWidth;endEl.classList.add('cep-flash');
-    // Focus address field so user can add number
-    endEl.focus();
-    // Place cursor at beginning so user can prepend number or at end
-    endEl.setSelectionRange(endEl.value.length,endEl.value.length);
   }
 }
 
@@ -2538,9 +2561,7 @@ function restoreActiveRoute(){
     showConfirm('Restaurar rota?','Voc\u00ea tem uma rota salva com '+data.clients.length+' cliente(s)'+(label?' de '+label:'')+'. Deseja restaurar?',()=>{
       clients=data.clients;order=data.order||clients.map((_,i)=>i);
       renderC();updStats();updBtns();toast('Rota restaurada!','ok');
-    },()=>{
-      localStorage.removeItem('rota_ativa');
-    });
+    },null,'Restaurar'); // v4.6.3: Cancelar preserva dados; botão diz "Restaurar"
     return true;
   }catch(e){return false;}
 }
@@ -3221,11 +3242,13 @@ function selAmb(i){
 function confirmAmb(){closeModal('amb-modal');ambRes=[];ambSel=-1;} // v4.6.3: don't overwrite address
 
 
-function showConfirm(title,msg,onOk,onCancel){
+function showConfirm(title,msg,onOk,onCancel,okLabel){
   g('confirm-title').textContent=title;
   g('confirm-msg').innerHTML=msg;
-  g('confirm-ok').onclick=()=>{closeModal('confirm-modal');onOk();};
-  // v4.6.3: optional cancel callback
+  // v4.6.3: customizable OK button label (default: "Confirmar")
+  const okBtn=g('confirm-ok');
+  okBtn.textContent=okLabel||'Confirmar';
+  okBtn.onclick=()=>{closeModal('confirm-modal');onOk();};
   const cancelBtn=g('confirm-cancel');
   if(cancelBtn)cancelBtn.onclick=()=>{closeModal('confirm-modal');if(onCancel)onCancel();};
   g('confirm-modal').classList.add('on');
@@ -5475,6 +5498,6 @@ function rerenderHeatmap(){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.6.3</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.6.4</div>
 </body>
 </html>
