@@ -2050,7 +2050,7 @@ pt:{
   'zone.north':'Norte','zone.south':'Sul','zone.east':'Leste','zone.west':'Oeste','zone.center':'Centro',
   // Stats dynamic
   'stats.clients_count':'{n} clientes','stats.routes_count':'{n} rotas','stats.bairros_count':'{n} bairros',
-  'stats.coletas':'{n} coleta(s)','stats.entregas':'{n} entrega(s)',
+  'stats.coleta':'{n} coleta','stats.coletas':'{n} coletas','stats.entrega':'{n} entrega','stats.entregas':'{n} entregas',
   'stats.summary':'{clients} clientes \xb7 {coletas} coleta(s) / {entregas} entrega(s)',
   // History dynamic
   'hist.empty':'Nenhuma rota salva ainda','hist.search_ph':'Buscar por data, nome ou telefone...',
@@ -2234,7 +2234,7 @@ en:{
   'misc.add':'Add','misc.coletas':'pickups','misc.entregas':'deliveries',
   'zone.north':'North','zone.south':'South','zone.east':'East','zone.west':'West','zone.center':'Center',
   'stats.clients_count':'{n} clients','stats.routes_count':'{n} routes','stats.bairros_count':'{n} neighborhoods',
-  'stats.coletas':'{n} pickup(s)','stats.entregas':'{n} delivery(ies)',
+  'stats.coleta':'{n} pickup','stats.coletas':'{n} pickups','stats.entrega':'{n} delivery','stats.entregas':'{n} deliveries',
   'stats.summary':'{clients} clients \xb7 {coletas} pickup(s) / {entregas} delivery(ies)',
   'hist.empty':'No saved routes yet','hist.search_ph':'Search by date, name or phone...',
   'hist.load':'Load route','hist.clients_summary':'{n} clients \xb7 {col} pickup(s) / {ent} delivery(ies)',
@@ -3383,7 +3383,7 @@ function _doFBLogin(){FB.login(async function(r){if(!r.authResponse)return;try{c
 function _authLogout(){showConfirm('Sair da conta','Tem certeza que deseja sair? Seus dados locais serao mantidos.',()=>{_authClearSession();_updateNavAuthBtn();toast('Voce saiu da conta','ok');});}
 
 // v5.0.1: Nav auth button — permite login para quem pulou, ou mostra conta
-function _navAuthClick(){if(_authUser){goPage('cfg',document.querySelectorAll('.ntab')[4]);}else{_authShowLogin();_authShowScreen();}}
+function _navAuthClick(){if(_authUser){goPage('cfg',document.querySelectorAll('.ntab')[4]);}else{localStorage.removeItem('rota_auth_skipped');_authShowLogin();_authShowScreen();}}
 function _updateNavAuthBtn(){const btn=document.getElementById('nav-auth-btn');if(!btn)return;btn.style.display='flex';if(_authUser){btn.classList.add('logged-in');btn.title=_authUser.name||'Conta';}else{btn.classList.remove('logged-in');btn.title='Entrar';}}
 
 function _authUpdateConfigUI(){const card=document.getElementById('cfg-account-card');if(!card)return;if(_authUser){card.style.display='';document.getElementById('cfg-user-name').textContent=_authUser.name||'Usuario';document.getElementById('cfg-user-email').textContent=_authUser.email||'';document.getElementById('cfg-avatar').textContent=(_authUser.name||'U').charAt(0).toUpperCase();document.getElementById('cfg-auth-providers').innerHTML=_authUser.provider==='google'?'<span class="auth-provider-badge">Google</span>':_authUser.provider==='facebook'?'<span class="auth-provider-badge">Facebook</span>':'<span class="auth-provider-badge">Email</span>';}else card.style.display='none';}
@@ -5731,7 +5731,7 @@ async function recalcRouteFromOrder(){
 function updStats(){
   const col=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}),ent=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');});
   g('s-cli').textContent=clients.length;
-  g('s-sub').textContent=t('misc.coletas',{n:col.length})+' / '+t('misc.entregas',{n:ent.length});
+  g('s-sub').textContent=t(col.length===1?'stats.coleta':'stats.coletas',{n:col.length})+' \xb7 '+t(ent.length===1?'stats.entrega':'stats.entregas',{n:ent.length});
   g('s-ret').textContent=col.reduce((s,c)=>s+(c.qtd||0),0);
   g('s-ent').textContent=ent.reduce((s,c)=>s+(c.qtd||0),0);
 }
