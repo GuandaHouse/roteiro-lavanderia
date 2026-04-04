@@ -4,6 +4,7 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.8.3 — 04/04/2026 — FIX: sidebar drag false positive + emoji M1     ║
 ║  v4.8.2 — 04/04/2026 — FIX: two-col overflow, emoji in render, timing  ║
 ║  v4.8.1 — 04/04/2026 — DIAG: timing instrumentation + emoji sanitize   ║
 ║  v4.8.0 — 04/04/2026 — PERF: parallel geocoding + pre-geocoding       ║
@@ -5345,7 +5346,7 @@ function updateMapSidebar(){
   if(delayedCount>0){
     const isDarkMode=document.body.classList.contains('dark');
     html+='<div style="background:'+(isDarkMode?'rgba(245,158,11,.12)':'#FEF3C7')+';border:1px solid '+(isDarkMode?'rgba(245,158,11,.3)':'#F59E0B')+';border-radius:10px;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:'+(isDarkMode?'#FBBF24':'#92400E')+';font-weight:500">'
-      +'\u26A0\uFE0F '+t('map.delayed',{n:delayedCount})
+      +_icoAlert+' '+t('map.delayed',{n:delayedCount})
     +'</div>';
   }
   html+='<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:8px">'+t('map.stops')+'</div>';
@@ -5415,19 +5416,28 @@ function initMapSidebarDragDrop(){
   let ghostEl=null;
   let dropIndicator=null;
   const DRAG_THRESHOLD=8;
+  // v4.8.3: Flag de supressao que sobrevive entre mouseup e click
+  // mouseup seta _msSuppressClick=true, click verifica e limpa
+  let _msSuppressClick=false;
   cards.forEach(card=>{
     card.addEventListener('mousedown',e=>{
       if(e.target.closest('button'))return;
       const stop=parseInt(card.dataset.msstop);
-      msDrag={stop,startX:e.clientX,startY:e.clientY,card,started:false,overStop:null,overHalf:null};
+      // v4.8.3: Rastrear startTime para distinguir click de drag abortado
+      msDrag={stop,startX:e.clientX,startY:e.clientY,card,started:false,overStop:null,overHalf:null,startTime:Date.now()};
+      _msSuppressClick=false;
       document.addEventListener('mousemove',msMove);
       document.addEventListener('mouseup',msEnd);
     });
     card.addEventListener('click',e=>{
+      // v4.8.3: 3 camadas de protecao contra falso positivo
+      // 1) Flag de supressao setada no mouseup (sobrevive ao event order mouseup→click)
+      if(_msSuppressClick){_msSuppressClick=false;return;}
+      // 2) Drag foi iniciado (>8px de movimento)
       if(msDrag&&msDrag.started)return;
-      if(e.target.closest('.ms-client-del'))return; // v4.4.0: ignore delete button clicks
+      if(e.target.closest('.ms-client-del'))return;
       const cid=card.dataset.clientid;
-      if(cid)editC(parseFloat(cid)); // v4.4.0: parse to number for editC
+      if(cid)editC(parseFloat(cid));
       else focusMapMarker(parseInt(card.dataset.msstop));
     });
   });
@@ -5491,6 +5501,13 @@ function initMapSidebarDragDrop(){
     document.removeEventListener('mousemove',msMove);
     document.removeEventListener('mouseup',msEnd);
     if(!msDrag)return;
+    // v4.8.3: Suprimir click se: drag iniciou OU segurou >200ms (tentativa de drag)
+    const elapsed=Date.now()-msDrag.startTime;
+    if(msDrag.started||elapsed>200){
+      _msSuppressClick=true;
+      // Limpar flag apos proximo tick (caso click nao dispare, ex: move pra fora do card)
+      setTimeout(()=>{_msSuppressClick=false;},0);
+    }
     if(ghostEl){ghostEl.remove();ghostEl=null;}
     if(dropIndicator){dropIndicator.remove();dropIndicator=null;}
     document.querySelectorAll('#ms-client-list .ms-client').forEach(c=>c.classList.remove('dragging','drag-over-top','drag-over-bottom'));
@@ -7053,6 +7070,6 @@ function rerenderHeatmap(){
   });
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.8.2</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.8.3</div>
 </body>
 </html>
