@@ -4,6 +4,16 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.6.5 — 03/04/2026 — Time Windows + Clear All + Restore Fix         ║
+║  ─────────────────────────────────────────                   ║
+║  CRÍTICO:                                                              ║
+║  • Roteirizador prioriza janelas de tempo (menos violações > distância)║
+║  ALTO:                                                                 ║
+║  • Cancelar restauração limpa rota_ativa do localStorage               ║
+║  • Botão "Limpar todos" na Rota do Dia (com confirmação + quantidade)  ║
+║  MÉDIO:                                                                ║
+║  • Indicador "Salvo" reposicionado (top: 140px)                        ║
+║                                                                        ║
 ║  v4.6.4 — 03/04/2026 — ViaCEP Smart Merge                             ║
 ║  ─────────────────────────────────────────                   ║
 ║  ALTO:                                                                 ║
@@ -657,7 +667,7 @@ body.dark .hm-mode-opt:hover:not(.active){background:rgba(255,255,255,.06)}
 .hist-card .hc-tag{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:20px;line-height:1.6;flex-shrink:0}
 /* v4.4.1: Bairro hover highlight (styles in drawer section above) */
 /* v4.4.0: Sync feedback indicator */
-.sync-indicator{position:fixed;top:100px;right:16px;z-index:300;display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;pointer-events:none;transition:all .4s cubic-bezier(.4,0,.2,1);opacity:0;transform:translateY(-8px)} /* v4.6.3: top ajustado para não sobrepor navbar */
+.sync-indicator{position:fixed;top:140px;right:16px;z-index:300;display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;pointer-events:none;transition:all .4s cubic-bezier(.4,0,.2,1);opacity:0;transform:translateY(-8px)} /* v4.6.5: top 140px — afastado da data no header */
 .sync-indicator.show{opacity:1;transform:translateY(0)}
 .sync-indicator.ok{background:rgba(34,197,94,.12);color:#16a34a;border:1px solid rgba(34,197,94,.2)}
 .sync-indicator.saving{background:rgba(108,92,231,.12);color:var(--pu);border:1px solid rgba(108,92,231,.2)}
@@ -1144,7 +1154,10 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <p class="ct" style="margin:0">Clientes na rota</p>
-      <span id="cc-count" style="font-size:12px;color:var(--mu);font-weight:600"></span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="cc-count" style="font-size:12px;color:var(--mu);font-weight:600"></span>
+        <button id="clear-all-btn" class="btn bo" style="display:none;font-size:11px;padding:3px 10px;border-radius:6px;color:var(--rd);border-color:rgba(226,68,92,.25)" onclick="clearAllClients()">Limpar todos</button>
+      </div>
     </div>
     <!-- v4.3.2: Busca rápida de clientes -->
     <div id="client-search-box" style="display:none;margin-bottom:10px">
@@ -2561,7 +2574,7 @@ function restoreActiveRoute(){
     showConfirm('Restaurar rota?','Voc\u00ea tem uma rota salva com '+data.clients.length+' cliente(s)'+(label?' de '+label:'')+'. Deseja restaurar?',()=>{
       clients=data.clients;order=data.order||clients.map((_,i)=>i);
       renderC();updStats();updBtns();toast('Rota restaurada!','ok');
-    },null,'Restaurar'); // v4.6.3: Cancelar preserva dados; botão diz "Restaurar"
+    },()=>{localStorage.removeItem('rota_ativa');toast('Rota descartada','');},'Restaurar'); // v4.6.5: Cancelar limpa rota_ativa — não pergunta de novo
     return true;
   }catch(e){return false;}
 }
@@ -3282,6 +3295,16 @@ function removeC(id){
     toast('Cliente removido','');
   });
 }
+// v4.6.5: Limpar todos os clientes da rota de uma vez
+function clearAllClients(){
+  if(!clients.length)return;
+  const n=clients.length;
+  showConfirm('Limpar rota?','Remover <strong>'+n+'</strong> cliente'+(n!==1?'s':'')+' da rota? Esta a\xe7\xe3o n\xe3o pode ser desfeita.',()=>{
+    pushRouteState();clients=[];order=[];renderC();updStats();updBtns();resetMap();
+    localStorage.removeItem('rota_ativa');
+    toast(n+' cliente'+(n!==1?'s':'')+' removido'+(n!==1?'s':''),'ok');
+  });
+}
 function toggleEmJanela(){
   const isCustom=g('em-janela').value==='custom';
   g('em-hi-wrap').style.display=isCustom?'':'none';
@@ -3346,7 +3369,8 @@ function saveEditC(){
 
 function renderC(){
   const el=g('clist');
-  if(!clients.length){el.innerHTML='<div class="empty"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span><p>Nenhum cliente ainda</p></div>';g('cc-count').textContent='';g('cfl-banner').innerHTML='';return;}
+  const clearBtn=g('clear-all-btn'); // v4.6.5
+  if(!clients.length){el.innerHTML='<div class="empty"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span><p>Nenhum cliente ainda</p></div>';g('cc-count').textContent='';g('cfl-banner').innerHTML='';if(clearBtn)clearBtn.style.display='none';return;}
   const cfls=clients.filter(c=>c.conflict);
   const coletasRisco=cfls.filter(c=>{const tipos=normalizeTipo(c.tipo);return tipos.length&&tipos.includes('coleta');}).length;
   g('cfl-banner').innerHTML=cfls.length?'<div class="ab w" style="margin-bottom:12px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <div><strong>'+cfls.length+' conflito(s) de hor\xE1rio.</strong> '+coletasRisco+' coleta(s) em risco.</div></div>':'';
@@ -3387,6 +3411,7 @@ function renderC(){
       +'</div>';
   }).join('');
   g('cc-count').textContent=clients.length+' cliente'+(clients.length!==1?'s':'');
+  if(clearBtn)clearBtn.style.display=clients.length>=2?'inline-block':'none'; // v4.6.5: Mostrar "Limpar todos" só com 2+ clientes
   // v4.3.2: Mostrar busca quando tem 5+ clientes
   const searchBox=g('client-search-box');
   if(searchBox)searchBox.style.display=clients.length>=5?'block':'none';
@@ -3781,7 +3806,23 @@ async function multiStrategyOptimize(geocoded,geocodedIdx,baseAddr,retAddr){
       for(let i=0;i<legs.length-1;i++){curMin+=legs[i].duration.value/60+tempo;}
       const lastStopMin=curMin;
 
-      results.push({name:strat.name,wpOrder,dirResult,legs,totalKm,totalMin,lastStopMin,
+      // v4.6.5: Simular tempos de chegada e contar violações de janela
+      let simCur=ts(cfg.saida||'10:00');
+      const simTempo=(cfg.tempo||10)*60;
+      const simAl1=cfg.al1,simAl2=cfg.al2;
+      let twViolations=0;
+      for(let i=0;i<legs.length-1;i++){
+        simCur+=legs[i].duration.value;
+        if(simAl1&&simAl2){const s=ts(simAl1),e=ts(simAl2);if(simCur>=s&&simCur<e)simCur=e;}
+        const ci=geocoded[wpOrder[i]];
+        if(ci){
+          if(ci.janela==='manha'&&simCur>ts('12:00'))twViolations++;
+          else if(ci.janela==='tarde'&&simCur<ts('12:00'))twViolations++;
+          else if(ci.janela==='custom'&&ci.hi&&ci.hf&&(simCur<ts(ci.hi)||simCur>ts(ci.hf)))twViolations++;
+        }
+        simCur+=simTempo;
+      }
+      results.push({name:strat.name,wpOrder,dirResult,legs,totalKm,totalMin,lastStopMin,twViolations,
         order:wpOrder.map(gi=>geocodedIdx[gi])});
       console.log('[OPTIMIZER] '+strat.name+': '+totalKm.toFixed(1)+'km | '+totalMin.toFixed(0)+'min | \xDAltima: '+Math.floor(lastStopMin/60)+':'+String(Math.round(lastStopMin%60)).padStart(2,'0'));
     }catch(e){console.warn('[OPTIMIZER] '+strat.name+' falhou:',e.message);}
@@ -3789,10 +3830,10 @@ async function multiStrategyOptimize(geocoded,geocodedIdx,baseAddr,retAddr){
 
   if(!results.length)return null;
 
-  // Sort by priority
+  // v4.6.5: Sort by priority — violações de janela são critério primário
   const mode=getRouteMode();
-  const byTime=[...results].sort((a,b)=>a.lastStopMin-b.lastStopMin);
-  const byDist=[...results].sort((a,b)=>a.totalKm-b.totalKm);
+  const byTime=[...results].sort((a,b)=>{const v=a.twViolations-b.twViolations;if(v)return v;return a.lastStopMin-b.lastStopMin;});
+  const byDist=[...results].sort((a,b)=>{const v=a.twViolations-b.twViolations;if(v)return v;return a.totalKm-b.totalKm;});
 
   // Cache both best results
   _routeResults.time=byTime[0]||null;
@@ -3801,7 +3842,8 @@ async function multiStrategyOptimize(geocoded,geocodedIdx,baseAddr,retAddr){
   const best=mode==='distance'?byDist[0]:byTime[0];
   const worst=mode==='distance'?byDist[byDist.length-1]:byTime[byTime.length-1];
 
-  console.log('[OPTIMIZER] Melhor ('+mode+'): '+best.name+' — '+best.totalKm.toFixed(1)+'km | '+best.totalMin.toFixed(0)+'min');
+  console.log('[OPTIMIZER] Melhor ('+mode+'): '+best.name+' — '+best.totalKm.toFixed(1)+'km | '+best.totalMin.toFixed(0)+'min | Viola\xe7\xf5es: '+best.twViolations);
+  results.forEach(r=>console.log('  '+r.name+': '+r.totalKm.toFixed(1)+'km | '+r.totalMin.toFixed(0)+'min | Viola\xe7\xf5es: '+r.twViolations));
 
   return {best,worst,byTime,byDist};
 }
@@ -5498,6 +5540,6 @@ function rerenderHeatmap(){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.6.4</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.6.5</div>
 </body>
 </html>
