@@ -4,6 +4,7 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.7.3 — 04/04/2026 — FIX: drag UX (click vs drag, map autoscroll)    ║
 ║  v4.7.2 — 04/04/2026 — FIX: i18n keys reconciled + Mobile responsive   ║
 ║  ─────────────────────────────────────────                   ║
 ║  GRANDE:                                                               ║
@@ -4501,7 +4502,7 @@ function initDragAndDrop(){
 }
 function initDragTracking(stopIdx,x,y,isTouch,card){
   // Rastrear movimento antes de iniciar o drag real
-  dragState={stopIdx,startX:x,startY:y,isTouch,card,started:false};
+  dragState={stopIdx,startX:x,startY:y,isTouch,card,started:false,startTime:Date.now()};
   if(isTouch){
     document.addEventListener('touchmove',onDragTrack,{passive:false});
     document.addEventListener('touchend',onDragTrackEnd);
@@ -4515,8 +4516,8 @@ function onDragTrack(e){
   const touch=e.touches?e.touches[0]:e;
   const dx=touch.clientX-dragState.startX,dy=touch.clientY-dragState.startY;
   if(!dragState.started){
-    if(Math.abs(dy)>DRAG_THRESHOLD){
-      // Ultrapassou threshold → iniciar drag real
+    if(Math.sqrt(dx*dx+dy*dy)>DRAG_THRESHOLD){
+      // v4.7.3: Usar distância total (não apenas vertical) para detecção de drag
       dragState.started=true;
       e.preventDefault();
       startDrag(dragState.stopIdx,touch.clientX,touch.clientY,dragState.isTouch);
@@ -4528,12 +4529,14 @@ function onDragTrack(e){
 function onDragTrackEnd(e){
   if(!dragState)return;
   if(!dragState.started){
-    // Não arrastou o suficiente → é um click
+    // Não arrastou o suficiente → verificar se foi click rápido ou tentativa de drag abortada
     document.removeEventListener('mousemove',onDragTrack);
     document.removeEventListener('mouseup',onDragTrackEnd);
     document.removeEventListener('touchmove',onDragTrack);
     document.removeEventListener('touchend',onDragTrackEnd);
-    if(!dragState.isTouch){
+    // v4.7.3: Se segurou >250ms sem mover o suficiente, foi uma tentativa de drag — NÃO abrir editC
+    const elapsed=Date.now()-dragState.startTime;
+    if(!dragState.isTouch&&elapsed<250){
       const idx=order[dragState.stopIdx];
       if(idx!==undefined)editC(clients[idx].id);
     }
@@ -4575,12 +4578,25 @@ let _dragScrollRAF=null;
 function _dragAutoScroll(clientY){
   const SCROLL_ZONE=80; // pixels da borda que ativam scroll
   const SCROLL_SPEED=10; // pixels por frame
-  // v4.6.9: body tem overflow:hidden auto — usar window.scrollBy que funciona independente do container
-  if(clientY<SCROLL_ZONE+60){ // 60px = altura aprox da navbar fixa
-    window.scrollBy(0,-SCROLL_SPEED);
-  }else if(clientY>window.innerHeight-SCROLL_ZONE){
-    window.scrollBy(0,SCROLL_SPEED);
-  }else{return;} // Fora das zonas de scroll
+  // v4.7.3: Detectar se está no modo mapa expandido — nesse caso, scrollar .map-sidebar em vez de window
+  const mapWrap=document.querySelector('.map-fullscreen');
+  const sidebar=mapWrap?mapWrap.querySelector('.map-sidebar'):null;
+  if(sidebar){
+    // Mapa expandido: scrollar o container da sidebar
+    const sbRect=sidebar.getBoundingClientRect();
+    if(clientY<sbRect.top+SCROLL_ZONE){
+      sidebar.scrollBy(0,-SCROLL_SPEED);
+    }else if(clientY>sbRect.bottom-SCROLL_ZONE){
+      sidebar.scrollBy(0,SCROLL_SPEED);
+    }else{return;}
+  }else{
+    // Modo normal: scrollar a janela
+    if(clientY<SCROLL_ZONE+60){ // 60px = altura aprox da navbar fixa
+      window.scrollBy(0,-SCROLL_SPEED);
+    }else if(clientY>window.innerHeight-SCROLL_ZONE){
+      window.scrollBy(0,SCROLL_SPEED);
+    }else{return;}
+  }
   _dragScrollRAF=requestAnimationFrame(()=>_dragAutoScroll(clientY));
 }
 function onDragMove(e){
@@ -4994,6 +5010,8 @@ function _runSA(initialOrder,matrix,gcIdx){
 
 // Etapa 5: Função principal do motor v2
 async function optimizeRouteV2(geocodedIdx,baseCoords,retCoords){
+  // v4.7.3: Timing detalhado para diagnóstico de performance
+  const _t0=performance.now();
   // Construir array de coordenadas: [base, ...clientes geocodificados, retorno]
   const geocoded=geocodedIdx.map(i=>clients[i]);
   const allCoords=[baseCoords,...geocoded.map(c=>({lat:c.lat,lng:c.lng})),retCoords];
@@ -5001,19 +5019,28 @@ async function optimizeRouteV2(geocodedIdx,baseCoords,retCoords){
   const gcIdx={};
   geocodedIdx.forEach((ci,i)=>{gcIdx[ci]=i+1;}); // +1 porque 0=base
   // Construir matriz
+  const _t1=performance.now();
   const matrix=await buildTimeMatrix(allCoords);
+  const _t2=performance.now();
+  console.log('[OPT-v2] ⏱ buildTimeMatrix: '+Math.round(_t2-_t1)+'ms ('+allCoords.length+' pontos)');
   _cachedMatrix={matrix,gcIdx,allCoords}; // Cache para recálculos
   // Rodar duas heurísticas construtivas
   const nnOrder=_nnDeadline(matrix,gcIdx);
   const ciOrder=_cheapestInsertTW(matrix,gcIdx);
+  const _t3=performance.now();
+  console.log('[OPT-v2] ⏱ Heurísticas (NN+CI): '+Math.round(_t3-_t2)+'ms');
   const nnEval=_evalOrder(nnOrder,matrix,0,gcIdx);
   const ciEval=_evalOrder(ciOrder,matrix,0,gcIdx);
   console.log('[OPT-v2] NN: '+Math.round(nnEval.totalTravel/60)+'min, '+nnEval.violations+' violações');
   console.log('[OPT-v2] CI: '+Math.round(ciEval.totalTravel/60)+'min, '+ciEval.violations+' violações');
   // v4.6.7: Rodar SA nos DOIS seeds e pegar o melhor resultado global
   // (evita que um seed com menos km mas posição arriscada para clientes críticos domine)
+  const _t4=performance.now();
   const saFromNN=_runSA(nnOrder,matrix,gcIdx);
+  const _t5=performance.now();
   const saFromCI=_runSA(ciOrder,matrix,gcIdx);
+  const _t6=performance.now();
+  console.log('[OPT-v2] ⏱ SA-NN: '+Math.round(_t5-_t4)+'ms | SA-CI: '+Math.round(_t6-_t5)+'ms');
   const saEvalNN=_evalOrder(saFromNN,matrix,0,gcIdx);
   const saEvalCI=_evalOrder(saFromCI,matrix,0,gcIdx);
   console.log('[OPT-v2] SA-NN: '+Math.round(saEvalNN.totalTravel/60)+'min, '+saEvalNN.violations+' violações');
@@ -5026,6 +5053,7 @@ async function optimizeRouteV2(geocodedIdx,baseCoords,retCoords){
   console.log('[OPT-v2] SA: '+Math.round(saEval.totalTravel/60)+'min, '+saEval.violations+' violações');
   // Mapear de volta para índices globais (array clients[])
   const finalOrder=saOrder; // já são índices globais de clients[]
+  console.log('[OPT-v2] ⏱ TOTAL: '+Math.round(performance.now()-_t0)+'ms ('+geocodedIdx.length+' clientes)');
   return {order:finalOrder,eval:saEval,matrix,gcIdx};
 }
 
@@ -5500,6 +5528,14 @@ function initMapSidebarDragDrop(){
     if(ghostEl){
       ghostEl.style.left=e.clientX-ghostEl.offsetWidth/2+'px';
       ghostEl.style.top=e.clientY-20+'px';
+    }
+    // v4.7.3: Auto-scroll dentro da sidebar do mapa durante drag
+    const sidebarScroll=document.querySelector('.map-sidebar');
+    if(sidebarScroll){
+      const sbR=sidebarScroll.getBoundingClientRect();
+      const SZ=60;
+      if(e.clientY<sbR.top+SZ)sidebarScroll.scrollBy(0,-8);
+      else if(e.clientY>sbR.bottom-SZ)sidebarScroll.scrollBy(0,8);
     }
     const allCards=[...document.querySelectorAll('#ms-client-list .ms-client[data-msstop]')];
     allCards.forEach(c=>c.classList.remove('drag-over-top','drag-over-bottom'));
@@ -6703,6 +6739,12 @@ function finishMotClient(idx){
   const c=clients[idx];
   const ta=document.getElementById('mot-obs-'+idx);
   if(ta&&ta.value.trim()){c._motObs=ta.value.trim();cloudUpdateStatus(idx,'obs',c._motObs);}
+  // v4.7.3: Se nenhum status foi marcado, assumir coletado/entregue automaticamente
+  if(!c._motStatus){
+    const isCol=c.tipo==='coleta'||c.tipo==='both';
+    c._motStatus=isCol?'coletado':'entregue';
+    cloudUpdateStatus(idx,'status',c._motStatus);
+  }
   c._motDone=true;
   cloudUpdateStatus(idx,'done',true);
   recalcDynamicETAs();
@@ -6710,7 +6752,9 @@ function finishMotClient(idx){
   autoSaveRoute(); // v4.7.2: persist to rota_ativa from motorist mode
   renderMotor();
   checkCompletion();
-  toast(c.nome+': '+t('mot.status_coletado'),'ok');
+  // v4.7.3: Toast reflete o status REAL selecionado pelo motorista
+  const statusLabels={coletado:t('mot.status_coletado'),entregue:t('mot.status_entregue'),ausente:t('mot.status_ausente'),reagendar:t('mot.status_reagendado')};
+  toast(c.nome+': '+(statusLabels[c._motStatus]||c._motStatus),'ok');
 }
 // ── Reabrir card concluído para edição ──
 function editDoneCard(idx){
@@ -6957,6 +7001,6 @@ function rerenderHeatmap(){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.7.2</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.7.3</div>
 </body>
 </html>
