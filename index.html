@@ -506,6 +506,13 @@
 <title>Roteiro de Coleta</title>
 <!-- v4.8.7: FOUC prevention — dark mode vars no :root ANTES do first paint -->
 <script>(function(){if(localStorage.getItem('rota_theme')==='dark')document.documentElement.className='dark';})();</script>
+<!-- v5.0.1: Auth flash prevention — esconde app content se nao logado -->
+<script>(function(){var t=localStorage.getItem('rota_auth');var s=localStorage.getItem('rota_auth_skipped');if(!t&&s!=='1'){document.documentElement.classList.add('auth-pending');}})();</script>
+<style>
+/* v5.0.1: Esconde nav e pages por padrao quando auth pendente */
+html.auth-pending nav,html.auth-pending .page{display:none!important;}
+html:not(.auth-pending) #auth-screen{display:none;}
+</style>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
@@ -1360,6 +1367,9 @@ body.dark .auth-card{box-shadow:0 8px 32px rgba(0,0,0,.3)}
 .auth-user-name{font-weight:700;font-size:14px;color:var(--tx)}
 .auth-user-email{font-size:12px;color:var(--mu)}
 .auth-provider-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:var(--sf);color:var(--mu)}
+.nav-auth-btn{background:none;border:none;color:var(--mu);cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.nav-auth-btn:hover{background:var(--sf);color:var(--pu)}
+.nav-auth-btn.logged-in{color:var(--pu)}
 </style>
 </head>
 <body>
@@ -1367,13 +1377,14 @@ body.dark .auth-card{box-shadow:0 8px 32px rgba(0,0,0,.3)}
 <script>if(document.documentElement.classList.contains('dark'))document.body.classList.add('dark');</script>
 
 <!-- v5.0.0: AUTH SCREEN -->
-<div id="auth-screen" class="auth-screen" style="display:none">
+<div id="auth-screen" class="auth-screen">
 <div class="auth-container">
 <div class="auth-logo"><div class="logo-i"><span class="mot-ico" style="width:18px;height:18px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span></div><span>Roteiro de Coleta</span></div>
 <div id="auth-login-form" class="auth-card">
 <h2>Entrar</h2><div id="auth-login-error" class="auth-error"></div>
 <button class="auth-social google" onclick="_authGoogle()"><svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Entrar com Google</button>
-<button class="auth-social facebook" onclick="_authFacebook()"><svg viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> Entrar com Facebook</button>
+<!-- v5.0.1: Facebook desativado por hora (app em modo desenvolvimento) -->
+<!--<button class="auth-social facebook" onclick="_authFacebook()"><svg viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> Entrar com Facebook</button>-->
 <div class="auth-divider"><span>ou</span></div>
 <input class="auth-input" type="email" id="auth-email" placeholder="Email" autocomplete="email" onkeydown="if(event.key==='Enter')document.getElementById('auth-pass').focus()"/>
 <input class="auth-input" type="password" id="auth-pass" placeholder="Senha" autocomplete="current-password" onkeydown="if(event.key==='Enter')_authLoginSubmit()"/>
@@ -1385,13 +1396,15 @@ body.dark .auth-card{box-shadow:0 8px 32px rgba(0,0,0,.3)}
 <div id="auth-register-form" class="auth-card" style="display:none">
 <h2>Criar conta</h2><div id="auth-reg-error" class="auth-error"></div>
 <button class="auth-social google" onclick="_authGoogle()"><svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Criar com Google</button>
+<!-- v5.0.1: Facebook desativado por hora (app em modo desenvolvimento) -->
+<!--<button class="auth-social facebook" onclick="_authFacebook()"><svg viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> Criar com Facebook</button>-->
 <div class="auth-divider"><span>ou</span></div>
 <input class="auth-input" type="text" id="auth-reg-name" placeholder="Nome completo" autocomplete="name"/>
 <input class="auth-input" type="email" id="auth-reg-email" placeholder="Email" autocomplete="email"/>
 <input class="auth-input" type="password" id="auth-reg-pass" placeholder="Senha (min. 8 caracteres)" autocomplete="new-password"/>
 <input class="auth-input" type="password" id="auth-reg-pass2" placeholder="Confirmar senha" autocomplete="new-password" onkeydown="if(event.key==='Enter')_authRegisterSubmit()"/>
 <button class="auth-btn" id="auth-reg-btn" onclick="_authRegisterSubmit()">Criar conta</button>
-<div class="auth-footer" style="margin-top:12px">Ja tem conta? <a onclick="_authShowLogin()">Entrar</a></div>
+<div class="auth-footer" style="margin-top:12px">J&#225; tem conta? <a onclick="_authShowLogin()">Entrar</a></div>
 <a class="auth-skip" onclick="_authSkip()">Continuar sem conta</a>
 </div>
 <div id="auth-forgot-form" class="auth-card" style="display:none">
@@ -1400,6 +1413,7 @@ body.dark .auth-card{box-shadow:0 8px 32px rgba(0,0,0,.3)}
 <input class="auth-input" type="email" id="auth-forgot-email" placeholder="Email" autocomplete="email" onkeydown="if(event.key==='Enter')_authForgotSubmit()"/>
 <button class="auth-btn" onclick="_authForgotSubmit()">Enviar link</button>
 <div class="auth-footer" style="margin-top:12px"><a onclick="_authShowLogin()">Voltar ao login</a></div>
+<div class="auth-footer" style="margin-top:8px">Novo por aqui? <a onclick="_authShowRegister()">Criar conta</a></div>
 </div>
 </div>
 </div>
@@ -1412,6 +1426,7 @@ body.dark .auth-card{box-shadow:0 8px 32px rgba(0,0,0,.3)}
   <button class="ntab" onclick="goPage('motor',this)"><svg class="ntab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg><span data-i18n="nav.motor">Motorista</span></button>
   <button class="ntab" onclick="goPage('cfg',this)"><svg class="ntab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span data-i18n="nav.cfg">Configura&#xE7;&#xF5;es</span></button>
   <div class="nav-r" id="nav-date"></div>
+  <button id="nav-auth-btn" class="nav-auth-btn" onclick="_navAuthClick()" title="Conta" style="display:none"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
   <div class="theme-toggle-wrap">
     <button class="theme-toggle" onclick="toggleTheme()">
       <div class="knob">
@@ -3318,8 +3333,8 @@ const _AUTH_KEY='rota_auth';
 function _authGetSession(){try{const r=localStorage.getItem(_AUTH_KEY);if(!r)return null;const d=JSON.parse(r);if(!d||!d.token||!d.user||!d.user.id)return null;if(d.expiresAt&&Date.now()>d.expiresAt){localStorage.removeItem(_AUTH_KEY);return null;}return d;}catch(e){return null;}}
 function _authSaveSession(u,t){_authUser=u;_authToken=t;localStorage.setItem(_AUTH_KEY,JSON.stringify({user:u,token:t,expiresAt:Date.now()+(30*86400000)}));_authUpdateConfigUI();}
 function _authClearSession(){_authUser=null;_authToken=null;localStorage.removeItem(_AUTH_KEY);_authUpdateConfigUI();}
-function _authShowScreen(){document.getElementById('auth-screen').style.display='flex';document.querySelector('nav').style.display='none';document.querySelectorAll('.page').forEach(p=>p.style.display='none');}
-function _authHideScreen(){document.getElementById('auth-screen').style.display='none';document.querySelector('nav').style.display='';}
+function _authShowScreen(){document.documentElement.classList.add('auth-pending');document.getElementById('auth-screen').style.display='flex';}
+function _authHideScreen(){document.documentElement.classList.remove('auth-pending');document.getElementById('auth-screen').style.display='none';document.querySelector('nav').style.display='';}
 function _authShowLogin(){document.getElementById('auth-login-form').style.display='';document.getElementById('auth-register-form').style.display='none';document.getElementById('auth-forgot-form').style.display='none';const e=document.getElementById('auth-login-error');if(e)e.style.display='none';}
 function _authShowRegister(){document.getElementById('auth-login-form').style.display='none';document.getElementById('auth-register-form').style.display='';document.getElementById('auth-forgot-form').style.display='none';const e=document.getElementById('auth-reg-error');if(e)e.style.display='none';}
 function _authForgot(){document.getElementById('auth-login-form').style.display='none';document.getElementById('auth-register-form').style.display='none';document.getElementById('auth-forgot-form').style.display='';const em=document.getElementById('auth-email').value;if(em)document.getElementById('auth-forgot-email').value=em;}
@@ -3358,14 +3373,18 @@ async function _authForgotSubmit(){
 
 // Google OAuth
 function _authGoogle(){if(!window.google?.accounts?.id){const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.onload=()=>_initGoogleAuth();s.onerror=()=>_authShowError('auth-login-error','Erro ao carregar Google.');document.head.appendChild(s);}else _initGoogleAuth();}
-function _initGoogleAuth(){const cid=localStorage.getItem('rota_google_client_id')||'';if(!cid){_authShowError('auth-login-error','Google OAuth nao configurado. Use email/senha.');return;}google.accounts.id.initialize({client_id:cid,callback:_handleGoogleCred,auto_select:false});google.accounts.id.prompt();}
+function _initGoogleAuth(){const cid=localStorage.getItem('rota_google_client_id')||'251116670672-eulttck17vcso97daub1n7gbruiku2bn.apps.googleusercontent.com';if(!cid){_authShowError('auth-login-error','Google OAuth nao configurado. Use email/senha.');return;}google.accounts.id.initialize({client_id:cid,callback:_handleGoogleCred,auto_select:false});google.accounts.id.prompt();}
 async function _handleGoogleCred(r){if(!r.credential)return;try{const res=await fetch(WORKER_URL+'/api/auth/google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:r.credential})});const d=await res.json();if(d.ok&&d.token){_authSaveSession(d.user,d.token);_authHideScreen();if(d.isNew)await _syncPush();else await _syncPull();_initApp();toast(d.isNew?'Conta criada com Google!':'Bem-vindo de volta!','ok');}else _authShowError('auth-login-error',d.error||'Erro com Google');}catch(e){_authShowError('auth-login-error','Sem conexao.');}}
 
 // Facebook OAuth
-function _authFacebook(){const aid=localStorage.getItem('rota_fb_app_id')||'';if(!aid){_authShowError('auth-login-error','Facebook Login nao configurado. Use email/senha.');return;}if(!window.FB){window.fbAsyncInit=function(){FB.init({appId:aid,cookie:true,xfbml:false,version:'v19.0'});_doFBLogin();};const s=document.createElement('script');s.src='https://connect.facebook.net/pt_BR/sdk.js';s.onerror=()=>_authShowError('auth-login-error','Erro ao carregar Facebook.');document.head.appendChild(s);}else _doFBLogin();}
+function _authFacebook(){const aid=localStorage.getItem('rota_fb_app_id')||'277188272955939';if(!aid){_authShowError('auth-login-error','Facebook Login nao configurado. Use email/senha.');return;}if(!window.FB){window.fbAsyncInit=function(){FB.init({appId:aid,cookie:true,xfbml:false,version:'v19.0'});_doFBLogin();};const s=document.createElement('script');s.src='https://connect.facebook.net/pt_BR/sdk.js';s.onerror=()=>_authShowError('auth-login-error','Erro ao carregar Facebook.');document.head.appendChild(s);}else _doFBLogin();}
 function _doFBLogin(){FB.login(async function(r){if(!r.authResponse)return;try{const res=await fetch(WORKER_URL+'/api/auth/facebook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accessToken:r.authResponse.accessToken})});const d=await res.json();if(d.ok&&d.token){_authSaveSession(d.user,d.token);_authHideScreen();if(d.isNew)await _syncPush();else await _syncPull();_initApp();toast(d.isNew?'Conta criada com Facebook!':'Bem-vindo de volta!','ok');}else _authShowError('auth-login-error',d.error||'Erro com Facebook');}catch(e){_authShowError('auth-login-error','Sem conexao.');}},{scope:'email,public_profile'});}
 
-function _authLogout(){showConfirm('Sair da conta','Tem certeza que deseja sair? Seus dados locais serao mantidos.',()=>{_authClearSession();toast('Voce saiu da conta','ok');});}
+function _authLogout(){showConfirm('Sair da conta','Tem certeza que deseja sair? Seus dados locais serao mantidos.',()=>{_authClearSession();_updateNavAuthBtn();toast('Voce saiu da conta','ok');});}
+
+// v5.0.1: Nav auth button — permite login para quem pulou, ou mostra conta
+function _navAuthClick(){if(_authUser){goPage('cfg',document.querySelectorAll('.ntab')[4]);}else{_authShowLogin();_authShowScreen();}}
+function _updateNavAuthBtn(){const btn=document.getElementById('nav-auth-btn');if(!btn)return;btn.style.display='flex';if(_authUser){btn.classList.add('logged-in');btn.title=_authUser.name||'Conta';}else{btn.classList.remove('logged-in');btn.title='Entrar';}}
 
 function _authUpdateConfigUI(){const card=document.getElementById('cfg-account-card');if(!card)return;if(_authUser){card.style.display='';document.getElementById('cfg-user-name').textContent=_authUser.name||'Usuario';document.getElementById('cfg-user-email').textContent=_authUser.email||'';document.getElementById('cfg-avatar').textContent=(_authUser.name||'U').charAt(0).toUpperCase();document.getElementById('cfg-auth-providers').innerHTML=_authUser.provider==='google'?'<span class="auth-provider-badge">Google</span>':_authUser.provider==='facebook'?'<span class="auth-provider-badge">Facebook</span>':'<span class="auth-provider-badge">Email</span>';}else card.style.display='none';}
 
@@ -3393,12 +3412,13 @@ function _initApp(){
   applyI18n();updateLangBtns();
   if(!cfg.tkey||!cfg.ttoken){const el=g('trello-nocred');if(el)el.style.display='block';const s1=g('trello-step1');if(s1)s1.style.display='none';}
   _authUpdateConfigUI();
+  _updateNavAuthBtn();
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
   // v5.0.0: Auth gate
-  if(_isMotoristaMode){_initApp();}
-  else{const s=_authGetSession();if(s){_authUser=s.user;_authToken=s.token;_authHideScreen();_initApp();_syncPull().catch(()=>{});}else if(localStorage.getItem('rota_auth_skipped')==='1'){_initApp();}else{_authShowScreen();}}
+  if(_isMotoristaMode){_authHideScreen();_initApp();}
+  else{const s=_authGetSession();if(s){_authUser=s.user;_authToken=s.token;_authHideScreen();_initApp();_syncPull().catch(()=>{});}else if(localStorage.getItem('rota_auth_skipped')==='1'){_authHideScreen();_initApp();}else{_authShowScreen();}}
   document.querySelectorAll('.mbg').forEach(m=>{let downOnBg=false;m.addEventListener('mousedown',e=>{downOnBg=e.target===m;});m.addEventListener('click',e=>{if(e.target===m&&downOnBg)m.classList.remove('on');downOnBg=false;});});
   document.addEventListener('paste',e=>{
     const img=Array.from(e.clipboardData.items).find(i=>i.type.startsWith('image/'));
