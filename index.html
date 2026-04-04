@@ -4,6 +4,8 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.9.1 — 04/04/2026 — FIX: geocoding cidade no sufixo + bairro solto no parser  ║
+║  v4.9.0 — 04/04/2026 — FIX: motorista pula modal restaurar, vai direto pro cloud ║
 ║  v4.8.9 — 04/04/2026 — FIX: parser complemento + formatação endereço estruturada ║
 ║  v4.8.8 — 04/04/2026 — FEAT: parser programático Trello (zero IA) + remove       ║
 ║         donuts motorista + fix toast transparente dark mode                      ║
@@ -3230,10 +3232,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('f-data').value=now.toISOString().split('T')[0];
   loadCfg();renderHist();loadTrelloSelection();
   // v4.6.3: Restore active route if saved
-  if(clients.length===0)restoreActiveRoute();
-  // v4.6.3: Restore active tab from previous session
+  // v4.9.0: Motorista NUNCA vê modal restaurar — carrega direto do cloud
+  if(clients.length===0&&!_isMotoristaMode)restoreActiveRoute();
+  // v4.6.3: Restore active tab from previous session (não no modo motorista)
   const savedTab=localStorage.getItem('rota_active_tab');
-  if(savedTab&&savedTab!=='rota'){
+  if(savedTab&&savedTab!=='rota'&&!_isMotoristaMode){
     const tabMap={hist:1,dash:2,motor:3,cfg:4};
     const tabIdx=tabMap[savedTab];
     const ntabs=document.querySelectorAll('.ntab');
@@ -4135,7 +4138,7 @@ function importTC(){
       [/\bDr\.\s?/gi,'Doutor '],[/\bDr\s/gi,'Doutor '],
       [/\bProf\.\s?/gi,'Professor '],[/\bProf\s/gi,'Professor '],
       [/\bEng\.\s?/gi,'Engenheiro '],[/\bTrav\.\s?/gi,'Travessa '],
-      [/\bP[cç]a\.\s?/gi,'Pra\u00e7a '],[/\bSta\.\s?/gi,'Santa '],
+      [/\bP[cç]a\.?\s?/gi,'Pra\u00e7a '],[/\bSta\.\s?/gi,'Santa '],
       [/\bSto\.\s?/gi,'Santo '],[/\bN[\u00ba\u00b0]\s?/gi,'']
     ];
     // Regex amplo para complemento \u2014 detecta em QUALQUER linha, TODOS os padr\u00f5es
@@ -4196,6 +4199,27 @@ function importTC(){
       }
     }
 
+    // PASSO 1.5 (v4.9.1): Linha unknown logo após endereço = provável BAIRRO
+    // Ex: "Praça Leonide Scavone 37" (addr) + "Vila Clementino" (unknown) → bairro
+    if(endereco){
+      const addrIdx=lineRoles.indexOf('addr');
+      if(addrIdx>=0){
+        for(let li=addrIdx+1;li<lines.length;li++){
+          if(lineRoles[li]!=='unknown')continue;
+          const line=lines[li];
+          // Se a linha é curta (1-3 palavras), sem números longos, sem palavras-chave de outros campos → bairro
+          const words=line.split(/\s+/);
+          if(words.length<=4&&words.length>=1&&!/\d{4,}/.test(line)&&!/^\d+\s*(?:tapetes?|pe)/i.test(line)&&!/^valor/i.test(line)&&!/^obs/i.test(line)&&!compRe.test(line)){
+            // Anexar como bairro ao endereço (será usado na montagem final)
+            endereco=endereco+' - '+line;
+            lineRoles[li]='bairro';
+            break; // só pega 1 bairro
+          }
+          break; // se a próxima linha unknown não é bairro, para
+        }
+      }
+    }
+
     // PASSO 2: Linhas 'unknown' \u2014 verificar se cont\u00e9m complemento antes de jogar pro obs
     for(let li=0;li<lines.length;li++){
       if(lineRoles[li]!=='unknown')continue;
@@ -4217,7 +4241,7 @@ function importTC(){
 
     // Expandir abreviações
     for(const [re,rep] of _abrevs)endereco=endereco.replace(re,rep);
-    endereco=endereco.replace(/\s{2,}/g,' ').trim();
+    endereco=endereco.replace(/,\s*,/g,',').replace(/\s{2,}/g,' ').trim();
 
     // PASSO 3: Estruturar endereço \u2014 "Logradouro, N\u00famero \u2014 Bairro, Cidade"
     let _p={l:'',n:'',b:'',c:''};
@@ -5884,6 +5908,19 @@ function initGoogleMaps(){
   if(hmEl)hmMap=new google.maps.Map(hmEl,{center:{lat:-23.55,lng:-46.63},zoom:11,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});
 }
 function initLeafMap(){}
+// v4.9.1: Invalidar cache de geocoding quando versão muda (corrige endereços cacheados errados)
+(function(){
+  const GEO_CACHE_VER='4.9.1';
+  if(localStorage.getItem('_geoCacheVer')!==GEO_CACHE_VER){
+    let cleared=0;
+    for(let i=localStorage.length-1;i>=0;i--){
+      const k=localStorage.key(i);
+      if(k&&k.startsWith('geo_')){localStorage.removeItem(k);cleared++;}
+    }
+    localStorage.setItem('_geoCacheVer',GEO_CACHE_VER);
+    if(cleared)console.log('[GEO] Cache invalidado (v'+GEO_CACHE_VER+'): '+cleared+' entradas removidas');
+  }
+})();
 const _geoCache={};
 // v4.8.0: Pre-geocoding — geocodifica cliente em background assim que adicionado
 function preGeocode(client){
@@ -5898,7 +5935,7 @@ function preGeocode(client){
 // v4.3.1: Geocodificação dinâmica baseada no endereço de partida do usuário
 // Âncora = endereço base configurado. Bounds = raio de ~80km ao redor da âncora.
 let _geoAnchor=null; // {lat,lng,state,city} — resolvido a partir de cfg.base
-const _GEO_RADIUS=0.7; // ~80km em graus (latitude)
+const _GEO_RADIUS=0.4; // v4.9.1: ~45km em graus (antes 0.7/~80km — permitia Jacareí)
 
 async function _resolveGeoAnchor(){
   if(_geoAnchor)return _geoAnchor;
@@ -5960,7 +5997,8 @@ async function nominatim(addr){
   await _resolveGeoAnchor();
   try{
     // Montar sufixo de contexto geográfico baseado na âncora
-    const suffix=_geoAnchor?(_geoAnchor.state?', '+_geoAnchor.state+', Brasil':', Brasil'):', Brasil';
+    // v4.9.1: Incluir CIDADE no sufixo (evita geocoding em cidade errada)
+    const suffix=_geoAnchor?(_geoAnchor.city?', '+_geoAnchor.city+', '+(_geoAnchor.state||'')+', Brasil':(_geoAnchor.state?', '+_geoAnchor.state+', Brasil':', Brasil')):', Brasil';
     const url='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+suffix)+'&region=br&key='+GKEY+_getAnchorBounds()+_getAnchorComponents();
     // v4.8.4: Timeout de 6s para Google Geocoding (evita pendura infinita)
     const _gc1=new AbortController();const _gt1=setTimeout(()=>_gc1.abort(),6000);
@@ -7358,6 +7396,6 @@ function rerenderHeatmap(){
   });
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.8.9</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.9.1</div>
 </body>
 </html>
