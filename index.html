@@ -4,6 +4,7 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.8.9 — 04/04/2026 — FIX: parser complemento + formatação endereço estruturada ║
 ║  v4.8.8 — 04/04/2026 — FEAT: parser programático Trello (zero IA) + remove       ║
 ║         donuts motorista + fix toast transparente dark mode                      ║
 ║  v4.8.7 — 04/04/2026 — FIX: dark mode FOUC prevention (zero flash no refresh)  ║
@@ -4127,81 +4128,144 @@ function importTC(){
       ||title.match(/(\d+)\s*(?:tapetes?|pe[cç]as?|itens?|unid(?:ades?)?)/i);
     if(qtdM)qtd=parseInt(qtdM[1],10)||0;
 
-    // ── ENDEREÇO ──
+    // ── ENDEREÇO + COMPLEMENTO (v4.8.9: reescrita completa) ──
     const _abrevs=[
       [/\bAv\.\s?/gi,'Avenida '],[/\bAv\s/gi,'Avenida '],
       [/\bR\.\s?/gi,'Rua '],[/\bAl\.\s?/gi,'Alameda '],
       [/\bDr\.\s?/gi,'Doutor '],[/\bDr\s/gi,'Doutor '],
       [/\bProf\.\s?/gi,'Professor '],[/\bProf\s/gi,'Professor '],
       [/\bEng\.\s?/gi,'Engenheiro '],[/\bTrav\.\s?/gi,'Travessa '],
-      [/\bPça\.\s?/gi,'Praça '],[/\bPca\.\s?/gi,'Praça '],
-      [/\bSta\.\s?/gi,'Santa '],[/\bSto\.\s?/gi,'Santo '],
-      [/\bN[º°]?\s?/gi,'']
+      [/\bP[cç]a\.\s?/gi,'Pra\u00e7a '],[/\bSta\.\s?/gi,'Santa '],
+      [/\bSto\.\s?/gi,'Santo '],[/\bN[\u00ba\u00b0]\s?/gi,'']
     ];
-    // Complemento patterns (extrair ANTES de montar endereço)
-    let complemento='';
-    const compRe=/\b((?:apto?\.?|apartamento|bloco|bl\.?|blc\.?|andar|casa|sala|conj(?:unto)?\.?|sobreloja|fundos|cobertura)\s*[\d\w\/-]*)/i;
+    // Regex amplo para complemento \u2014 detecta em QUALQUER linha, TODOS os padr\u00f5es
+    const _compWords='apto?\\.?|apartamento|ap\\.?|bloco|bl\\.?|blc\\.?|andar|casa|sala|conj(?:unto)?\\.?|sobreloja|sobrado|fundos|cobertura|ed(?:if[i\u00ed]cio)?\\.?|torre|loja|kit(?:net)?|flat';
+    const compRe=new RegExp('\\b((?:'+_compWords+')\\s*[\\d\\w\\/-]*)','i');
+    const compReGlobal=new RegExp('\\b((?:'+_compWords+')\\s*[\\d\\w\\/-]*)','gi');
 
-    // Tentar extrair endereço das linhas da descrição
-    let endereco='';
+    // PASSO 1: Varrer TODAS as linhas e classificar cada uma
+    let endereco='',complemento='';
     const lines=desc.split(/[\n\r]+/).map(l=>l.trim()).filter(Boolean);
-    for(const line of lines){
-      // Pular linhas que são claramente telefone, qtd, valor, obs
-      if(/^\(?\d{2}\)?\s?\d{4,5}[\s.\-]?\d{4}$/.test(line))continue;
-      if(/^\d+\s*(?:tapetes?|pe[cç]as?)/i.test(line))continue;
-      if(/^valor\s/i.test(line))continue;
-      if(/^obs[:\s]/i.test(line))continue;
-      // Linha que parece endereço: contém logradouro ou número
-      if(/(?:^(?:rua|r\.|av[.\s]|avenida|alameda|al\.|travessa|pra[cç]a|estrada|rod|viela|largo|beco)\b|\d{5}-?\d{3}|\b\d{1,5}\s*[-,])/i.test(line)){
-        endereco=line;break;
+    const lineRoles=[]; // track role of each line
+    const compParts=[]; // acumular todos os fragmentos de complemento
+
+    for(let li=0;li<lines.length;li++){
+      const line=lines[li];
+      // Telefone?
+      if(/^(?:\+?55\s?)?(?:\(?\d{2}\)?\s?)?\d{4,5}[\s.\-]?\d{4}$/.test(line)){lineRoles[li]='tel';continue;}
+      // Quantidade?
+      if(/^\d+\s*(?:tapetes?|pe[c\u00e7]as?|itens?|unid)/i.test(line)){lineRoles[li]='qtd';continue;}
+      // Valor?
+      if(/^valor\s/i.test(line)){lineRoles[li]='valor';continue;}
+      // Obs expl\u00edcita?
+      if(/^obs[:\s]/i.test(line)){lineRoles[li]='obs';continue;}
+      // Linha \u00e9 PURAMENTE complemento? (ex: "Apartamento 122", "Bloco B Apto 45")
+      if(compRe.test(line)){
+        const rest=line.replace(compReGlobal,'').replace(/[\s,\-\u2014]+/g,'').trim();
+        if(rest.length<5){
+          lineRoles[li]='comp';
+          const cms=line.match(compReGlobal)||[];
+          cms.forEach(c=>compParts.push(c.trim()));
+          continue;
+        }
       }
+      // Endere\u00e7o? (logradouro ou CEP ou n\u00famero)
+      if(!endereco&&/(?:^(?:rua|r\.|av[.\s]|avenida|alameda|al\.|travessa|trav\.|pra[c\u00e7]a|estrada|rod|viela|largo|beco)\b|\d{5}-?\d{3}|\b\d{1,5}\s*[-,])/i.test(line)){
+        lineRoles[li]='addr';
+        endereco=line;
+        // Extrair complemento INLINE do endere\u00e7o
+        const inlineComps=endereco.match(compReGlobal)||[];
+        inlineComps.forEach(c=>compParts.push(c.trim()));
+        if(inlineComps.length)endereco=endereco.replace(compReGlobal,'').replace(/,\s*,/g,',').replace(/,\s*[-\u2014]/g,' \u2014').replace(/[\s,\-\u2014]+$/,'').replace(/^\s*[,\-\u2014]\s*/,'').trim();
+        continue;
+      }
+      lineRoles[li]='unknown';
     }
-    // Se não achou por pattern, pegar primeira linha da desc que não é tel/qtd/valor
+
+    // Se n\u00e3o achou endere\u00e7o por logradouro, pegar primeira linha n\u00e3o classificada >5 chars
     if(!endereco){
-      for(const line of lines){
-        if(/\(?\d{2}\)?\s?\d{4,5}[\s.\-]?\d{4}/.test(line))continue;
-        if(/^\d+\s*(?:tapetes?|pe[cç]as?)/i.test(line))continue;
-        if(/^valor\s/i.test(line))continue;
-        if(/^obs[:\s]/i.test(line))continue;
-        if(line.length>5){endereco=line;break;}
+      for(let li=0;li<lines.length;li++){
+        if(lineRoles[li]==='unknown'&&lines[li].length>5){
+          lineRoles[li]='addr';
+          endereco=lines[li];
+          const inlineComps=endereco.match(compReGlobal)||[];
+          inlineComps.forEach(c=>compParts.push(c.trim()));
+          if(inlineComps.length)endereco=endereco.replace(compReGlobal,'').replace(/,\s*,/g,',').replace(/,\s*[-\u2014]/g,' \u2014').replace(/[\s,\-\u2014]+$/,'').replace(/^\s*[,\-\u2014]\s*/,'').trim();
+          break;
+        }
       }
     }
 
-    // Extrair complemento do endereço
-    const compMatch=endereco.match(compRe);
-    if(compMatch){
-      complemento=compMatch[1].trim();
-      endereco=endereco.replace(compRe,'').replace(/\s*[,\-]\s*$/,'').trim();
+    // PASSO 2: Linhas 'unknown' \u2014 verificar se cont\u00e9m complemento antes de jogar pro obs
+    for(let li=0;li<lines.length;li++){
+      if(lineRoles[li]!=='unknown')continue;
+      const cms=lines[li].match(compReGlobal);
+      if(cms){
+        cms.forEach(c=>compParts.push(c.trim()));
+        lineRoles[li]='comp';
+      }
     }
-    // Extrair CEP (remover do endereço visual)
+
+    // Montar complemento final (normaliza e deduplica)
+    const compSet=new Set();
+    compParts.forEach(c=>{const n=normalizeComplemento(c);if(n)compSet.add(n);});
+    complemento=[...compSet].join(', ');
+
+    // Extrair CEP do endere\u00e7o
     const cepM=endereco.match(/\b(\d{5}-?\d{3})\b/);
-    if(cepM)endereco=endereco.replace(cepM[0],'').replace(/\s*[,\-]\s*$/,'').trim();
+    if(cepM)endereco=endereco.replace(cepM[0],'').replace(/[\s,\-\u2014]+$/,'').trim();
 
     // Expandir abreviações
     for(const [re,rep] of _abrevs)endereco=endereco.replace(re,rep);
-    // Limpar espaços duplos
     endereco=endereco.replace(/\s{2,}/g,' ').trim();
-    // Title Case no endereço
-    if(endereco)endereco=titleCase(endereco);
-    // Normalizar complemento
-    if(complemento)complemento=normalizeComplemento(complemento);
 
-    // ── OBSERVAÇÕES ──
+    // PASSO 3: Estruturar endereço \u2014 "Logradouro, N\u00famero \u2014 Bairro, Cidade"
+    let _p={l:'',n:'',b:'',c:''};
+    // Padr\u00e3o 1: "Logradouro, Num - Bairro" (com v\u00edrgula)
+    const _ap1=endereco.match(/^(.+?)\s*,\s*(\d+\s*[A-Za-z]?)\s*[-\u2014]\s*(.+)$/);
+    if(_ap1){
+      _p.l=_ap1[1].trim();_p.n=_ap1[2].trim();
+      const rest=_ap1[3].trim();
+      const cs=rest.match(/^(.+?)\s*[,\-\u2014]\s*(.+)$/);
+      if(cs){_p.b=cs[1].trim();_p.c=cs[2].trim();}else{_p.b=rest;}
+    }else{
+      // Padr\u00e3o 2: "Logradouro Num - Bairro" (sem v\u00edrgula)
+      const _ap2=endereco.match(/^(.+?)\s+(\d+\s*[A-Za-z]?)\s*[-\u2014]\s*(.+)$/);
+      if(_ap2){
+        _p.l=_ap2[1].trim();_p.n=_ap2[2].trim();
+        const rest=_ap2[3].trim();
+        const cs=rest.match(/^(.+?)\s*[,\-\u2014]\s*(.+)$/);
+        if(cs){_p.b=cs[1].trim();_p.c=cs[2].trim();}else{_p.b=rest;}
+      }else{
+        // Padr\u00e3o 3: "Logradouro Num Bairro" (tudo colado)
+        const _ap3=endereco.match(/^(.+?)\s+(\d+\s*[A-Za-z]?)(?:\s+(.+))?$/);
+        if(_ap3){_p.l=_ap3[1].trim();_p.n=_ap3[2].trim();if(_ap3[3])_p.b=_ap3[3].trim();}
+        else{_p.l=endereco;}
+      }
+    }
+
+    // Remontar: "Logradouro, N\u00famero \u2014 Bairro, Cidade \u2014 Complemento"
+    let endFmt=titleCase(_p.l);
+    if(_p.n)endFmt+=', '+_p.n;
+    if(_p.b){endFmt+=' \u2014 '+titleCase(_p.b);if(_p.c)endFmt+=', '+titleCase(_p.c);}
+    if(complemento)endFmt+=' \u2014 '+complemento;
+    endereco=endFmt;
+
+    // ── OBSERVA\u00c7\u00d5ES (v4.8.9: complemento NUNCA vai pro obs) ──
     let obs='';
     for(const line of lines){
       if(/^obs[:\s]/i.test(line)){obs=line.replace(/^obs[:\s]*/i,'').trim();break;}
     }
-    // Coletar linhas não consumidas como obs
+    // Coletar linhas realmente n\u00e3o consumidas (excluindo complemento)
     if(!obs){
       const extras=[];
-      for(const line of lines){
-        if(line===endereco)continue;
-        if(compMatch&&line.includes(compMatch[1]))continue;
+      for(let li=0;li<lines.length;li++){
+        if(lineRoles[li]&&lineRoles[li]!=='unknown')continue;
+        const line=lines[li];
+        if(compRe.test(line))continue;
         if(telAll.length&&telAll.some(t=>line.includes(t)))continue;
         if(qtdM&&line.includes(qtdM[0]))continue;
-        if(/^valor\s/i.test(line))continue;
-        if(/^obs[:\s]/i.test(line))continue;
-        if(line.length>3&&!endereco.includes(line))extras.push(line);
+        if(line.length>3)extras.push(line);
       }
       if(extras.length)obs=extras.join('; ');
     }
@@ -7294,6 +7358,6 @@ function rerenderHeatmap(){
   });
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.8.8</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.8.9</div>
 </body>
 </html>
