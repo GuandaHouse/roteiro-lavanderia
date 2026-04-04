@@ -1705,7 +1705,81 @@ pt:{
   'mot.offline':'Offline','mot.updated':'Rota atualizada','mot.buildroute':'Monte uma rota primeiro',
   'mot.qr':'QR Code','mot.whatsapp':'WhatsApp',
   // Misc
-  'misc.add':'Adicionar','misc.coletas':'coletas','misc.entregas':'entregas'
+  'misc.add':'Adicionar','misc.coletas':'coletas','misc.entregas':'entregas',
+  // Zones
+  'zone.north':'Norte','zone.south':'Sul','zone.east':'Leste','zone.west':'Oeste','zone.center':'Centro',
+  // Stats dynamic
+  'stats.clients_count':'{n} clientes','stats.routes_count':'{n} rotas','stats.bairros_count':'{n} bairros',
+  'stats.coletas':'{n} coleta(s)','stats.entregas':'{n} entrega(s)',
+  'stats.summary':'{clients} clientes \xb7 {coletas} coleta(s) / {entregas} entrega(s)',
+  // History dynamic
+  'hist.empty':'Nenhuma rota salva ainda','hist.search_ph':'Buscar por data, nome ou telefone...',
+  'hist.load':'Carregar rota','hist.clients_summary':'{n} clientes \xb7 {col} coleta(s) / {ent} entrega(s)',
+  'hist.search_client':'Buscar cliente...','hist.route_loaded':'Rota carregada!','hist.route_removed':'Rota removida',
+  // Dashboard dynamic
+  'dash.identifying':'Identificando bairros...','dash.no_bairros':'N\xe3o foi poss\xedvel identificar bairros.',
+  // Motor dynamic
+  'mot.stops':'Paradas','mot.pickup':'Retirar','mot.deliver':'Entregar','mot.completed':'Conclu\xeddos',
+  'mot.departure':'Sa\xedda','mot.tracking':'Modo Acompanhamento',
+  'mot.tracking_desc':'Rota publicada \u2014 o motorista est\xe1 usando pelo celular. Voc\xea v\xea as atualiza\xe7\xf5es em tempo real.',
+  'mot.viewed_at':'Motorista visualizou \xe0s','mot.awaiting':'Aguardando motorista abrir a rota...',
+  'mot.status_coletado':'Coletado','mot.status_entregue':'Entregue','mot.status_ausente':'Ausente',
+  'mot.status_reagendar':'Reagendar','mot.status_reagendado':'Reagendado','mot.status_pendente':'Pendente',
+  'mot.payment':'Pagamento','mot.pix_paid':'Pix (pago)','mot.pix_charge':'Pix (cobrar)',
+  'mot.card':'Cart\xe3o','mot.cash':'Dinheiro','mot.no_info':'Sem info',
+  'mot.coleta':'Coleta','mot.entrega':'Entrega','mot.concluir':'Concluir','mot.editar':'Editar',
+  'mot.obs_placeholder':'Observa\xe7\xe3o...',
+  // Completion summary
+  'comp.stops':'{n} paradas','comp.completed':'Concluidos','comp.absent':'Ausentes',
+  'comp.received':'Recebido','comp.to_charge':'A cobrar','comp.pickups':'Coletados','comp.deliveries':'Entregues',
+  // Share
+  'share.summary':'Resumo da Rota','share.completed':'conclu\xeddos','share.absent':'ausentes',
+  // Performance
+  'perf.avg':'M\xe9dia recebido/rota','perf.total':'Total recebido',
+  // Map panel dynamic
+  'map.panel_title':'Painel da Rota','map.undo_tip':'Desfazer (Ctrl+Z)','map.beyond_limit':'Al\xe9m do limite',
+  'map.delayed':'{n} parada(s) com previs\xe3o de atraso','map.departure_return':'Partida / Retorno',
+  // CEP messages
+  'cep.searching':'Buscando...','cep.not_found':'CEP n\xe3o encontrado','cep.search_error':'Erro na busca',
+  'cep.detected':'CEP detectado','cep.confirmed':'CEP confirmado','cep.valid':'CEP v\xe1lido',
+  'cep.addr_updated':'Endere\xe7o atualizado via CEP.','cep.addr_filled':'Endere\xe7o preenchido via CEP. Adicione o n\xfamero.',
+  // Misc dynamic messages
+  'msg.optimizing':'Otimizando rota (motor v2)...','msg.optimized':'Rota otimizada!',
+  'msg.optimized_nomap':'Rota otimizada! (sem mapa \u2014 Directions indispon\xedvel)',
+  'msg.gen_image':'Gerando imagem...','msg.link_copied':'Link copiado!',
+  'msg.client_updated':'Cliente atualizado!','msg.addr_confirmed':'Endere\xe7o confirmado!',
+  'msg.publish_first':'Publique a rota no cloud primeiro','msg.driver_update':'Atualiza\xe7\xe3o do motorista recebida',
+  'msg.new_client':'Novo cliente adicionado:','msg.status_removed':'{name}: status removido',
+  'msg.completed_client':'{name}: conclu\xedddo!','msg.editing':'{name}: editando...',
+  // Error messages dynamic
+  'err.publish':'Erro ao publicar:','err.connection':'Erro de conex\xe3o:',
+  'err.fill_required':'Preencha nome e endere\xe7o','err.addr_invalid':'Endere\xe7o inv\xe1lido (m\xednimo 10 caracteres + n\xfamero)',
+  'err.time_order':'Hor\xe1rio in\xedcio deve ser anterior ao fim','err.max_time':'Tempo por parada m\xe1ximo: 240 min',
+  'err.lunch_order':'Pausa almo\xe7o: in\xedcio deve ser anterior ao fim',
+  'err.no_tags':'Nenhuma tag dispon\xedvel','err.max_tags':'M\xe1ximo de 10 tags',
+  'err.tag_exists':'Tag j\xe1 existe','err.tag_name':'Digite o nome da tag',
+  'err.file_empty':'Arquivo vazio ou sem dados','err.excel_read':'Erro ao ler arquivo Excel:',
+  'err.sheet_empty':'Aba vazia','err.no_valid':'Nenhum dado v\xe1lido encontrado',
+  'err.no_valid_import':'Nenhum dado v\xe1lido para importar',
+  'err.select_date':'Selecione uma data','err.no_boards':'Nenhum quadro encontrado',
+  'err.fetch_boards':'Erro ao buscar quadros:','err.no_lists':'Nenhuma lista neste quadro',
+  'err.fetch_lists':'Erro ao buscar listas','err.fetch_cards':'Erro ao buscar cart\xf5es',
+  'err.configure_ai':'Configure Anthropic para importar com IA','err.select_card':'Selecione ao menos um cart\xe3o',
+  'err.configure_trello_manual':'Configure a chave do app Trello primeiro (Configura\xe7\xe3o manual)',
+  'err.qty_neg':'Quantidade n\xe3o pode ser negativa','err.val_neg':'Valor n\xe3o pode ser negativo',
+  'err.start_addr':'Configure o endere\xe7o de partida!','err.addr_not_found':'Endere\xe7o n\xe3o encontrado:',
+  'err.gen_image':'Erro ao gerar imagem:','err.calc_route':'Erro ao calcular rota:',
+  // Confirm dialogs
+  'confirm.restore_msg':'Voc\xea tem uma rota salva com {n} cliente(s) de {date}. Deseja restaurar?',
+  'confirm.remove_client':'Remover <strong>{name}</strong> da rota?',
+  'confirm.clear_msg':'Remover <strong>{n}</strong> cliente(s) da rota? Esta a\xe7\xe3o n\xe3o pode ser desfeita.',
+  'confirm.replace_msg':'Isso ir\xe1 substituir os {n} clientes atuais pela rota do hist\xf3rico.',
+  'confirm.remove_toast':'Remover {name} da rota?',
+  // Card labels
+  'card.until_noon':'At\xe9 12h','card.after_noon':'Ap\xf3s 12h','card.arrival':'Chegada:',
+  'card.conflict':'{n} conflito(s) de hor\xe1rio','card.risk':'{n} coleta(s) em risco',
+  // Tag
+  'tag.created':'Tag "{name}" criada!'
 },
 en:{
   'nav.rota':'Daily Route','nav.hist':'History','nav.dash':'Client Map','nav.motor':'Driver','nav.cfg':'Settings',
@@ -1774,11 +1848,70 @@ en:{
   'hist.load':'Load route','hist.search':'Search route...',
   'mot.offline':'Offline','mot.updated':'Route updated','mot.buildroute':'Create a route first',
   'mot.qr':'QR Code','mot.whatsapp':'WhatsApp',
-  'misc.add':'Add','misc.coletas':'pickups','misc.entregas':'deliveries'
+  'misc.add':'Add','misc.coletas':'pickups','misc.entregas':'deliveries',
+  'zone.north':'North','zone.south':'South','zone.east':'East','zone.west':'West','zone.center':'Center',
+  'stats.clients_count':'{n} clients','stats.routes_count':'{n} routes','stats.bairros_count':'{n} neighborhoods',
+  'stats.coletas':'{n} pickup(s)','stats.entregas':'{n} delivery(ies)',
+  'stats.summary':'{clients} clients \xb7 {coletas} pickup(s) / {entregas} delivery(ies)',
+  'hist.empty':'No saved routes yet','hist.search_ph':'Search by date, name or phone...',
+  'hist.load':'Load route','hist.clients_summary':'{n} clients \xb7 {col} pickup(s) / {ent} delivery(ies)',
+  'hist.search_client':'Search client...','hist.route_loaded':'Route loaded!','hist.route_removed':'Route removed',
+  'dash.identifying':'Identifying neighborhoods...','dash.no_bairros':'Could not identify neighborhoods.',
+  'mot.stops':'Stops','mot.pickup':'Pick up','mot.deliver':'Deliver','mot.completed':'Completed',
+  'mot.departure':'Departure','mot.tracking':'Tracking Mode',
+  'mot.tracking_desc':'Route published \u2014 the driver is using it on mobile. You see updates in real time.',
+  'mot.viewed_at':'Driver viewed at','mot.awaiting':'Waiting for driver to open the route...',
+  'mot.status_coletado':'Picked up','mot.status_entregue':'Delivered','mot.status_ausente':'Absent',
+  'mot.status_reagendar':'Reschedule','mot.status_reagendado':'Rescheduled','mot.status_pendente':'Pending',
+  'mot.payment':'Payment','mot.pix_paid':'Pix (paid)','mot.pix_charge':'Pix (to charge)',
+  'mot.card':'Card','mot.cash':'Cash','mot.no_info':'No info',
+  'mot.coleta':'Pickup','mot.entrega':'Delivery','mot.concluir':'Complete','mot.editar':'Edit',
+  'mot.obs_placeholder':'Note...',
+  'comp.stops':'{n} stops','comp.completed':'Completed','comp.absent':'Absent',
+  'comp.received':'Received','comp.to_charge':'To charge','comp.pickups':'Picked up','comp.deliveries':'Delivered',
+  'share.summary':'Route Summary','share.completed':'completed','share.absent':'absent',
+  'perf.avg':'Avg received/route','perf.total':'Total received',
+  'map.panel_title':'Route Panel','map.undo_tip':'Undo (Ctrl+Z)','map.beyond_limit':'Beyond deadline',
+  'map.delayed':'{n} stop(s) with delay forecast','map.departure_return':'Departure / Return',
+  'cep.searching':'Searching...','cep.not_found':'ZIP not found','cep.search_error':'Search error',
+  'cep.detected':'ZIP detected','cep.confirmed':'ZIP confirmed','cep.valid':'Valid ZIP',
+  'cep.addr_updated':'Address updated via ZIP.','cep.addr_filled':'Address filled via ZIP. Add the number.',
+  'msg.optimizing':'Optimizing route (engine v2)...','msg.optimized':'Route optimized!',
+  'msg.optimized_nomap':'Route optimized! (no map \u2014 Directions unavailable)',
+  'msg.gen_image':'Generating image...','msg.link_copied':'Link copied!',
+  'msg.client_updated':'Client updated!','msg.addr_confirmed':'Address confirmed!',
+  'msg.publish_first':'Publish route to cloud first','msg.driver_update':'Driver update received',
+  'msg.new_client':'New client added:','msg.status_removed':'{name}: status removed',
+  'msg.completed_client':'{name}: completed!','msg.editing':'{name}: editing...',
+  'err.publish':'Error publishing:','err.connection':'Connection error:',
+  'err.fill_required':'Fill in name and address','err.addr_invalid':'Invalid address (minimum 10 characters + number)',
+  'err.time_order':'Start time must be before end','err.max_time':'Maximum time per stop: 240 min',
+  'err.lunch_order':'Lunch break: start must be before end',
+  'err.no_tags':'No tags available','err.max_tags':'Maximum 10 tags',
+  'err.tag_exists':'Tag already exists','err.tag_name':'Enter tag name',
+  'err.file_empty':'Empty file or no data','err.excel_read':'Error reading Excel file:',
+  'err.sheet_empty':'Empty sheet','err.no_valid':'No valid data found',
+  'err.no_valid_import':'No valid data to import',
+  'err.select_date':'Select a date','err.no_boards':'No boards found',
+  'err.fetch_boards':'Error fetching boards:','err.no_lists':'No lists in this board',
+  'err.fetch_lists':'Error fetching lists','err.fetch_cards':'Error fetching cards',
+  'err.configure_ai':'Configure Anthropic to import with AI','err.select_card':'Select at least one card',
+  'err.configure_trello_manual':'Configure the Trello app key first (Manual setup)',
+  'err.qty_neg':'Quantity cannot be negative','err.val_neg':'Value cannot be negative',
+  'err.start_addr':'Configure departure address!','err.addr_not_found':'Address not found:',
+  'err.gen_image':'Error generating image:','err.calc_route':'Error calculating route:',
+  'confirm.restore_msg':'You have a saved route with {n} client(s) from {date}. Restore it?',
+  'confirm.remove_client':'Remove <strong>{name}</strong> from route?',
+  'confirm.clear_msg':'Remove <strong>{n}</strong> client(s) from route? This action cannot be undone.',
+  'confirm.replace_msg':'This will replace the {n} current clients with the history route.',
+  'confirm.remove_toast':'Remove {name} from route?',
+  'card.until_noon':'Until 12pm','card.after_noon':'After 12pm','card.arrival':'Arrival:',
+  'card.conflict':'{n} time conflict(s)','card.risk':'{n} pickup(s) at risk',
+  'tag.created':'Tag "{name}" created!'
 }
 };
 function t(key,vars){const s=(_i18n[_lang]||_i18n.pt)[key]||(_i18n.pt)[key]||key;if(!vars)return s;return Object.entries(vars).reduce((r,[k,v])=>r.replace('{'+k+'}',v),s);}
-function setLang(lang){_lang=lang;localStorage.setItem('rota_lang',lang);applyI18n();updateLangBtns();toast(_lang==='en'?'Language changed to English':'Idioma alterado para Portugu\xeas','ok');}
+function setLang(lang){_lang=lang;localStorage.setItem('rota_lang',lang);applyI18n();updateLangBtns();toast(t('t.lang_changed'),'ok');}
 function updateLangBtns(){const pt=document.getElementById('lang-pt'),en=document.getElementById('lang-en');if(pt)pt.className=_lang==='pt'?'btn bp':'btn bo';if(en)en.className=_lang==='en'?'btn bp':'btn bo';}
 function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const k=el.getAttribute('data-i18n');const txt=t(k);if(el.tagName==='INPUT'||el.tagName==='TEXTAREA'){el.placeholder=txt;}else if(el.tagName==='OPTION'){el.textContent=txt;}else{
   // Preserve child elements (icons etc) — only replace text nodes
@@ -1906,11 +2039,11 @@ function selectInlineColor(id,color,el){
 function confirmInlineTag(id){
   const nameInput=g(id+'-new-name');
   const name=(nameInput?.value||'').trim();
-  if(!name){toast('Digite o nome da tag','warn');return;}
-  if(_tags.length>=10){toast('M\xe1ximo de 10 tags','warn');return;}
+  if(!name){toast(t('tag.enter_name'),'warn');return;}
+  if(_tags.length>=10){toast(t('tag.max_10'),'warn');return;}
   // Check duplicate
   if(_tags.some(t=>t.label.toLowerCase()===name.toLowerCase())){
-    toast('Tag j\xe1 existe','warn');return;
+    toast(t('tag.exists'),'warn');return;
   }
   const newId='tag_'+Date.now();
   const color=_inlineTagColor||TAG_PALETTE[_tags.length%TAG_PALETTE.length];
@@ -1921,7 +2054,7 @@ function confirmInlineTag(id){
   // Update tag config UI if visible
   if(typeof renderTagsConfig==='function')renderTagsConfig();
   if(typeof updateTagSelects==='function')updateTagSelects();
-  toast('Tag "'+name+'" criada!','ok');
+  toast(name+t('t.tag_created'),'ok');
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -2019,9 +2152,9 @@ function applyCepToAddress(data,endEl,statusEl,prefix){
       setTimeout(()=>{if(statusEl)statusEl.innerHTML='';},5000);
     }
     if(preserved){
-      toast('Endere\u00e7o atualizado via CEP.','ok');
+      toast(t('cep.updated'),'ok');
     }else{
-      toast('Endere\u00e7o preenchido via CEP. Adicione o n\u00famero.','ok');
+      toast(t('cep.add_number'),'ok');
       endEl.focus();
       endEl.setSelectionRange(endEl.value.length,endEl.value.length);
     }
@@ -2304,10 +2437,10 @@ async function cloudPublish(){
       toast(t('t.published'),'ok');
       setCloudStatus('synced','Rota online e sincronizada em tempo real');
     } else {
-      toast('Erro ao publicar: '+(data.error||'desconhecido'),'err');
+      toast(t('err.publish')+(data.error||t('err.unknown')),'err');
     }
   }catch(e){
-    toast('Erro de conexão: '+e.message,'err');
+    toast(t('err.connection')+': '+e.message,'err');
   }finally{
     if(btn)btn.disabled=false;
   }
@@ -2370,7 +2503,7 @@ async function cloudPoll(){
         // Notifica se tem cliente novo (toast legado)
         if(route._newClient){
           const nc=route.clients[route._newClient.idx];
-          if(nc&&!_isMotoristaMode)toast('Novo cliente adicionado: '+nc.nome,'ok');
+          if(nc&&!_isMotoristaMode)toast(t('t.new_client')+': '+nc.nome,'ok');
         }
       }
     }
@@ -2407,7 +2540,7 @@ async function _processOfflineQueue(){
     _saveOfflineQueue();
     if(!_offlineQueue.length){
       setCloudStatus('synced','Rota online e sincronizada em tempo real');
-      toast('Dados offline sincronizados!','ok');
+      toast(t('t.synced'),'ok');
     }else{
       setCloudStatus('syncing','Sincronizando... ('+_offlineQueue.length+' pendente'+((_offlineQueue.length>1)?'s':'')+')');
     }
@@ -2472,7 +2605,7 @@ function startGestorPolling(){
           clients=route.clients;order=route.order;
           if(route.cfg){cfg.base=route.cfg.base||cfg.base;cfg.retaddr=route.cfg.retaddr||cfg.retaddr;cfg.saida=route.cfg.saida||cfg.saida;cfg.ret=route.cfg.ret||cfg.ret;cfg.tempo=route.cfg.tempo||cfg.tempo;}
           renderMotor();
-          toast('Atualiza\xe7\xe3o do motorista recebida','ok');
+          toast(t('t.driver_update'),'ok');
         }
       }
     }catch(e){}
@@ -2496,8 +2629,8 @@ function openSmartInsert(){
 async function doSmartInsert(){
   const nome=titleCase(document.getElementById('si-nome').value.trim());
   const end=titleCase(document.getElementById('si-end').value.trim());
-  if(!nome||!end){toast('Preencha nome e endereço','err');return;}
-  if(end.length<10||!/\d/.test(end)){toast('Endereço inválido (mínimo 10 caracteres + número)','err');return;}
+  if(!nome||!end){toast(t('e.fill_name_addr'),'err');return;}
+  if(end.length<10||!/\d/.test(end)){toast(t('e.addr_invalid'),'err');return;}
 
   const btn=document.getElementById('si-btn');
   btn.disabled=true;
@@ -2590,7 +2723,7 @@ async function doSmartInsert(){
       if(pubData.ok){_cloudVersion=pubData.version;_cloudHash=pubData.hash;}
     }catch(e){}
   }
-  toast('Cliente inserido na rota: '+nome,'ok');
+  toast(t('t.client_added')+': '+nome,'ok');
 
   btn.disabled=false;
   btn.innerHTML='<span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span> Inserir na rota';
@@ -2626,18 +2759,18 @@ function showCompletionSummary(){
   const tapR=order.filter(i=>clients[i].tipo==='coleta').reduce((s,i)=>s+(clients[i].qtd||0),0);
   const tapE=order.filter(i=>clients[i].tipo==='entrega').reduce((s,i)=>s+(clients[i].qtd||0),0);
 
-  const d=clients[0]?.data?new Date(clients[0].data+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
-  document.getElementById('compl-sub').textContent=d+' — '+total+' paradas';
+  const d=clients[0]?.data?new Date(clients[0].data+'T12:00').toLocaleDateString(_lang==='en'?'en-US':'pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
+  document.getElementById('compl-sub').textContent=d+' — '+total+' '+t('comp.stops');
   document.getElementById('compl-charts').innerHTML=buildChartsHTML(clients,order);
 
   const pct=total?Math.round(done/total*100):0;
   document.getElementById('compl-stats').innerHTML=
-    '<div class="completion-stat"><div class="cs-val">'+pct+'%</div><div class="cs-label">Concluidos</div></div>'
-    +'<div class="completion-stat"><div class="cs-val">'+ausente+'</div><div class="cs-label">Ausentes</div></div>'
-    +'<div class="completion-stat"><div class="cs-val">R$ '+fmtBRL(recebido)+'</div><div class="cs-label">Recebido</div></div>'
-    +'<div class="completion-stat"><div class="cs-val">R$ '+fmtBRL(aCobrar)+'</div><div class="cs-label">A cobrar</div></div>'
-    +'<div class="completion-stat"><div class="cs-val">'+tapR+'</div><div class="cs-label">Coletados</div></div>'
-    +'<div class="completion-stat"><div class="cs-val">'+tapE+'</div><div class="cs-label">Entregues</div></div>';
+    '<div class="completion-stat"><div class="cs-val">'+pct+'%</div><div class="cs-label">'+t('comp.completed')+'</div></div>'
+    +'<div class="completion-stat"><div class="cs-val">'+ausente+'</div><div class="cs-label">'+t('comp.absent')+'</div></div>'
+    +'<div class="completion-stat"><div class="cs-val">R$ '+fmtBRL(recebido)+'</div><div class="cs-label">'+t('comp.received')+'</div></div>'
+    +'<div class="completion-stat"><div class="cs-val">R$ '+fmtBRL(aCobrar)+'</div><div class="cs-label">'+t('comp.to_charge')+'</div></div>'
+    +'<div class="completion-stat"><div class="cs-val">'+tapR+'</div><div class="cs-label">'+t('comp.collected')+'</div></div>'
+    +'<div class="completion-stat"><div class="cs-val">'+tapE+'</div><div class="cs-label">'+t('comp.delivered')+'</div></div>';
 
   document.getElementById('completion-overlay').classList.add('on');
 }
@@ -2658,13 +2791,13 @@ function shareCompletionWhatsApp(){
     if(c._motPay==='Pix (cobrar)')aCobrar+=v;
     else if(c._motPay)recebido+=v;
   });
-  const d=clients[0]?.data?new Date(clients[0].data+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):'';
-  const text='*Resumo da Rota '+d+'*\n'
-    +done+'/'+total+' concluidos'
-    +(ausente?' | '+ausente+' ausentes':'')
-    +'\nRecebido: R$ '+fmtBRL(recebido)
-    +(aCobrar?'\nA cobrar: R$ '+fmtBRL(aCobrar):'')
-    +'\n\n_Roteiro de Coleta_';
+  const d=clients[0]?.data?new Date(clients[0].data+'T12:00').toLocaleDateString(_lang==='en'?'en-US':'pt-BR',{day:'2-digit',month:'2-digit'}):'';
+  const text='*'+t('whatsapp.summary')+' '+d+'*\n'
+    +done+'/'+total+' '+t('comp.completed').toLowerCase()
+    +(ausente?' | '+ausente+' '+t('comp.absent').toLowerCase():'')
+    +'\n'+t('comp.received')+': R$ '+fmtBRL(recebido)
+    +(aCobrar?'\n'+t('comp.to_charge')+': R$ '+fmtBRL(aCobrar):'')
+    +'\n\n_'+t('whatsapp.route')+'_';
   window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
 }
 
@@ -2710,14 +2843,14 @@ function renderPerfDash(){
   const avgRecebido=totalRoutes?sumRecebido/totalRoutes:0;
 
   el.innerHTML='<div class="card" style="margin-bottom:20px">'
-    +'<p class="ct">Performance ('+totalRoutes+' rotas com dados)</p>'
+    +'<p class="ct">'+t('perf.title')+' ('+totalRoutes+' '+t('perf.routes')+' '+t('perf.with_data')+')</p>'
     +'<div class="perf-grid">'
-    +'<div class="perf-card"><div class="perf-val">'+avgConcl+'%</div><div class="perf-label">Taxa de conclusao</div></div>'
-    +'<div class="perf-card"><div class="perf-val">'+avgAusencia+'%</div><div class="perf-label">Taxa de ausencia</div></div>'
-    +'<div class="perf-card"><div class="perf-val">'+avgClientes+'</div><div class="perf-label">Media clientes/rota</div></div>'
-    +'<div class="perf-card"><div class="perf-val">R$ '+fmtBRL(avgRecebido)+'</div><div class="perf-label">Media recebido/rota</div></div>'
-    +'<div class="perf-card"><div class="perf-val">R$ '+fmtBRL(sumRecebido)+'</div><div class="perf-label">Total recebido</div></div>'
-    +'<div class="perf-card"><div class="perf-val">R$ '+fmtBRL(sumACobrar)+'</div><div class="perf-label">Total a cobrar</div></div>'
+    +'<div class="perf-card"><div class="perf-val">'+avgConcl+'%</div><div class="perf-label">'+t('perf.completion_rate')+'</div></div>'
+    +'<div class="perf-card"><div class="perf-val">'+avgAusencia+'%</div><div class="perf-label">'+t('perf.absence_rate')+'</div></div>'
+    +'<div class="perf-card"><div class="perf-val">'+avgClientes+'</div><div class="perf-label">'+t('perf.avg_clients')+'</div></div>'
+    +'<div class="perf-card"><div class="perf-val">R$ '+fmtBRL(avgRecebido)+'</div><div class="perf-label">'+t('perf.avg_received')+'</div></div>'
+    +'<div class="perf-card"><div class="perf-val">R$ '+fmtBRL(sumRecebido)+'</div><div class="perf-label">'+t('perf.total_received')+'</div></div>'
+    +'<div class="perf-card"><div class="perf-val">R$ '+fmtBRL(sumACobrar)+'</div><div class="perf-label">'+t('perf.total_to_charge')+'</div></div>'
     +'</div></div>';
 }
 
@@ -2884,7 +3017,7 @@ function restoreActiveRoute(){
       renderC();updStats();updBtns();toast(t('t.restored'),'ok');
       // v4.6.9: Rebuild OSRM matrix em background para ETAs funcionarem no drag
       _rebuildCachedMatrix();
-    },()=>{localStorage.removeItem('rota_ativa');toast('Rota descartada','');},'Restaurar'); // v4.6.5: Cancelar limpa rota_ativa — não pergunta de novo
+    },()=>{localStorage.removeItem('rota_ativa');toast(t('t.discarded'),'');},'Restaurar'); // v4.6.5: Cancelar limpa rota_ativa — não pergunta de novo
     return true;
   }catch(e){return false;}
 }
@@ -2960,10 +3093,10 @@ function saveCfg(){
     tkey:v('cfg-tkey'),ttoken:v('cfg-ttoken'),
     akey:v('cfg-akey'),gkey:v('cfg-gkey')};
   // Validações
-  if(cfg.saida&&cfg.ret&&cfg.saida>=cfg.ret){toast('Horário de saída deve ser anterior ao retorno','err');return;}
-  if(cfg.tempo>240){toast('Tempo por parada máximo: 240 min','err');return;}
+  if(cfg.saida&&cfg.ret&&cfg.saida>=cfg.ret){toast(t('e.time_order'),'err');return;}
+  if(cfg.tempo>240){toast(t('e.max_time'),'err');return;}
   if(cfg.tempo<1){cfg.tempo=1;}
-  if(cfg.al1&&cfg.al2&&cfg.al1>=cfg.al2){toast('Pausa almoço: início deve ser anterior ao fim','err');return;}
+  if(cfg.al1&&cfg.al2&&cfg.al1>=cfg.al2){toast(t('e.lunch_order'),'err');return;}
   localStorage.setItem('rota_cfg',JSON.stringify(cfg));
   // v4.3.3: Salvar tags configuráveis
   _saveTags();
@@ -2998,7 +3131,7 @@ function renderTagsConfig(){
 function setTagColor(idx,color){_tags[idx].color=color;_saveTags();renderTagsConfig();renderC();}
 function setTagLabel(idx,label){_tags[idx].label=label.trim()||_tags[idx].label;_saveTags();updateTagSelects();renderC();}
 function removeTag(idx){
-  if(_tags.length<=0){toast('Nenhuma tag dispon\xedvel','warn');return;}
+  if(_tags.length<=0){toast(t('tag.none_available'),'warn');return;}
   const removedId=_tags[idx].id;
   _tags.splice(idx,1);_saveTags();
   // Migrar clientes com a tag removida para array vazio
@@ -3006,7 +3139,7 @@ function removeTag(idx){
   renderTagsConfig();updateTagSelects();renderC();
 }
 function addNewTag(){
-  if(_tags.length>=10){toast('M\xe1ximo de 10 tags','warn');return;}
+  if(_tags.length>=10){toast(t('tag.max_10'),'warn');return;}
   const usedColors=_tags.map(t=>t.color);
   const availColor=TAG_PALETTE.find(c=>!usedColors.includes(c))||TAG_PALETTE[_tags.length%TAG_PALETTE.length];
   const id='tag_'+Date.now();
@@ -3170,7 +3303,7 @@ function parseImportFile(file){
       const txt=e.target.result;
       const sep=ext==='tsv'?'\t':detectCSVSeparator(txt);
       const rows=parseCSVText(txt,sep);
-      if(rows.length<2){toast('Arquivo vazio ou sem dados','err');return;}
+      if(rows.length<2){toast(t('e.empty_file'),'err');return;}
       _fileImportCols=rows[0].map(c=>(c||'').toString().trim());
       _fileImportData=rows.slice(1).map(r=>{
         const obj={};
@@ -3190,7 +3323,7 @@ function parseImportFile(file){
         loadSheetData(_fileImportWB.SheetNames[0]);
         showColumnMapping(file.name);
       }catch(err){
-        toast('Erro ao ler arquivo Excel: '+err.message,'err');
+        toast(t('e.read_excel')+': '+err.message,'err');
       }
     };
     reader.readAsArrayBuffer(file);
@@ -3235,7 +3368,7 @@ function loadSheetData(sheetName){
   if(!_fileImportWB)return;
   const ws=_fileImportWB.Sheets[sheetName];
   const json=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-  if(json.length<2){toast('Aba vazia','err');return;}
+  if(json.length<2){toast(t('e.empty_sheet'),'err');return;}
   _fileImportCols=json[0].map(c=>(c||'').toString().trim());
   _fileImportData=json.slice(1).map(r=>{
     const obj={};
@@ -3304,8 +3437,8 @@ function onColMapChange(fieldKey,colName){
 }
 
 function previewFileImport(){
-  if(!_fileImportMap.nome){toast('Mapeie pelo menos a coluna Nome','err');return;}
-  if(!_fileImportMap.endereco){toast('Mapeie pelo menos a coluna Endere\xE7o','err');return;}
+  if(!_fileImportMap.nome){toast(t('e.map_name'),'err');return;}
+  if(!_fileImportMap.endereco){toast(t('e.map_addr'),'err');return;}
   // Build preview rows
   _fileImportPreviewRows=[];
   const errors=[];
@@ -3334,7 +3467,7 @@ function previewFileImport(){
     if(!r._valid)errors.push('Linha '+(i+2)+': '+r._err);
     _fileImportPreviewRows.push(r);
   });
-  if(!_fileImportPreviewRows.length){toast('Nenhum dado v\xE1lido encontrado','err');return;}
+  if(!_fileImportPreviewRows.length){toast(t('e.no_valid_data'),'err');return;}
   // Show preview
   g('file-import-map').style.display='none';
   g('file-import-preview').style.display='block';
@@ -3406,7 +3539,7 @@ function resetFileImport(){
 
 function executeFileImport(){
   const valid=_fileImportPreviewRows.filter(r=>r._valid);
-  if(!valid.length){toast('Nenhum dado v\xE1lido para importar','err');return;}
+  if(!valid.length){toast(t('e.no_valid_import'),'err');return;}
   const today=new Date().toISOString().split('T')[0];
   let count=0;
   valid.forEach(r=>{
@@ -3453,7 +3586,7 @@ function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace
 // ═══════════════ END MULTI-IMPORT ═══════════════
 
 async function extractImg(){
-  if(!cfg.akey){toast('Configure a chave Anthropic','err');return;}
+  if(!cfg.akey){toast(t('e.configure_anthropic'),'err');return;}
   if(!imgData)return;
   g('ext-btn').disabled=true;g('espin').style.display='';g('elbl').textContent='Extraindo...';
   try{
@@ -3481,7 +3614,7 @@ async function extractImg(){
     g('ai-badge').style.display='inline-flex';
     if(ext.endereco)schedGeo();
     toast(t('t.extracted'),'ok');
-  }catch(e){toast('Erro na extracao. Verifique a chave Anthropic.','err');}
+  }catch(e){toast(t('e.extract_error'),'err');}
   finally{g('ext-btn').disabled=false;g('espin').style.display='none';g('elbl').textContent='\u2728 Extrair com IA';}
 }
 
@@ -3508,14 +3641,14 @@ async function trelloBuscarCartoes(){
   // Lê data do td2 (painel rápido) ou td (campo principal)
   const td2el=document.getElementById('td2');
   const dateVal=(td2el&&td2el.value)||v('td');
-  if(!dateVal){toast('Selecione uma data','warn');return;}
+  if(!dateVal){toast(t('e.select_date'),'warn');return;}
   // Sincroniza o campo principal de data
   g('td').value=dateVal;
   saveTrelloSelection(); // v4.6.5: Persiste data selecionada
   g('trello-btn').disabled=true;g('tspin').style.display='';g('tlbl').textContent='Buscando...';
   g('trello-cards').innerHTML='';
   try{await trelloSelectList(selList.id,selList.name);}
-  catch(e){toast('Erro: '+e.message,'err');console.error(e);}
+  catch(e){toast(t('err.generic')+': '+e.message,'err');console.error(e);}
   finally{
     g('trello-btn').disabled=false;g('tspin').style.display='none';
     g('tlbl').innerHTML='<span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span> Buscar cart\xF5es';
@@ -3526,13 +3659,13 @@ async function trelloStep1(){
   if(!key||!token){
     g('trello-nocred').style.display='block';
     g('trello-step1').style.display='none';
-    toast('Configure a chave e token do Trello em Configura\xE7\xF5es','err');return;
+    toast(t('e.configure_trello'),'err');return;
   }
   g('trello-nocred').style.display='none';
   g('trello-btn').disabled=true;g('tspin').style.display='';g('tlbl').textContent='Buscando...';
   try{
     const boards=await trelloAPICall('/members/me/boards?fields=name,id,desc');
-    if(!Array.isArray(boards)||!boards.length){toast('Nenhum quadro encontrado','warn');return;}
+    if(!Array.isArray(boards)||!boards.length){toast(t('e.no_boards'),'warn');return;}
     let html='';
     boards.forEach(b=>{
       const wasSel=selBoard&&selBoard.id===b.id;
@@ -3545,7 +3678,7 @@ async function trelloStep1(){
     g('trello-boards').innerHTML=html;
     g('trello-step1').style.display='none';
     g('trello-step2').style.display='block';
-  }catch(e){toast('Erro ao buscar quadros: '+e.message,'err');console.error(e);}
+  }catch(e){toast(t('e.fetch_boards')+': '+e.message,'err');console.error(e);}
   finally{g('trello-btn').disabled=false;g('tspin').style.display='none';g('tlbl').innerHTML='<span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span> Buscar quadros';}
 }
 
@@ -3555,7 +3688,7 @@ async function trelloSelectBoard(id,name){
   g('trello-boards').innerHTML='<div class="ab info">Buscando listas do quadro <strong>'+name+'</strong>... <span class="spin"></span></div>';
   try{
     const lists=await trelloAPICall('/boards/'+id+'/lists?fields=name,id&filter=open');
-    if(!Array.isArray(lists)||!lists.length){toast('Nenhuma lista neste quadro','warn');return;}
+    if(!Array.isArray(lists)||!lists.length){toast(t('e.no_lists'),'warn');return;}
     let html='<div class="ab info" style="margin-bottom:12px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span> Quadro: <strong>'+name+'</strong></div>';
     lists.forEach(l=>{
       html+='<div class="sel-opt" onclick="trelloSelectList(\''+l.id+'\',\''+l.name.replace(/'/g,"\\'")+'\')">'
@@ -3571,7 +3704,7 @@ async function trelloSelectBoard(id,name){
     g('trello-step3').style.display='block';
     g('tlbl').innerHTML='<span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span> Buscar cart\xF5es';
   }catch(e){
-    toast('Erro ao buscar listas','err');console.error(e);
+    toast(t('e.fetch_lists'),'err');console.error(e);
     // Restaura lista de quadros se falhar
     if(_tboardsHtml)g('trello-boards').innerHTML=_tboardsHtml;
     else g('trello-boards').innerHTML='<div class="ab w">Erro ao buscar listas. Tente novamente.</div>';
@@ -3609,7 +3742,7 @@ async function trelloSelectList(id,name){
     g('trello-step3').style.display='none';
     g('trello-step4').style.display='block';
     g('trello-nav-bar').innerHTML=buildTrelloNavBar();
-  }catch(e){toast('Erro ao buscar cart\xF5es','err');console.error(e);}
+  }catch(e){toast(t('e.fetch_cards'),'err');console.error(e);}
 }
 
 // trelloBack e trelloBack2 removidos — substituídos por botões "Mudar Lista" e "Mudar Quadro" no nav bar
@@ -3620,9 +3753,9 @@ function togTC(i){
 }
 
 async function importTC(){
-  if(!cfg.akey){toast('Configure Anthropic para importar com IA','err');return;}
+  if(!cfg.akey){toast(t('e.configure_anthropic_ai'),'err');return;}
   const cards=(window._tcards||[]).filter((_,i)=>{const cb=g('tch-'+i);return cb&&cb.checked;});
-  if(!cards.length){toast('Selecione ao menos um cart\xE3o','warn');return;}
+  if(!cards.length){toast(t('e.select_cards'),'warn');return;}
   if(clients.length>0){
     const sub=confirm('Já existem '+clients.length+' cliente(s) na rota.\n\nOK = Substituir tudo\nCancelar = Adicionar aos existentes');
     if(sub){clients=[];order=[];}
@@ -3707,7 +3840,7 @@ async function importTC(){
     }
     // v4.6.7: Se a API falhou, parar importação e avisar
     if(apiFailed){
-      toast('Erro na API Anthropic — verifique seus créditos!','err');
+      toast(t('e.anthropic_api'),'err');
       g('trello-cards').innerHTML='<div class="ab w"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <div><strong>Importação interrompida!</strong><br>A API da Anthropic retornou erro. Verifique se há créditos disponíveis em <a href="https://console.anthropic.com/settings/billing" target="_blank" style="color:var(--pu)">console.anthropic.com</a>.</div></div>';
       break;
     }
@@ -3716,7 +3849,7 @@ async function importTC(){
     renderC();updStats();
   }
   order=clients.map((_,i)=>i);renderC();updStats();updBtns();
-  toast(count+' cliente(s) importado(s)!','ok');
+  toast(count+t('t.clients_imported'),'ok');
   g('trello-nav-bar').innerHTML=buildTrelloNavBar();
   g('trello-cards').innerHTML='<div class="ab ok"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> '+count+' cliente(s) importado(s)!</div>';
 }
@@ -3727,7 +3860,7 @@ function connectTrelloOAuth(){
   // Fluxo client-side do Trello: abre popup de autorização
   const key=cfg.tkey||TRELLO_APP_KEY;
   if(!key||key==='a1b2c3d4e5f6'){
-    toast('Configure a chave do app Trello primeiro (Configuração manual)','warn');return;
+    toast(t('e.trello_key_manual'),'warn');return;
   }
   const returnUrl=window.location.origin+window.location.pathname;
   const authUrl='https://trello.com/1/authorize?expiration=never&name=Roteiro+de+Coleta&scope=read&response_type=token&key='+key+'&return_url='+encodeURIComponent(returnUrl+'?trello_auth=1');
@@ -3761,7 +3894,7 @@ function disconnectTrello(){
   document.getElementById('cfg-ttoken').value='';
   document.getElementById('trello-connected').style.display='none';
   document.getElementById('trello-not-connected').style.display='block';
-  toast('Trello desconectado','');
+  toast(t('t.trello_disconnected'),'');
 }
 async function checkTrelloConnection(){
   if(!cfg.tkey||!cfg.ttoken){
@@ -3824,7 +3957,7 @@ function showTrelloQuickPanel(){
 
 async function reloadTrelloList(){
   const dv=document.getElementById('td2')?.value||v('td');
-  if(!dv){toast('Selecione uma data','warn');return;}
+  if(!dv){toast(t('e.select_date'),'warn');return;}
   g('td').value=dv;
   if(selList)await trelloSelectList(selList.id,selList.name);
 }
@@ -3909,7 +4042,7 @@ function selAmb(i){
   document.querySelectorAll('.ao').forEach(a=>a.classList.remove('sel'));
   g('ao-'+i)?.classList.add('sel');ambSel=i;
   // v4.6.3: Preserve user's original address — only use Google result to resolve ambiguity (lat/lng/CEP), not to overwrite the address text
-  if(ambRes[i]){g('amb-box').style.display='none';toast('Endere\xE7o confirmado!','ok');}
+  if(ambRes[i]){g('amb-box').style.display='none';toast(t('t.addr_confirmed'),'ok');}
 }
 function confirmAmb(){closeModal('amb-modal');ambRes=[];ambSel=-1;} // v4.6.3: don't overwrite address
 
@@ -3932,20 +4065,20 @@ function addClient(){
   if(end.length<10||!/\d/.test(end)){toast(t('e.addrinv'),'err');return;}
   if(!tipos.length){toast(t('e.tag'),'err');return;}
   const qtd=parseInt(v('f-qtd'))||0;
-  if(qtd<0){toast('Quantidade n\xe3o pode ser negativa','err');return;}
+  if(qtd<0){toast(t('e.qty_negative'),'err');return;}
   const valTipo=g('f-valtipo')?.value||'normal';
   const val=valTipo==='normal'?(parseFloat(v('f-val').replace(',','.'))||0):0;
-  if(val<0){toast('Valor n\xE3o pode ser negativo','err');return;}
+  if(val<0){toast(t('e.value_negative'),'err');return;}
   const janela=g('f-janela').value;
   if(janela==='custom'){
     const hi=v('f-hi'),hf=v('f-hf');
-    if(hi&&hf&&hi>=hf){toast('Horário início deve ser anterior ao fim','err');return;}
+    if(hi&&hf&&hi>=hf){toast(t('e.time_order'),'err');return;}
   }
   const cep=v('f-cep').replace(/\D/g,'');
   clients.push({id:Date.now()+Math.random(),nome,endereco:end,cep,complemento:'',tel:v('f-tel'),tipo:tipos,qtd,val,valTipo,data:v('f-data')||new Date().toISOString().split('T')[0],janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null});
   order=clients.map((_,i)=>i);
   resetForm();clearImg();renderC();updStats();updBtns();
-  toast(nome+' adicionado!','ok');
+  toast(nome+t('t.added'),'ok');
 }
 function removeC(id){
   const c=clients.find(x=>x.id===id);if(!c)return;
@@ -3961,7 +4094,7 @@ function clearAllClients(){
   showConfirm('Limpar rota?','Remover <strong>'+n+'</strong> cliente'+(n!==1?'s':'')+' da rota? Esta a\xe7\xe3o n\xe3o pode ser desfeita.',()=>{
     pushRouteState();clients=[];order=[];renderC();updStats();updBtns();resetMap();
     localStorage.removeItem('rota_ativa');
-    toast(n+' cliente'+(n!==1?'s':'')+' removido'+(n!==1?'s':''),'ok');
+    toast(n+' '+t('cli.cli_removed',{n:n}),'ok');
   });
 }
 function toggleEmJanela(){
@@ -4020,27 +4153,27 @@ function saveEditC(){
   c.hi=c.janela==='custom'?g('em-hi').value:'';
   c.hf=c.janela==='custom'?g('em-hf').value:'';
   c.obs=_emObs||'';
-  if(c.janela==='custom'&&c.hi&&c.hf&&c.hi>=c.hf){toast('Horário início deve ser anterior ao fim','err');return;}
+  if(c.janela==='custom'&&c.hi&&c.hf&&c.hi>=c.hf){toast(t('e.time_order'),'err');return;}
   closeModal('edit-modal');
   renderC();updStats();
-  toast('Cliente atualizado!','ok');
+  toast(t('t.client_updated'),'ok');
 }
 
 function renderC(){
   const el=g('clist');
   const clearBtn=g('clear-all-btn'); // v4.6.5
-  if(!clients.length){el.innerHTML='<div class="empty"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span><p>Nenhum cliente ainda</p></div>';g('cc-count').textContent='';g('cfl-banner').innerHTML='';if(clearBtn)clearBtn.style.display='none';return;}
+  if(!clients.length){el.innerHTML='<div class="empty"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span><p>'+t('cl.empty')+'</p></div>';g('cc-count').textContent='';g('cfl-banner').innerHTML='';if(clearBtn)clearBtn.style.display='none';return;}
   const cfls=clients.filter(c=>c.conflict);
   const coletasRisco=cfls.filter(c=>{const tipos=normalizeTipo(c.tipo);return tipos.length&&tipos.includes('coleta');}).length;
-  g('cfl-banner').innerHTML=cfls.length?'<div class="ab w" style="margin-bottom:12px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <div><strong>'+cfls.length+' conflito(s) de hor\xE1rio.</strong> '+coletasRisco+' coleta(s) em risco.</div></div>':'';
+  g('cfl-banner').innerHTML=cfls.length?'<div class="ab w" style="margin-bottom:12px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <div><strong>'+t('card.conflict',{n:cfls.length})+'</strong> '+t('card.risk',{n:coletasRisco})+'</div></div>':'';
   el.innerHTML=order.map((idx,stop)=>{
     const c=clients[idx];
     const tipos=normalizeTipo(c.tipo);
     const primaryColor=tipos.length?_getTagColor(tipos[0]):'rgba(108,92,231,.18)';
     const tagColor=primaryColor;
     const isCol=tipos.includes('coleta');
-    const jl={livre:'',manha:'At\xe9 12h',tarde:'Ap\xf3s 12h',custom:c.hi+'\u2013'+c.hf}[c.janela]||'';
-    const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';
+    const jl={livre:'',manha:t('card.until_noon'),tarde:t('card.after_noon'),custom:c.hi+'\u2013'+c.hf}[c.janela]||'';
+    const vd=c.valTipo==='medir'?t('form.medir'):c.valTipo==='pago'?t('form.pago'):c.val?'R$ '+fmtBRL(c.val):'';
     // v4.3.5: Multi-tags — borda listrada lado a lado (3px por tag)
     const bw=tagBorderWidth(tipos);
     const tagChips=renderTagChips(tipos);
@@ -4061,7 +4194,7 @@ function renderC(){
           +(c.qtd?'<span>'+c.qtd+' '+(cfg._itemLabel||'item')+(c.qtd>1?'s':'')+'</span>':'')
           +(vd?'<span>'+vd+'</span>':'')
           +(jl?'<span>'+jl+'</span>':'')
-          +(c.estT?'<span class="et '+(c.conflict?'late':'')+'">Chegada: '+c.estT+'</span>':'')
+          +(c.estT?'<span class="et '+(c.conflict?'late':'')+'">'+t('card.arrival')+': '+c.estT+'</span>':'')
         +'</div>'
         +(c.obs?'<div style="font-size:12px;color:var(--mu);margin-top:3px;font-style:italic">'+c.obs+'</div>':'')
         +(c.conflict?'<div class="cmsg">\u26A0 '+c.cmsg+'</div>':'')
@@ -4271,7 +4404,7 @@ function onDragEnd(e){
       const item=order.splice(from,1)[0];
       order.splice(to,0,item);
       // v4.6.6: Recalcular ETAs instantaneamente via cache, depois refinar com Google
-      if(recalcETAsFromCache()){renderC();toast('Ordem atualizada — recalculando rota...','ok');}
+      if(recalcETAsFromCache()){renderC();toast(t('t.order_updated'),'ok');}
       else{renderC();}
       recalcRouteFromOrder();updateUndoBtn();
     }
@@ -4296,7 +4429,7 @@ function undoRoute(){
   prev.clients.forEach((saved,i)=>{if(clients[i]){clients[i].estT=saved.estT;clients[i].conflict=saved.conflict;clients[i].cmsg=saved.cmsg;}});
   animateRouteTransition();
   renderC();recalcRouteFromOrder();updateMapSidebar();updateUndoBtn(); // v4.6.2: removed pushRouteState after undo (was causing double entries)
-  toast('Altera\xe7\xe3o desfeita','ok');
+  toast(t('t.undo'),'ok');
 }
 function updateUndoBtn(){
   const btn=document.querySelector('.undo-btn');
@@ -4920,11 +5053,11 @@ async function recalcRouteFromOrder(){
     const destination=legs[legs.length-1].end_location;
     if(origin&&destination){
       if(origin.lat()===destination.lat()&&origin.lng()===destination.lng()){
-        const mkBase=createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida / Retorno',type:'ambos'});
+        const mkBase=createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:t('map.departure_return'),type:'ambos'});
         gBaseMarkers.push(mkBase);
       } else {
-        const mkStart=createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida',type:'partida'});
-        const mkEnd=createBaseMarker({position:{lat:destination.lat(),lng:destination.lng()},map:gMap,title:'Retorno',type:'retorno'});
+        const mkStart=createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:t('map.departure'),type:'partida'});
+        const mkEnd=createBaseMarker({position:{lat:destination.lat(),lng:destination.lng()},map:gMap,title:t('map.return'),type:'retorno'});
         gBaseMarkers.push(mkStart,mkEnd);
       }
     }
@@ -4943,7 +5076,7 @@ async function recalcRouteFromOrder(){
 function updStats(){
   const col=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}),ent=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');});
   g('s-cli').textContent=clients.length;
-  g('s-sub').textContent=col.length+' coleta'+(col.length!==1?'s':'')+' / '+ent.length+' entrega'+(ent.length!==1?'s':'');
+  g('s-sub').textContent=t('misc.coletas',{n:col.length})+' / '+t('misc.entregas',{n:ent.length});
   g('s-ret').textContent=col.reduce((s,c)=>s+(c.qtd||0),0);
   g('s-ent').textContent=ent.reduce((s,c)=>s+(c.qtd||0),0);
 }
@@ -4996,34 +5129,34 @@ function updateMapSidebar(){
   const lastClient=order.length?clients[order[order.length-1]]:null;
   const etaFim=lastClient?.estT||'--:--';
   let html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
-    +'<div style="font-size:15px;font-weight:800;color:var(--tx)">Painel da Rota</div>'
-    +'<button class="undo-btn'+((_routeHistory.length>0)?' active':'')+'" onclick="undoRoute()" title="Desfazer (Ctrl+Z)">'
+    +'<div style="font-size:15px;font-weight:800;color:var(--tx)">'+t('map.panel_title')+'</div>'
+    +'<button class="undo-btn'+((_routeHistory.length>0)?' active':'')+'" onclick="undoRoute()" title="'+t('map.undo_tip')+'">'
     +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>'
-    +'Desfazer</button></div>';
+    +t('btn.undo')+'</button></div>';
   // v4.6.1: Toggle KM/Tempo removido (funcionalidade descontinuada)
   // v4.5.0: Savings indicator
   html+='<div class="opt-savings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span class="opt-savings-text"></span></div>';
   html+='<div class="ms-route-stats">'
-    +'<div class="ms-stat"><div class="ms-stat-val">'+_routeTotalKm.toFixed(1)+' km</div><div class="ms-stat-label">Dist\xe2ncia total</div></div>'
-    +'<div class="ms-stat"><div class="ms-stat-val">'+fmtDuration(Math.round(_routeTotalMin))+'</div><div class="ms-stat-label">Tempo estimado</div></div>'
-    +'<div class="ms-stat"><div class="ms-stat-val">'+doneCount+'/'+totalStops+'</div><div class="ms-stat-label">Conclu\xEDdos</div></div>'
-    +'<div class="ms-stat"><div class="ms-stat-val">'+etaFim+'</div><div class="ms-stat-label">\xDAltima parada</div></div>'
+    +'<div class="ms-stat"><div class="ms-stat-val">'+_routeTotalKm.toFixed(1)+' km</div><div class="ms-stat-label">'+t('map.dist')+'</div></div>'
+    +'<div class="ms-stat"><div class="ms-stat-val">'+fmtDuration(Math.round(_routeTotalMin))+'</div><div class="ms-stat-label">'+t('map.time')+'</div></div>'
+    +'<div class="ms-stat"><div class="ms-stat-val">'+doneCount+'/'+totalStops+'</div><div class="ms-stat-label">'+t('map.done')+'</div></div>'
+    +'<div class="ms-stat"><div class="ms-stat-val">'+etaFim+'</div><div class="ms-stat-label">'+t('map.last')+'</div></div>'
   +'</div>';
   // v4.3.4: Progress bar and delay warning
   const progressPercent=totalStops>0?Math.round(doneCount/totalStops*100):0;
   html+='<div style="background:var(--bd);border-radius:6px;height:6px;margin-bottom:12px;overflow:hidden">'
     +'<div style="background:var(--pu);height:100%;border-radius:6px;width:'+progressPercent+'%;transition:width .3s"></div>'
   +'</div>'
-    +'<div style="font-size:11px;color:var(--mu);margin-bottom:12px;font-weight:500">'+doneCount+'/'+totalStops+' paradas ('+progressPercent+'%)</div>';
+    +'<div style="font-size:11px;color:var(--mu);margin-bottom:12px;font-weight:500">'+doneCount+'/'+totalStops+' '+t('map.stops')+' ('+progressPercent+'%)</div>';
   // Check for delays
-  const delayedCount=order.filter(i=>clients[i].conflict&&clients[i].cmsg.includes('Al\xE9m do limite')).length;
+  const delayedCount=order.filter(i=>clients[i].conflict&&clients[i].cmsg.includes(t('map.beyond_limit'))).length;
   if(delayedCount>0){
     const isDarkMode=document.body.classList.contains('dark');
     html+='<div style="background:'+(isDarkMode?'rgba(245,158,11,.12)':'#FEF3C7')+';border:1px solid '+(isDarkMode?'rgba(245,158,11,.3)':'#F59E0B')+';border-radius:10px;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:'+(isDarkMode?'#FBBF24':'#92400E')+';font-weight:500">'
-      +'\u26A0\uFE0F '+delayedCount+' parada'+(delayedCount!==1?'s':'')+' com previs\xE3o de atraso'
+      +'\u26A0\uFE0F '+t('map.delayed',{n:delayedCount})
     +'</div>';
   }
-  html+='<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:8px">Paradas</div>';
+  html+='<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:8px">'+t('map.stops')+'</div>';
   // v4.3.5: Cart\xf5es com multi-tags + drag and drop
   html+='<div id="ms-client-list">';
   order.forEach((idx,stop)=>{
@@ -5045,7 +5178,7 @@ function updateMapSidebar(){
         +'</div>'
         +'<div style="font-size:11px;color:var(--mu);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.endereco+(c.complemento?' \u2014 '+c.complemento:'')+'</div>'
         +'<div style="display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap">'
-          +(c.estT?'<span style="font-size:10px;color:var(--pu);font-weight:600">Chegada: '+c.estT+'</span>':'')
+          +(c.estT?'<span style="font-size:10px;color:var(--pu);font-weight:600">'+t('card.arrival')+': '+c.estT+'</span>':'')
           +(vd?'<span style="font-size:10px;color:var(--mu)">'+vd+'</span>':'')
         +'</div>'
       +'</div>'
@@ -5170,8 +5303,8 @@ function initMapSidebarDragDrop(){
         const item=order.splice(msDrag.stop,1)[0];
         order.splice(to,0,item);
         // v4.6.9: Recalcular ETAs via cache (instantâneo) + Google Directions (async)
-        if(recalcETAsFromCache()){renderC();toast('Ordem atualizada — recalculando rota...','ok');}
-        else{renderC();toast('Ordem da rota atualizada','ok');}
+        if(recalcETAsFromCache()){renderC();toast(t('t.order_updated'),'ok');}
+        else{renderC();toast(t('t.order_updated'),'ok');}
         recalcRouteFromOrder();updateMapSidebar();updateUndoBtn();
       }
     }
@@ -5388,7 +5521,7 @@ function clientDeadlineMin(c){
 async function calcRoute(){
   if(!clients.length)return;
   if(!cfg.base||!cfg.base.trim()){
-    toast('Configure o endere\xE7o de partida!','err');
+    toast(t('e.configure_departure'),'err');
     showConfirm('Endere\xE7o de partida necess\xE1rio',
       'Para calcular os hor\xE1rios de chegada corretamente, o sistema precisa saber de onde o motorista sai.<br><br>V\xE1 em <strong>Configura\xE7\xF5es</strong> e preencha o campo <strong>Endere\xE7o de partida</strong>.',
       ()=>{closeModal('confirm-modal');goPage('cfg',document.querySelectorAll('.ntab')[4]);});
@@ -5410,11 +5543,11 @@ async function calcRoute(){
       }
       await new Promise(res=>setTimeout(res,200));
     }
-    if(notFound.length)toast('Endereço não encontrado: '+notFound.join(', '),'warn');
+    if(notFound.length)toast(t('e.addr_not_found')+': '+notFound.join(', '),'warn');
     const geocodedIdx=[];
     for(let i=0;i<clients.length;i++){if(clients[i].lat&&clients[i].lng)geocodedIdx.push(i);}
     const geocoded=geocodedIdx.map(i=>clients[i]);
-    if(!geocoded.length){toast('Nenhum endere\xE7o encontrado','err');return;}
+    if(!geocoded.length){toast(t('e.no_addresses'),'err');return;}
     if(geocoded.length===1){
       gMap.setCenter({lat:geocoded[0].lat,lng:geocoded[0].lng});gMap.setZoom(15);
       createAdvMarker({position:{lat:geocoded[0].lat,lng:geocoded[0].lng},map:gMap,label:'1',fillColor:'#6C5CE7'});
@@ -5432,11 +5565,11 @@ async function calcRoute(){
     let baseCoords,retCoords;
     const baseGeo=await nominatim(baseAddr);
     if(baseGeo){baseCoords={lat:baseGeo.lat,lng:baseGeo.lng};}
-    else{toast('Endere\xe7o de partida n\xe3o encontrado','err');return;}
+    else{toast(t('e.departure_not_found'),'err');return;}
     const retGeo=await nominatim(retAddr);
     retCoords=retGeo?{lat:retGeo.lat,lng:retGeo.lng}:{...baseCoords};
     // Otimizar via motor v2 (matriz + heurísticas + SA)
-    toast('Otimizando rota (motor v2)...','');
+    toast(t('t.optimizing'),'');
     const optV2=await optimizeRouteV2(geocodedIdx,baseCoords,retCoords);
     // Aplicar ordem otimizada
     const noCoords=[];
@@ -5454,7 +5587,7 @@ async function calcRoute(){
       recalcETAsFromCache();
       renderC();updStats();saveHist();
       const urgCount=geocoded.filter(c=>clientDeadlineMin(c)<24*60).length;
-      toast('Rota otimizada! (sem mapa — Directions indispon\xEDvel)'+(urgCount?' ('+urgCount+' com janela)':''),'ok');
+      toast(t('t.optimized_no_map')+(urgCount?' ('+urgCount+' '+t('t.with_window')+')':''),'ok');
       return; // Pular renderização do mapa
     }
     // Renderizar mapa com resultado do Google
@@ -5484,10 +5617,10 @@ async function calcRoute(){
     const destination=legs[legs.length-1].end_location;
     if(origin&&destination){
       if(origin.lat()===destination.lat()&&origin.lng()===destination.lng()){
-        gBaseMarkers.push(createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida / Retorno',type:'ambos'}));
+        gBaseMarkers.push(createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:t('map.departure_return'),type:'ambos'}));
       } else {
-        gBaseMarkers.push(createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:'Partida',type:'partida'}));
-        gBaseMarkers.push(createBaseMarker({position:{lat:destination.lat(),lng:destination.lng()},map:gMap,title:'Retorno',type:'retorno'}));
+        gBaseMarkers.push(createBaseMarker({position:{lat:origin.lat(),lng:origin.lng()},map:gMap,title:t('map.departure'),type:'partida'}));
+        gBaseMarkers.push(createBaseMarker({position:{lat:destination.lat(),lng:destination.lng()},map:gMap,title:t('map.return'),type:'retorno'}));
       }
     }
     gMap.addListener('click',()=>{if(_activeInfoWindow){_activeInfoWindow.close();_activeInfoWindow=null;}});
@@ -5500,7 +5633,7 @@ async function calcRoute(){
     renderC();updStats();
     saveHist();
     toast(t('t.optimized')+urgMsg,'ok');
-  }catch(e){toast('Erro ao calcular rota: '+e.message,'err');console.error(e);}
+  }catch(e){toast(t('e.calculate_route')+': '+e.message,'err');console.error(e);}
   finally{g('rp').classList.remove('on');g('route-btn').disabled=!clients.length;}
 }
 
@@ -5571,7 +5704,7 @@ function resetMap(){if(leafRoute&&leafMap){leafMap.removeLayer(leafRoute);leafRo
 async function genImage(){
   if(!clients.length)return;
   const btn=g('pdf-btn');btn.disabled=true;btn.innerHTML='<span class="spin"></span> Gerando...';
-  toast('Gerando imagem...','');
+  toast(t('t.generating_image'),'');
   const col=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}),ent=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');});
   const tapR=col.reduce((s,c)=>s+(c.qtd||0),0),tapE=ent.reduce((s,c)=>s+(c.qtd||0),0);
   const d=clients[0]?.data?new Date(clients[0].data+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
@@ -5616,7 +5749,7 @@ async function genImage(){
     link.click();
     toast(t('t.imggen'),'ok');
     saveHist();
-  }catch(e){toast('Erro ao gerar imagem: '+e.message,'err');console.error(e);}
+  }catch(e){toast(t('e.generate_image')+': '+e.message,'err');console.error(e);}
   finally{
     try{document.body.removeChild(wrap);}catch(e){}
     const btn=g('pdf-btn');if(btn){btn.disabled=false;btn.innerHTML='<span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span> Gerar imagem do roteiro';}
@@ -5704,7 +5837,7 @@ function genPDF_unused(){
   doc.text('Saida: '+(cfg.saida||'10:00')+'  |  Retorno: '+(cfg.ret||'17:00')+'  |  '+(cfg.tempo||10)+' min/parada'+(cfg.base?'  |  Partida: '+cfg.base:''),M,293);
   doc.text('Gerado em '+new Date().toLocaleString('pt-BR'),W-M,293,{align:'right'});
   doc.save('roteiro-'+new Date().toISOString().split('T')[0]+'.pdf');
-  saveHist();toast('PDF gerado!','ok');
+  saveHist();toast(t('t.pdf_generated'),'ok');
 }
 
 function getHist(){return safeJsonParse('rota_hist',[]);}
@@ -5720,16 +5853,16 @@ function saveHist(){
 function renderHist(){
   renderPerfDash();
   const hist=getHist();const el=g('hlist');
-  if(!hist.length){el.innerHTML='<div class="empty"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span><p>Nenhuma rota salva ainda</p></div>';return;}
+  if(!hist.length){el.innerHTML='<div class="empty"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span><p>'+t('hist.empty')+'</p></div>';return;}
   // v4.5.0: Date filter for history list
   const filterEl=document.getElementById('hist-date-filter');
-  el.innerHTML='<div class="hist-filters" style="margin-bottom:14px"><input type="text" id="hist-search" placeholder="Buscar por data, nome ou telefone..." oninput="filterHistList(this.value)"></div>';
+  el.innerHTML='<div class="hist-filters" style="margin-bottom:14px"><input type="text" id="hist-search" placeholder="'+t('hist.search_ph')+'" oninput="filterHistList(this.value)"></div>';
   el.innerHTML+=hist.map((h,i)=>{
-    const d=new Date(h.date+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+    const d=new Date(h.date+'T12:00').toLocaleDateString(_lang==='en'?'en-US':'pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
     const col=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}).length,ent=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');}).length;
     const clientNames=h.clients.map(c=>(c.nome||'').toLowerCase()).join('|');
     const clientTels=h.clients.map(c=>(c.tel||'')).join('|');
-    return '<div class="hi" onclick="openHist('+i+')" data-clients="'+clientNames.replace(/"/g,'&quot;')+'" data-tels="'+clientTels.replace(/"/g,'&quot;')+'"><div style="width:42px;height:42px;background:var(--pul);border-radius:var(--rl2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0"><span class="mot-ico" style="width:20px;height:20px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span></div><div><div style="font-weight:700;font-size:14px">'+d.charAt(0).toUpperCase()+d.slice(1)+'</div><div class="hm">'+h.clients.length+' clientes · '+col+' coleta'+(col!==1?'s':'')+' / '+ent+' entrega'+(ent!==1?'s':'')+'</div></div></div>';
+    return '<div class="hi" onclick="openHist('+i+')" data-clients="'+clientNames.replace(/"/g,'&quot;')+'" data-tels="'+clientTels.replace(/"/g,'&quot;')+'"><div style="width:42px;height:42px;background:var(--pul);border-radius:var(--rl2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0"><span class="mot-ico" style="width:20px;height:20px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span></div><div><div style="font-weight:700;font-size:14px">'+d.charAt(0).toUpperCase()+d.slice(1)+'</div><div class="hm">'+h.clients.length+' '+t('hist.clients')+' · '+t('misc.coletas',{n:col})+' / '+t('misc.entregas',{n:ent})+'</div></div></div>';
   }).join('');
 }
 // v4.6.2: Filter history list by date, client name, or phone
@@ -5746,17 +5879,17 @@ function filterHistList(query){
 }
 function openHist(i){
   histIdx=i;const h=getHist()[i];
-  const d=new Date(h.date+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  const d=new Date(h.date+'T12:00').toLocaleDateString(_lang==='en'?'en-US':'pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   g('hm-title').textContent=d.charAt(0).toUpperCase()+d.slice(1);
   const col=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}),ent=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');});
-  let html='<div class="ab ok">'+h.clients.length+' clientes — '+col.length+' coleta'+(col.length!==1?'s':'')+' / '+ent.length+' entrega'+(ent.length!==1?'s':'')+'</div>';
+  let html='<div class="ab ok">'+h.clients.length+' '+t('hist.clients')+' — '+t('misc.coletas',{n:col.length})+' / '+t('misc.entregas',{n:ent.length})+'</div>';
   // Gráficos donut no histórico (se houver dados de status/pagamento)
   const hasMotorData=h.order.some(idx=>{const c=h.clients[idx]||h.clients[0];return c&&(c._motStatus||c._motPay);});
   if(hasMotorData)html+=buildChartsHTML(h.clients,h.order);
   // v4.5.0: History filters
   html+='<div class="hist-filters">'
-    +'<input type="text" placeholder="Buscar cliente..." oninput="filterHistCards(this.value)">'
-    +'<select onchange="filterHistType(this.value)"><option value="">Todos</option><option value="coleta">Coleta</option><option value="entrega">Entrega</option></select>'
+    +'<input type="text" placeholder="'+t('hist.search_client')+'" oninput="filterHistCards(this.value)">'
+    +'<select onchange="filterHistType(this.value)"><option value="">'+t('hist.all')+'</option><option value="coleta">'+t('mot.coleta')+'</option><option value="entrega">'+t('mot.entrega')+'</option></select>'
   +'</div>';
   html+='<div id="hist-card-list">';
   h.order.forEach((idx,stop)=>{const c=h.clients[idx]||h.clients[stop];if(!c)return;const tipos=normalizeTipo(c.tipo);const primaryColor=tipos.length?_getTagColor(tipos[0]):'rgba(108,92,231,.18)';const tagChips=renderTagChips(tipos);const bw=tagBorderWidth(tipos);const borderStyle=tipos.length<=1?'border-left:3px solid '+primaryColor:'border-left:none;padding-left:'+(13+bw)+'px;overflow:hidden;position:relative';const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';html+='<div class="hist-card" data-hc-name="'+(c.nome||'').toLowerCase()+'" data-hc-type="'+(tipos.join(','))+'" style="'+borderStyle+'">'+(tipos.length>1?renderTagBorder(tipos):'')+'<div class="hc-num" style="background:'+primaryColor+'">'+(stop+1)+'</div><div class="hc-info"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px"><span class="hc-name">'+c.nome+'</span>'+(tagChips?'<div style="display:flex;gap:3px;flex-wrap:wrap;flex-shrink:0">'+tagChips+'</div>':'')+'</div><div class="hc-addr">'+c.endereco+(c.complemento?' \u2014 '+c.complemento:'')+'</div><div class="hc-meta">'+(c.tel?'<span>\u260E '+c.tel+'</span>':'')+(c.qtd?'<span>'+c.qtd+' '+(cfg._itemLabel||'item')+(c.qtd>1?'s':'')+'</span>':'')+(vd?'<span>'+vd+'</span>':'')+'</div></div></div>';});
@@ -5791,12 +5924,12 @@ function doLoadHist(){window.scrollTo(0,0);
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(x=>x.classList.remove('on'));
   g('page-rota').classList.add('on');document.querySelectorAll('.ntab')[0].classList.add('on');
-  renderC();updStats();updBtns();toast('Rota carregada!','ok');
+  renderC();updStats();updBtns();toast(t('t.route_loaded'),'ok');
 }
 function delHist(){
   showConfirm('Excluir rota?','Esta a\xE7\xE3o n\xE3o pode ser desfeita.',()=>{
     const hist=getHist();hist.splice(histIdx,1);localStorage.setItem('rota_hist',JSON.stringify(hist));
-    closeModal('hist-modal');renderHist();toast('Rota removida','');
+    closeModal('hist-modal');renderHist();toast(t('t.route_removed'),'');
   });
 }
 
@@ -5844,14 +5977,14 @@ async function renderDash(){
   if(drawer){drawer.style.display='flex';drawer.classList.remove('closed');if(drawerToggle)drawerToggle.classList.add('open');}
   const totalClientes=allC.length;const totalRotas=hist.length;
   const sumEl=g('dash-summary');
-  if(sumEl)sumEl.textContent=totalClientes+' clientes \xB7 '+totalRotas+' rota'+(totalRotas!==1?'s':'');
+  if(sumEl)sumEl.textContent=totalClientes+' '+t('hist.clients')+' \xB7 '+totalRotas+' '+t('dash.rota')+(totalRotas!==1?t('dash.plural'):'');
   // v4.6.0: Use cached data if available
   if(_dashCache.loaded){
     renderDashStats(_dashCache.br,_dashCache.pts);
     return;
   }
-  const _pBody=g('dash-panel-body');if(_pBody)_pBody.innerHTML='<div style="padding:8px 0;text-align:center;font-size:12px;color:var(--mu)">Identificando bairros... <span class="spin"></span></div>';
-  const _dashT=setTimeout(()=>{const b=g('dash-panel-body');if(b&&b.innerHTML.includes('Identificando'))b.innerHTML='<p style="font-size:12px;color:var(--mu);padding:8px 0">N\u00e3o foi poss\u00edvel identificar bairros.</p>';},15000);
+  const _pBody=g('dash-panel-body');if(_pBody)_pBody.innerHTML='<div style="padding:8px 0;text-align:center;font-size:12px;color:var(--mu)">'+t('dash.identifying')+' <span class="spin"></span></div>';
+  const _dashT=setTimeout(()=>{const b=g('dash-panel-body');if(b&&b.innerHTML.includes(t('dash.identifying')))b.innerHTML='<p style="font-size:12px;color:var(--mu);padding:8px 0">'+t('dash.no_bairros')+'</p>';},15000);
   const br={};const pts=[];
   // Nominatim: sequential to respect rate limit
   for(const c of allC){
@@ -5901,7 +6034,7 @@ function renderDashStats(br,pts){
   const el=g('dash-panel-body');if(!el)return;
   const sorted=Object.entries(br).sort((a,b)=>b[1]-a[1]).slice(0,10);
   const sumEl2=g('dash-summary');
-  if(sumEl2){const cur=sumEl2.textContent;if(!cur.includes('bairro'))sumEl2.textContent=cur+' \xb7 '+sorted.length+' bairro'+(sorted.length!==1?'s':'');}
+  if(sumEl2){const cur=sumEl2.textContent;if(!cur.includes(t('dash.bairro')))sumEl2.textContent=cur+' \xb7 '+sorted.length+' '+t('dash.bairro')+(sorted.length!==1?t('dash.plural'):'');}
   _bairroCoords={};
   if(pts.length&&typeof _dashCache!=='undefined'&&_dashCache.br){
   }
@@ -5925,6 +6058,7 @@ function renderDashStats(br,pts){
 }
 // v4.3.9: Dashboard geográfico — zonas, cobertura, densidade
 const ZONE_COLORS={Norte:'#6366F1',Sul:'#EC4899',Leste:'#F59E0B',Oeste:'#10B981',Centro:'#8B5CF6'};
+const ZONE_NAMES={Norte:'zone.north',Sul:'zone.south',Leste:'zone.east',Oeste:'zone.west',Centro:'zone.center'};
 function classifyZone(lat,lng){
   // Centro de SP como referência
   const cLat=-23.5505,cLng=-46.6333;
@@ -5969,7 +6103,7 @@ function renderGeoDash(pts){
       const startAngle=cumul*360;
       const endAngle=(cumul+pct)*360;
       paths+=donutArc(18,18,14,startAngle,endAngle,ZONE_COLORS[zone]);
-      legHtml+='<div class="zone-legend-item"><div class="zone-legend-dot" style="background:'+ZONE_COLORS[zone]+'"></div>'+zone+'<span class="zone-legend-count">'+count+'</span></div>';
+      legHtml+='<div class="zone-legend-item"><div class="zone-legend-dot" style="background:'+ZONE_COLORS[zone]+'"></div>'+t(ZONE_NAMES[zone])+'<span class="zone-legend-count">'+count+'</span></div>';
       cumul+=pct;
     });
     donutEl.innerHTML=paths+'<circle cx="18" cy="18" r="9.5" fill="var(--bg)"/><text x="18" y="17" text-anchor="middle" dominant-baseline="central" style="font-size:6px;font-weight:800;fill:var(--tx)">'+total+'</text><text x="18" y="20.5" text-anchor="middle" dominant-baseline="central" style="font-size:2.2px;font-weight:600;fill:var(--mu);text-transform:uppercase;letter-spacing:.04em">clientes</text>';
@@ -6017,20 +6151,20 @@ function getMotoristaLink(){
 }
 function copyMotLink(){
   if(!_currentRouteId){
-    toast('Publique a rota no cloud primeiro','err');return;
+    toast(t('e.publish_first'),'err');return;
   }
   const link=getMotoristaLink();
   navigator.clipboard.writeText(link).then(()=>{
-    toast('Link copiado!','ok');
+    toast(t('t.link_copied'),'ok');
   }).catch(()=>{
     const ta=document.createElement('textarea');ta.value=link;ta.style.position='fixed';ta.style.opacity='0';
     document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
-    toast('Link copiado!','ok');
+    toast(t('t.link_copied'),'ok');
   });
 }
 function shareMotWhatsApp(){
   if(!_currentRouteId){
-    toast('Publique a rota no cloud primeiro','err');return;
+    toast(t('e.publish_first'),'err');return;
   }
   const link=getMotoristaLink();
   const text='Acesse o roteiro do dia aqui:\n'+link;
@@ -6055,7 +6189,7 @@ function dismissUpdateBanner(){
 }
 
 function showMotQR(){
-  if(!_currentRouteId){toast('Publique a rota no cloud primeiro','err');return;}
+  if(!_currentRouteId){toast(t('e.publish_first'),'err');return;}
   const link=getMotoristaLink();
   const box=g('mot-qr-box');box.style.display='block';
   // Carregar lib QR leve via CDN se não disponível
@@ -6099,10 +6233,10 @@ function buildChartsHTML(clientsList,orderList){
   const reagendar=orderList.filter(i=>clientsList[i]._motStatus==='reagendar').length;
   const pendente=total-done-ausente-reagendar;
   const statusSegs=[
-    {value:done,color:'var(--tx)',label:'Conclu\xEDdo'},
-    {value:ausente,color:'#94a3b8',label:'Ausente'},
-    {value:reagendar,color:'var(--pu)',label:'Reagendar'},
-    {value:pendente,color:'var(--bd)',label:'Pendente'}
+    {value:done,color:'var(--tx)',label:t('mot.status_coletado')},
+    {value:ausente,color:'#94a3b8',label:t('mot.status_ausente')},
+    {value:reagendar,color:'var(--pu)',label:t('mot.status_reagendar')},
+    {value:pendente,color:'var(--bd)',label:t('mot.status_pendente')}
   ];
   const pctDone=total?Math.round((done+ausente+reagendar)/total*100):0;
   // 2) Pagamento
@@ -6112,11 +6246,11 @@ function buildChartsHTML(clientsList,orderList){
   const dinheiro=orderList.filter(i=>clientsList[i]._motPay==='Dinheiro').length;
   const semPay=total-pixPago-pixCobrar-cartao-dinheiro;
   const paySegs=[
-    {value:pixPago,color:'var(--tx)',label:'Pix pago'},
-    {value:cartao,color:'#64748b',label:'Cart\xe3o'},
-    {value:dinheiro,color:'var(--pu)',label:'Dinheiro'},
-    {value:pixCobrar,color:'#94a3b8',label:'Pix cobrar'},
-    {value:semPay,color:'var(--bd)',label:'Sem info'}
+    {value:pixPago,color:'var(--tx)',label:t('mot.pix_paid')},
+    {value:cartao,color:'#64748b',label:t('mot.card')},
+    {value:dinheiro,color:'var(--pu)',label:t('mot.cash')},
+    {value:pixCobrar,color:'#94a3b8',label:t('mot.pix_charge')},
+    {value:semPay,color:'var(--bd)',label:t('mot.no_payment')}
   ];
   const payTotal=pixPago+pixCobrar+cartao+dinheiro;
   // 3) Recebido vs A Cobrar
@@ -6129,8 +6263,8 @@ function buildChartsHTML(clientsList,orderList){
     else if(c._motPay)recebido+=v;
   });
   const valSegs=[
-    {value:recebido,color:'var(--tx)',label:'Recebido'},
-    {value:aCobrar,color:'var(--pu)',label:'A cobrar'}
+    {value:recebido,color:'var(--tx)',label:t('comp.received')},
+    {value:aCobrar,color:'var(--pu)',label:t('comp.to_charge')}
   ];
   return '<div class="mot-charts">'
     +'<div class="mot-chart-item">'+buildDonutSVG(statusSegs,pctDone+'%','progresso')+'<div class="mot-chart-label">Status</div>'+buildDonutLegend(statusSegs)+'</div>'
@@ -6140,41 +6274,41 @@ function buildChartsHTML(clientsList,orderList){
 }
 function renderMotor(){
   const el=g('motor-body');const dateEl=g('motor-date');
-  if(!clients.length){el.innerHTML='<div class="empty"><span style="font-size:28px;opacity:.3">'+mi('map')+'</span><p>Monte uma rota primeiro</p></div>';dateEl.textContent='';return;}
+  if(!clients.length){el.innerHTML='<div class="empty"><span style="font-size:28px;opacity:.3">'+mi('map')+'</span><p>'+t('mot.buildroute')+'</p></div>';dateEl.textContent='';return;}
   const _gestorReadonly=!_isMotoristaMode&&_currentRouteId&&_cloudVersion>0;
-  const d=clients[0]?.data?new Date(clients[0].data+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
+  const d=clients[0]?.data?new Date(clients[0].data+'T12:00').toLocaleDateString(_lang==='en'?'en-US':'pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
   dateEl.textContent=d;
   const tapR=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}).reduce((s,c)=>s+(c.qtd||0),0);
   const tapE=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');}).reduce((s,c)=>s+(c.qtd||0),0);
   const doneCount=order.filter(i=>clients[i]._motDone).length;
   // Resumo
   let html='<div class="mot-summary">'
-    +'<div class="ms-item"><div class="ms-label">Paradas</div><div class="ms-val">'+clients.length+'</div></div>'
-    +'<div class="ms-item"><div class="ms-label">Retirar</div><div class="ms-val">'+tapR+'</div></div>'
-    +'<div class="ms-item"><div class="ms-label">Entregar</div><div class="ms-val">'+tapE+'</div></div>'
-    +'<div class="ms-item"><div class="ms-label">Conclu\xEDdos</div><div class="ms-val">'+doneCount+'/'+clients.length+'</div></div>'
-    +(cfg.saida?'<div class="ms-item"><div class="ms-label">Sa\xEDda</div><div class="ms-val">'+cfg.saida+'</div></div>':'')
+    +'<div class="ms-item"><div class="ms-label">'+t('mot.stops')+'</div><div class="ms-val">'+clients.length+'</div></div>'
+    +'<div class="ms-item"><div class="ms-label">'+t('mot.pickup')+'</div><div class="ms-val">'+tapR+'</div></div>'
+    +'<div class="ms-item"><div class="ms-label">'+t('mot.deliver')+'</div><div class="ms-val">'+tapE+'</div></div>'
+    +'<div class="ms-item"><div class="ms-label">'+t('mot.completed')+'</div><div class="ms-val">'+doneCount+'/'+clients.length+'</div></div>'
+    +(cfg.saida?'<div class="ms-item"><div class="ms-label">'+t('mot.departure')+'</div><div class="ms-val">'+cfg.saida+'</div></div>':'')
     +'</div>';
   // Banner gestor acompanhamento
   if(_gestorReadonly){
     html+='<div style="border:2px solid var(--pu);border-radius:14px;padding:14px 16px;margin-bottom:12px;font-size:13px;display:flex;gap:12px;align-items:center;background:var(--sf)">'
       +'<span style="font-size:20px">'+mi('eye')+'</span>'
-      +'<div><div style="font-weight:700;color:var(--tx)">Modo Acompanhamento</div>'
-      +'<div style="color:var(--mu);font-size:12px;margin-top:2px">Rota publicada &mdash; o motorista est\xe1 usando pelo celular. Voc\xea v\xea as atualiza\xe7\xf5es em tempo real.</div>'
-      +(_motoristaViewedAt?'<div style="color:var(--gnd);font-size:11px;margin-top:4px;font-weight:600">'+mi('check','mot-ico-sm')+' Motorista visualizou \xe0s '+new Date(_motoristaViewedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'</div>':'<div style="color:var(--mu);font-size:11px;margin-top:4px;opacity:.6">Aguardando motorista abrir a rota...</div>')
+      +'<div><div style="font-weight:700;color:var(--tx)">'+t('mot.tracking')+'</div>'
+      +'<div style="color:var(--mu);font-size:12px;margin-top:2px">'+t('mot.tracking_desc')+'</div>'
+      +(_motoristaViewedAt?'<div style="color:var(--gnd);font-size:11px;margin-top:4px;font-weight:600">'+mi('check','mot-ico-sm')+' '+t('mot.viewed_at')+' '+new Date(_motoristaViewedAt).toLocaleTimeString(_lang==='en'?'en-US':'pt-BR',{hour:'2-digit',minute:'2-digit'})+'</div>':'<div style="color:var(--mu);font-size:11px;margin-top:4px;opacity:.6">'+t('mot.awaiting')+'</div>')
       +'</div></div>';
   }
   // Gráficos donut
   html+=buildChartsHTML(clients,order);
   // Partida
-  if(cfg.base)html+='<div style="border:1px solid var(--bd);border-radius:14px;padding:14px 16px;margin-bottom:12px;font-size:14px;display:flex;gap:12px;align-items:center;background:var(--sf)"><span style="opacity:.35">'+mi('building')+'</span><div><div style="font-weight:700;font-size:13px;color:var(--tx)">Partida</div><div style="color:var(--mu);font-size:12px">'+cfg.base+'</div></div></div>';
+  if(cfg.base)html+='<div style="border:1px solid var(--bd);border-radius:14px;padding:14px 16px;margin-bottom:12px;font-size:14px;display:flex;gap:12px;align-items:center;background:var(--sf)"><span style="opacity:.35">'+mi('building')+'</span><div><div style="font-weight:700;font-size:13px;color:var(--tx)">'+t('map.departure')+'</div><div style="color:var(--mu);font-size:12px">'+cfg.base+'</div></div></div>';
   // Cards dos clientes
   html+=order.map((idx,stop)=>{
     const c=clients[idx];
     const isDone=!!c._motDone;
     const isActive=!isDone&&stop===order.findIndex(i=>!clients[i]._motDone);
     const tipos=normalizeTipo(c.tipo);const isCol=tipos.includes('coleta');
-    const statusLabel=isCol?'Coletado':'Entregue';
+    const statusLabel=isCol?t('mot.status_coletado'):t('mot.status_entregue');
     const statusClass=isCol?'s-coletado':'s-entregue';
     const navAddr=encodeURIComponent(c.endereco+', S\xe3o Paulo, SP');
     const wazeUrl='https://waze.com/ul?q='+navAddr+'&navigate=yes';
@@ -6183,15 +6317,15 @@ function renderMotor(){
       // Banner de concluído
       +(isDone?'<div class="mc-done-banner">'
         +'<span class="mot-ico" style="opacity:.4">'+MI[c._motStatus==='ausente'?'x':c._motStatus==='reagendar'?'refresh':'check']+'</span> '
-        +(c._motStatus==='coletado'?'Coletado':c._motStatus==='entregue'?'Entregue':c._motStatus==='ausente'?'Ausente':c._motStatus==='reagendar'?'Reagendado':(c._motStatus||''))
+        +(c._motStatus==='coletado'?t('mot.status_coletado'):c._motStatus==='entregue'?t('mot.status_entregue'):c._motStatus==='ausente'?t('mot.status_ausente'):c._motStatus==='reagendar'?t('mot.status_reagendado'):(c._motStatus||''))
         +(c._motPay?' \u2014 '+c._motPay:'')
-        +(!_gestorReadonly?'<button class="mc-done-edit" onclick="event.stopPropagation();editDoneCard('+idx+')">'+mi('edit','mot-ico-sm')+' Editar</button>':'')
+        +(!_gestorReadonly?'<button class="mc-done-edit" onclick="event.stopPropagation();editDoneCard('+idx+')">'+mi('edit','mot-ico-sm')+' '+t('mot.editar')+'</button>':'')
         +'</div>':'')
       // Top: número + tipo + horário
       +'<div class="mc-top">'
         +'<div class="mc-top-left">'
           +'<div class="mc-num">'+(stop+1)+'</div>'
-          +'<span class="mc-tipo">'+(isCol?'Coleta':'Entrega')+'</span>'
+          +'<span class="mc-tipo">'+(isCol?t('mot.coleta'):t('mot.entrega'))+'</span>'
         +'</div>'
         +(c.estT?'<div class="mc-time">'+c.estT+'</div>':'')
       +'</div>'
@@ -6202,9 +6336,9 @@ function renderMotor(){
       +'<div class="mc-details">'
         +(c.qtd?'<span class="mc-detail">'+mi('bag','mot-ico-sm')+' '+c.qtd+' '+(cfg._itemLabel||'item')+(c.qtd>1?'s':'')+'</span>':'')
         +(c.val&&c.valTipo!=='medir'&&c.valTipo!=='pago'?'<span class="mc-detail">R$ '+fmtBRL(c.val)+'</span>':'')
-        +(c.valTipo==='medir'?'<span class="mc-detail alert">'+mi('scale','mot-ico-sm')+' Medir</span>':'')
-        +(c.valTipo==='pago'?'<span class="mc-detail">'+mi('check','mot-ico-sm')+' Pago</span>':'')
-        +(c.janela&&c.janela!=='livre'?'<span class="mc-detail alert">'+mi('clock','mot-ico-sm')+' At\xe9 '+(c.hf||'12h')+'</span>':'')
+        +(c.valTipo==='medir'?'<span class="mc-detail alert">'+mi('scale','mot-ico-sm')+' '+t('form.medir')+'</span>':'')
+        +(c.valTipo==='pago'?'<span class="mc-detail">'+mi('check','mot-ico-sm')+' '+t('form.pago')+'</span>':'')
+        +(c.janela&&c.janela!=='livre'?'<span class="mc-detail alert">'+mi('clock','mot-ico-sm')+' '+t('card.until')+' '+(c.hf||'12h')+'</span>':'')
       +'</div>'
       // Telefone
       +(c.tel?'<a href="tel:'+c.tel+'" class="mc-tel">'+mi('phone')+' '+c.tel+'</a>':'')
@@ -6216,11 +6350,11 @@ function renderMotor(){
         (c._motStatus||c._motPay||c._motObs?
           '<div class="mc-sep"></div>'
           +'<div style="padding:8px 18px 14px;font-size:12px;color:var(--mu)">'
-            +(c._motStatus?'<span style="display:inline-flex;align-items:center;gap:4px;background:var(--s2);border-radius:8px;padding:4px 10px;margin-right:6px;font-weight:600;color:var(--tx)">'+mi('check','mot-ico-sm')+' '+(c._motStatus==='coletado'?'Coletado':c._motStatus==='entregue'?'Entregue':c._motStatus==='ausente'?'Ausente':c._motStatus==='reagendar'?'Reagendado':c._motStatus)+'</span>':'')
+            +(c._motStatus?'<span style="display:inline-flex;align-items:center;gap:4px;background:var(--s2);border-radius:8px;padding:4px 10px;margin-right:6px;font-weight:600;color:var(--tx)">'+mi('check','mot-ico-sm')+' '+(c._motStatus==='coletado'?t('mot.status_coletado'):c._motStatus==='entregue'?t('mot.status_entregue'):c._motStatus==='ausente'?t('mot.status_ausente'):c._motStatus==='reagendar'?t('mot.status_reagendado'):c._motStatus)+'</span>':'')
             +(c._motPay?'<span style="display:inline-flex;align-items:center;gap:4px;background:var(--s2);border-radius:8px;padding:4px 10px;font-weight:600;color:var(--tx)">'+c._motPay+'</span>':'')
             +(c._motObs?'<div style="margin-top:8px;font-style:italic;color:var(--mu)">Obs: '+c._motObs+'</div>':'')
           +'</div>'
-        :'<div style="padding:8px 18px 14px;font-size:12px;color:var(--mu);opacity:.5">Aguardando motorista...</div>')
+        :'<div style="padding:8px 18px 14px;font-size:12px;color:var(--mu);opacity:.5">'+t('mot.awaiting_driver')+'</div>')
       :
         // ── Motorista interativo: todos os botões ──
         '<div class="mc-sep"></div>'
@@ -6231,22 +6365,22 @@ function renderMotor(){
           +'</div>'
           +'<div class="mc-status-row">'
             +'<button class="mc-status-btn '+statusClass+(c._motStatus===(isCol?'coletado':'entregue')?' selected':'')+'" onclick="event.stopPropagation();setMotStatus('+idx+',&#39;'+(isCol?'coletado':'entregue')+'&#39;)">'+mi('check')+' '+statusLabel+'</button>'
-            +'<button class="mc-status-btn s-ausente'+(c._motStatus==='ausente'?' selected':'')+'" onclick="event.stopPropagation();setMotStatus('+idx+',&#39;ausente&#39;)">'+mi('x')+' Ausente</button>'
+            +'<button class="mc-status-btn s-ausente'+(c._motStatus==='ausente'?' selected':'')+'" onclick="event.stopPropagation();setMotStatus('+idx+',&#39;ausente&#39;)">'+mi('x')+' '+t('mot.status_ausente')+'</button>'
           +'</div>'
-          +'<button class="mc-status-btn s-reagendar'+(c._motStatus==='reagendar'?' selected':'')+'" style="width:100%" onclick="event.stopPropagation();setMotStatus('+idx+',&#39;reagendar&#39;)">'+mi('refresh')+' Reagendar</button>'
+          +'<button class="mc-status-btn s-reagendar'+(c._motStatus==='reagendar'?' selected':'')+'" style="width:100%" onclick="event.stopPropagation();setMotStatus('+idx+',&#39;reagendar&#39;)">'+mi('refresh')+' '+t('mot.status_reagendar')+'</button>'
           +'<div class="mc-pay-section" style="padding:0">'
-            +'<div class="mc-pay-label">Pagamento</div>'
+            +'<div class="mc-pay-label">'+t('mot.payment')+'</div>'
             +'<div class="mc-pay-row">'
-              +'<button class="mc-pay-btn'+(c._motPay==='Pix (pago)'?' selected':'')+'" onclick="event.stopPropagation();setMotPay('+idx+',&#39;Pix (pago)&#39;)">'+mi('check','mot-ico-sm')+' Pix pago</button>'
-              +'<button class="mc-pay-btn'+(c._motPay==='Pix (cobrar)'?' selected':'')+'" onclick="event.stopPropagation();setMotPay('+idx+',&#39;Pix (cobrar)&#39;)">'+mi('clock','mot-ico-sm')+' Pix cobrar</button>'
-              +'<button class="mc-pay-btn'+(c._motPay==='Cart\xe3o'?' selected':'')+'" onclick="event.stopPropagation();setMotPay('+idx+',&#39;Cart\xe3o&#39;)">'+mi('card','mot-ico-sm')+' Cart\xe3o</button>'
-              +'<button class="mc-pay-btn'+(c._motPay==='Dinheiro'?' selected':'')+'" onclick="event.stopPropagation();setMotPay('+idx+',&#39;Dinheiro&#39;)">'+mi('dollar','mot-ico-sm')+' Dinheiro</button>'
+              +'<button class="mc-pay-btn'+(c._motPay==='Pix (pago)'?' selected':'')+'" onclick="event.stopPropagation();setMotPay('+idx+',&#39;Pix (pago)&#39;)">'+mi('check','mot-ico-sm')+' '+t('mot.pix_paid')+'</button>'
+              +'<button class="mc-pay-btn'+(c._motPay==='Pix (cobrar)'?' selected':'')+'" onclick="event.stopPropagation();setMotPay('+idx+',&#39;Pix (cobrar)&#39;)">'+mi('clock','mot-ico-sm')+' '+t('mot.pix_charge')+'</button>'
+              +'<button class="mc-pay-btn'+(c._motPay==='Cart\xe3o'?' selected':'')+'" onclick="event.stopPropagation();setMotPay('+idx+',&#39;Cart\xe3o&#39;)">'+mi('card','mot-ico-sm')+' '+t('mot.card')+'</button>'
+              +'<button class="mc-pay-btn'+(c._motPay==='Dinheiro'?' selected':'')+'" onclick="event.stopPropagation();setMotPay('+idx+',&#39;Dinheiro&#39;)">'+mi('dollar','mot-ico-sm')+' '+t('mot.cash')+'</button>'
             +'</div>'
           +'</div>'
           +'<div class="mc-obs-section" style="padding:0">'
-            +'<textarea class="mc-obs-input" id="mot-obs-'+idx+'" rows="2" placeholder="Observa\xe7\xe3o..." onchange="setMotObs('+idx+',this.value)">'+(c._motObs||'')+'</textarea>'
+            +'<textarea class="mc-obs-input" id="mot-obs-'+idx+'" rows="2" placeholder="'+t('mot.obs_placeholder')+'" onchange="setMotObs('+idx+',this.value)">'+(c._motObs||'')+'</textarea>'
           +'</div>'
-          +'<button class="mc-conclude-btn" onclick="event.stopPropagation();finishMotClient('+idx+')">'+mi('check')+' Concluir</button>'
+          +'<button class="mc-conclude-btn" onclick="event.stopPropagation();finishMotClient('+idx+')">'+mi('check')+' '+t('mot.concluir')+'</button>'
         +'</div>'
       ):'')
     +'</div>';
@@ -6298,7 +6432,7 @@ function setMotStatus(idx,status){
   renderMotor();
   const card=document.getElementById('mot-card-'+idx);
   if(card)card.scrollIntoView({behavior:'smooth',block:'center'});
-  toast(c.nome+': '+(c._motStatus||'status removido'),'ok');
+  toast(c.nome+': '+(c._motStatus||t('t.status_removed')),'ok');
   cloudUpdateStatus(idx,'status',c._motStatus);
   saveHist();
 }
@@ -6330,7 +6464,7 @@ function finishMotClient(idx){
   saveHist();
   renderMotor();
   checkCompletion();
-  toast(c.nome+': conclu\xEDdo!','ok');
+  toast(c.nome+': '+t('mot.status_coletado'),'ok');
 }
 // ── Reabrir card concluído para edição ──
 function editDoneCard(idx){
@@ -6339,7 +6473,7 @@ function editDoneCard(idx){
   renderMotor();
   const card=document.getElementById('mot-card-'+idx);
   if(card)card.scrollIntoView({behavior:'smooth',block:'center'});
-  toast(clients[idx].nome+': editando...','ok');
+  toast(clients[idx].nome+': '+t('t.editing'),'ok');
 }
 
 // v4.4.1: Bairro hover highlight on heatmap
