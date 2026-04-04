@@ -4,6 +4,15 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.7.2 — 04/04/2026 — FIX: i18n keys reconciled + Mobile responsive   ║
+║  ─────────────────────────────────────────                   ║
+║  GRANDE:                                                               ║
+║  • i18n: 84 chaves faltantes reconciliadas (49 remapeadas, 35 novas)   ║
+║  • Nenhuma chave bruta aparece mais na UI (perf.*, dash.*, hist.*, etc) ║
+║  • Mobile: CSS responsivo completo (480px + 768px breakpoints)         ║
+║  • Navbar compacta em mobile, cards sem corte, drawer full-width       ║
+║  • Dados do motorista persistem no histórico (5 gaps corrigidos)       ║
+║                                                                        ║
 ║  v4.7.1 — 04/04/2026 — FEAT: i18n cobertura completa (EN/PT)           ║
 ║  ─────────────────────────────────────────                   ║
 ║  GRANDE:                                                               ║
@@ -1086,6 +1095,133 @@ body.dark .toast{background:rgba(255,255,255,.12)}
 /* v4.3.4: Config page sticky save bar */
 .cfg-save-bar{position:sticky;bottom:0;left:0;right:0;z-index:100;background:var(--bg);border-top:1px solid var(--bd);padding:12px 16px;display:flex;justify-content:flex-end;gap:8px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
+
+/* ═══════════════════════════════════════════════
+   v4.7.2: MOBILE RESPONSIVENESS — Comprehensive
+   ═══════════════════════════════════════════════ */
+
+/* ── 480px and below: phones ── */
+@media(max-width:480px){
+  /* Nav: compact for small screens */
+  nav{padding:0 8px;gap:0}
+  .logo{padding:10px 10px 10px 0;gap:6px;font-size:12px;margin-right:2px}
+  .logo-i{width:26px;height:26px;border-radius:6px;font-size:13px}
+  .logo span{display:none}
+  .ntab{padding:12px 8px;font-size:11px}
+  .nav-r{display:none}
+  .theme-toggle-wrap{padding-left:6px}
+  .theme-toggle{width:40px;height:22px;border-radius:11px}
+  .theme-toggle .knob{width:18px;height:18px}
+  body.dark .theme-toggle .knob{transform:translateX(18px)}
+  .theme-toggle .knob svg{width:11px;height:11px}
+
+  /* Pages: tighter padding */
+  .page{padding:60px 12px 16px}
+  #page-dash{padding:48px 0 0!important}
+
+  /* Cards */
+  .card{padding:14px;border-radius:14px;margin-bottom:12px}
+  .cc{padding:10px 10px 10px 11px;gap:8px;border-radius:10px}
+  .cn{font-size:12px}
+  .ca{font-size:11px}
+  .cm{font-size:11px;gap:6px}
+
+  /* Two-col: single column */
+  .two-col{gap:14px}
+
+  /* Stats grid */
+  .sg{gap:8px}
+  .st{padding:12px;border-radius:12px}
+  .sv{font-size:22px}
+
+  /* Forms */
+  .fg2{grid-template-columns:1fr;gap:10px}
+  input,textarea,select{font-size:16px;padding:10px 12px}
+
+  /* Map */
+  .mapw{height:180px;border-radius:12px}
+
+  /* Buttons */
+  .btn{padding:8px 14px;font-size:12px;border-radius:10px}
+  .bsm{padding:5px 10px;font-size:11px}
+
+  /* Tabs */
+  .tabs{gap:0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tab{padding:8px 12px;font-size:12px;white-space:nowrap;flex-shrink:0}
+
+  /* Motorist cards */
+  .mot-card .mc-name{font-size:16px;padding:8px 14px 0}
+  .mot-card .mc-addr{font-size:11px;padding:2px 14px 0}
+  .mot-card .mc-top{padding:12px 14px 0}
+  .mot-card .mc-num{width:28px;height:28px;font-size:13px;border-radius:7px}
+  .mot-summary{padding:14px;gap:12px}
+  .mot-summary .ms-val{font-size:22px}
+  .mot-start-btn{padding:14px;font-size:16px;border-radius:12px}
+
+  /* History */
+  .hist-filters{flex-wrap:wrap;gap:8px}
+  .hist-filters input,.hist-filters select{min-width:0;flex:1 1 100%}
+
+  /* Dashboard drawer */
+  .dash-drawer{width:calc(100vw - 16px)!important;right:8px!important;left:8px!important;top:56px!important;bottom:8px!important;max-height:calc(100vh - 72px)!important;border-radius:14px!important}
+
+  /* Dashboard top bar */
+  .dash-top-bar{left:8px;right:8px;top:8px;gap:6px;padding:8px 12px;flex-wrap:wrap}
+  .dash-top-title{font-size:12px}
+  .dash-top-stat{font-size:11px}
+  .dash-top-sep{display:none}
+
+  /* Edit modal */
+  .modal{padding:18px;border-radius:14px;max-width:calc(100vw - 24px)}
+  .edit-row{grid-template-columns:1fr}
+
+  /* Completion card */
+  .completion-card{padding:20px 16px;border-radius:16px;max-width:calc(100vw - 24px)}
+  .completion-title{font-size:18px}
+  .completion-stats{grid-template-columns:1fr 1fr;gap:8px}
+  .completion-stat{padding:10px}
+  .completion-stat .cs-val{font-size:20px}
+
+  /* Toast */
+  .toast{bottom:12px;right:12px;left:12px;max-width:none;font-size:12px;padding:10px 14px;border-radius:12px}
+
+  /* Map sidebar fullscreen */
+  .map-sidebar{min-width:0!important}
+
+  /* Performance section */
+  .ph h2{font-size:18px}
+  .ph p{font-size:13px}
+
+  /* File import table */
+  .fi-table{font-size:11px}
+  .fi-table td,.fi-table th{padding:4px 6px}
+
+  /* Config page */
+  .cfg-save-bar{padding:10px 12px}
+}
+
+/* ── 768px and below: tablets + large phones ── */
+@media(max-width:768px){
+  /* Nav: hide version, compact */
+  .nav-r{font-size:10px;max-width:80px;overflow:hidden;text-overflow:ellipsis}
+  .ntab{padding:13px 10px;font-size:12px}
+  .logo span{font-size:12px}
+
+  /* Pages */
+  .page{padding:64px 16px 20px}
+
+  /* Prevent horizontal overflow */
+  .page,.card,.cc,.mot-card,.hist-card{max-width:100%;overflow:hidden}
+
+  /* Map fullscreen mobile */
+  .map-fullscreen{top:48px!important;height:calc(100vh - 48px)!important}
+
+  /* Completion overlay */
+  .completion-overlay{padding:12px}
+}
+
+/* ── Prevent horizontal scroll globally ── */
+html,body{overflow-x:hidden;max-width:100vw}
 </style>
 </head>
 <body>
@@ -1781,6 +1917,43 @@ pt:{
   // Tag
   'tag.created':'Tag "{name}" criada!'
 },
+  // v4.7.2: Missing keys reconciliation
+  'card.until':'Até',
+  'cep.add_number':'Adicione o número do endereço',
+  'cep.updated':'CEP atualizado',
+  'comp.collected':'Coletados',
+  'comp.delivered':'Entregues',
+  'dash.bairro':'bairro',
+  'dash.plural':'bairros',
+  'dash.rota':'rota',
+  'err.generic':'Erro inesperado. Tente novamente.',
+  'err.unknown':'Erro desconhecido',
+  'hist.all':'Todas',
+  'hist.clients':'clientes',
+  'mot.awaiting_driver':'Aguardando motorista',
+  'mot.no_payment':'Sem pagamento registrado',
+  'perf.absence_rate':'Taxa de Ausência',
+  'perf.avg_clients':'Média de Clientes',
+  'perf.avg_received':'Média Recebida',
+  'perf.completion_rate':'Taxa de Conclusão',
+  'perf.routes':'rotas',
+  'perf.title':'Desempenho',
+  'perf.total_received':'Total Recebido',
+  'perf.total_to_charge':'Total a Cobrar',
+  'perf.with_data':'com dados',
+  't.clients_imported':'Clientes importados',
+  't.lang_changed':'Idioma alterado',
+  't.pdf_generated':'PDF gerado com sucesso',
+  't.route_loaded':'Rota carregada',
+  't.route_removed':'Rota removida',
+  't.with_window':'com janela',
+  'tag.enter_name':'Digite o nome da tag',
+  'tag.exists':'Tag já existe',
+  'tag.max_10':'Máximo de 10 tags',
+  'tag.none_available':'Nenhuma tag disponível',
+  'whatsapp.route':'Roteiro WhatsApp',
+  'whatsapp.summary':'Resumo WhatsApp',
+
 en:{
   'nav.rota':'Daily Route','nav.hist':'History','nav.dash':'Client Map','nav.motor':'Driver','nav.cfg':'Settings',
   'add.title':'Add client','add.tab.trello':'Import from Trello','add.tab.img':'By Image','add.tab.file':'File','add.tab.man':'Manual',
@@ -1908,6 +2081,43 @@ en:{
   'card.until_noon':'Until 12pm','card.after_noon':'After 12pm','card.arrival':'Arrival:',
   'card.conflict':'{n} time conflict(s)','card.risk':'{n} pickup(s) at risk',
   'tag.created':'Tag "{name}" created!'
+
+  // v4.7.2: Missing keys reconciliation
+  'card.until':'Until',
+  'cep.add_number':'Add the address number',
+  'cep.updated':'ZIP code updated',
+  'comp.collected':'Collected',
+  'comp.delivered':'Delivered',
+  'dash.bairro':'neighborhood',
+  'dash.plural':'neighborhoods',
+  'dash.rota':'route',
+  'err.generic':'Unexpected error. Try again.',
+  'err.unknown':'Unknown error',
+  'hist.all':'All',
+  'hist.clients':'clients',
+  'mot.awaiting_driver':'Awaiting driver',
+  'mot.no_payment':'No payment recorded',
+  'perf.absence_rate':'Absence Rate',
+  'perf.avg_clients':'Avg Clients',
+  'perf.avg_received':'Avg Received',
+  'perf.completion_rate':'Completion Rate',
+  'perf.routes':'routes',
+  'perf.title':'Performance',
+  'perf.total_received':'Total Received',
+  'perf.total_to_charge':'Total to Charge',
+  'perf.with_data':'with data',
+  't.clients_imported':'Clients imported',
+  't.lang_changed':'Language changed',
+  't.pdf_generated':'PDF generated successfully',
+  't.route_loaded':'Route loaded',
+  't.route_removed':'Route removed',
+  't.with_window':'with window',
+  'tag.enter_name':'Enter tag name',
+  'tag.exists':'Tag already exists',
+  'tag.max_10':'Maximum 10 tags',
+  'tag.none_available':'No tags available',
+  'whatsapp.route':'WhatsApp Route',
+  'whatsapp.summary':'WhatsApp Summary',
 }
 };
 function t(key,vars){const s=(_i18n[_lang]||_i18n.pt)[key]||(_i18n.pt)[key]||key;if(!vars)return s;return Object.entries(vars).reduce((r,[k,v])=>r.replace('{'+k+'}',v),s);}
@@ -2054,7 +2264,7 @@ function confirmInlineTag(id){
   // Update tag config UI if visible
   if(typeof renderTagsConfig==='function')renderTagsConfig();
   if(typeof updateTagSelects==='function')updateTagSelects();
-  toast(name+t('t.tag_created'),'ok');
+  toast(name+t('tag.created'),'ok');
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -2503,8 +2713,10 @@ async function cloudPoll(){
         // Notifica se tem cliente novo (toast legado)
         if(route._newClient){
           const nc=route.clients[route._newClient.idx];
-          if(nc&&!_isMotoristaMode)toast(t('t.new_client')+': '+nc.nome,'ok');
+          if(nc&&!_isMotoristaMode)toast(t('msg.new_client')+': '+nc.nome,'ok');
         }
+        saveHist(); // v4.7.2: persist cloud updates (motorist data) to history
+        autoSaveRoute(); // v4.7.2: persist to rota_ativa too
       }
     }
   }catch(e){
@@ -2605,7 +2817,7 @@ function startGestorPolling(){
           clients=route.clients;order=route.order;
           if(route.cfg){cfg.base=route.cfg.base||cfg.base;cfg.retaddr=route.cfg.retaddr||cfg.retaddr;cfg.saida=route.cfg.saida||cfg.saida;cfg.ret=route.cfg.ret||cfg.ret;cfg.tempo=route.cfg.tempo||cfg.tempo;}
           renderMotor();
-          toast(t('t.driver_update'),'ok');
+          toast(t('msg.driver_update'),'ok');
         }
       }
     }catch(e){}
@@ -2629,8 +2841,8 @@ function openSmartInsert(){
 async function doSmartInsert(){
   const nome=titleCase(document.getElementById('si-nome').value.trim());
   const end=titleCase(document.getElementById('si-end').value.trim());
-  if(!nome||!end){toast(t('e.fill_name_addr'),'err');return;}
-  if(end.length<10||!/\d/.test(end)){toast(t('e.addr_invalid'),'err');return;}
+  if(!nome||!end){toast(t('err.fill_required'),'err');return;}
+  if(end.length<10||!/\d/.test(end)){toast(t('err.addr_invalid'),'err');return;}
 
   const btn=document.getElementById('si-btn');
   btn.disabled=true;
@@ -2723,7 +2935,7 @@ async function doSmartInsert(){
       if(pubData.ok){_cloudVersion=pubData.version;_cloudHash=pubData.hash;}
     }catch(e){}
   }
-  toast(t('t.client_added')+': '+nome,'ok');
+  toast(t('msg.new_client')+': '+nome,'ok');
 
   btn.disabled=false;
   btn.innerHTML='<span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span> Inserir na rota';
@@ -3093,10 +3305,10 @@ function saveCfg(){
     tkey:v('cfg-tkey'),ttoken:v('cfg-ttoken'),
     akey:v('cfg-akey'),gkey:v('cfg-gkey')};
   // Validações
-  if(cfg.saida&&cfg.ret&&cfg.saida>=cfg.ret){toast(t('e.time_order'),'err');return;}
-  if(cfg.tempo>240){toast(t('e.max_time'),'err');return;}
+  if(cfg.saida&&cfg.ret&&cfg.saida>=cfg.ret){toast(t('err.time_order'),'err');return;}
+  if(cfg.tempo>240){toast(t('err.max_time'),'err');return;}
   if(cfg.tempo<1){cfg.tempo=1;}
-  if(cfg.al1&&cfg.al2&&cfg.al1>=cfg.al2){toast(t('e.lunch_order'),'err');return;}
+  if(cfg.al1&&cfg.al2&&cfg.al1>=cfg.al2){toast(t('err.lunch_order'),'err');return;}
   localStorage.setItem('rota_cfg',JSON.stringify(cfg));
   // v4.3.3: Salvar tags configuráveis
   _saveTags();
@@ -3303,7 +3515,7 @@ function parseImportFile(file){
       const txt=e.target.result;
       const sep=ext==='tsv'?'\t':detectCSVSeparator(txt);
       const rows=parseCSVText(txt,sep);
-      if(rows.length<2){toast(t('e.empty_file'),'err');return;}
+      if(rows.length<2){toast(t('err.file_empty'),'err');return;}
       _fileImportCols=rows[0].map(c=>(c||'').toString().trim());
       _fileImportData=rows.slice(1).map(r=>{
         const obj={};
@@ -3323,7 +3535,7 @@ function parseImportFile(file){
         loadSheetData(_fileImportWB.SheetNames[0]);
         showColumnMapping(file.name);
       }catch(err){
-        toast(t('e.read_excel')+': '+err.message,'err');
+        toast(t('err.excel_read')+': '+err.message,'err');
       }
     };
     reader.readAsArrayBuffer(file);
@@ -3368,7 +3580,7 @@ function loadSheetData(sheetName){
   if(!_fileImportWB)return;
   const ws=_fileImportWB.Sheets[sheetName];
   const json=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-  if(json.length<2){toast(t('e.empty_sheet'),'err');return;}
+  if(json.length<2){toast(t('err.sheet_empty'),'err');return;}
   _fileImportCols=json[0].map(c=>(c||'').toString().trim());
   _fileImportData=json.slice(1).map(r=>{
     const obj={};
@@ -3437,8 +3649,8 @@ function onColMapChange(fieldKey,colName){
 }
 
 function previewFileImport(){
-  if(!_fileImportMap.nome){toast(t('e.map_name'),'err');return;}
-  if(!_fileImportMap.endereco){toast(t('e.map_addr'),'err');return;}
+  if(!_fileImportMap.nome){toast(t('e.mapname'),'err');return;}
+  if(!_fileImportMap.endereco){toast(t('e.mapaddr'),'err');return;}
   // Build preview rows
   _fileImportPreviewRows=[];
   const errors=[];
@@ -3467,7 +3679,7 @@ function previewFileImport(){
     if(!r._valid)errors.push('Linha '+(i+2)+': '+r._err);
     _fileImportPreviewRows.push(r);
   });
-  if(!_fileImportPreviewRows.length){toast(t('e.no_valid_data'),'err');return;}
+  if(!_fileImportPreviewRows.length){toast(t('err.no_valid'),'err');return;}
   // Show preview
   g('file-import-map').style.display='none';
   g('file-import-preview').style.display='block';
@@ -3539,7 +3751,7 @@ function resetFileImport(){
 
 function executeFileImport(){
   const valid=_fileImportPreviewRows.filter(r=>r._valid);
-  if(!valid.length){toast(t('e.no_valid_import'),'err');return;}
+  if(!valid.length){toast(t('err.no_valid_import'),'err');return;}
   const today=new Date().toISOString().split('T')[0];
   let count=0;
   valid.forEach(r=>{
@@ -3586,7 +3798,7 @@ function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace
 // ═══════════════ END MULTI-IMPORT ═══════════════
 
 async function extractImg(){
-  if(!cfg.akey){toast(t('e.configure_anthropic'),'err');return;}
+  if(!cfg.akey){toast(t('err.configure_ai'),'err');return;}
   if(!imgData)return;
   g('ext-btn').disabled=true;g('espin').style.display='';g('elbl').textContent='Extraindo...';
   try{
@@ -3614,7 +3826,7 @@ async function extractImg(){
     g('ai-badge').style.display='inline-flex';
     if(ext.endereco)schedGeo();
     toast(t('t.extracted'),'ok');
-  }catch(e){toast(t('e.extract_error'),'err');}
+  }catch(e){toast(t('e.extract'),'err');}
   finally{g('ext-btn').disabled=false;g('espin').style.display='none';g('elbl').textContent='\u2728 Extrair com IA';}
 }
 
@@ -3641,7 +3853,7 @@ async function trelloBuscarCartoes(){
   // Lê data do td2 (painel rápido) ou td (campo principal)
   const td2el=document.getElementById('td2');
   const dateVal=(td2el&&td2el.value)||v('td');
-  if(!dateVal){toast(t('e.select_date'),'warn');return;}
+  if(!dateVal){toast(t('err.select_date'),'warn');return;}
   // Sincroniza o campo principal de data
   g('td').value=dateVal;
   saveTrelloSelection(); // v4.6.5: Persiste data selecionada
@@ -3659,13 +3871,13 @@ async function trelloStep1(){
   if(!key||!token){
     g('trello-nocred').style.display='block';
     g('trello-step1').style.display='none';
-    toast(t('e.configure_trello'),'err');return;
+    toast(t('e.trello.cfg'),'err');return;
   }
   g('trello-nocred').style.display='none';
   g('trello-btn').disabled=true;g('tspin').style.display='';g('tlbl').textContent='Buscando...';
   try{
     const boards=await trelloAPICall('/members/me/boards?fields=name,id,desc');
-    if(!Array.isArray(boards)||!boards.length){toast(t('e.no_boards'),'warn');return;}
+    if(!Array.isArray(boards)||!boards.length){toast(t('err.no_boards'),'warn');return;}
     let html='';
     boards.forEach(b=>{
       const wasSel=selBoard&&selBoard.id===b.id;
@@ -3678,7 +3890,7 @@ async function trelloStep1(){
     g('trello-boards').innerHTML=html;
     g('trello-step1').style.display='none';
     g('trello-step2').style.display='block';
-  }catch(e){toast(t('e.fetch_boards')+': '+e.message,'err');console.error(e);}
+  }catch(e){toast(t('err.fetch_boards')+': '+e.message,'err');console.error(e);}
   finally{g('trello-btn').disabled=false;g('tspin').style.display='none';g('tlbl').innerHTML='<span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span> Buscar quadros';}
 }
 
@@ -3688,7 +3900,7 @@ async function trelloSelectBoard(id,name){
   g('trello-boards').innerHTML='<div class="ab info">Buscando listas do quadro <strong>'+name+'</strong>... <span class="spin"></span></div>';
   try{
     const lists=await trelloAPICall('/boards/'+id+'/lists?fields=name,id&filter=open');
-    if(!Array.isArray(lists)||!lists.length){toast(t('e.no_lists'),'warn');return;}
+    if(!Array.isArray(lists)||!lists.length){toast(t('err.no_lists'),'warn');return;}
     let html='<div class="ab info" style="margin-bottom:12px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span> Quadro: <strong>'+name+'</strong></div>';
     lists.forEach(l=>{
       html+='<div class="sel-opt" onclick="trelloSelectList(\''+l.id+'\',\''+l.name.replace(/'/g,"\\'")+'\')">'
@@ -3704,7 +3916,7 @@ async function trelloSelectBoard(id,name){
     g('trello-step3').style.display='block';
     g('tlbl').innerHTML='<span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span> Buscar cart\xF5es';
   }catch(e){
-    toast(t('e.fetch_lists'),'err');console.error(e);
+    toast(t('err.fetch_lists'),'err');console.error(e);
     // Restaura lista de quadros se falhar
     if(_tboardsHtml)g('trello-boards').innerHTML=_tboardsHtml;
     else g('trello-boards').innerHTML='<div class="ab w">Erro ao buscar listas. Tente novamente.</div>';
@@ -3742,7 +3954,7 @@ async function trelloSelectList(id,name){
     g('trello-step3').style.display='none';
     g('trello-step4').style.display='block';
     g('trello-nav-bar').innerHTML=buildTrelloNavBar();
-  }catch(e){toast(t('e.fetch_cards'),'err');console.error(e);}
+  }catch(e){toast(t('err.fetch_cards'),'err');console.error(e);}
 }
 
 // trelloBack e trelloBack2 removidos — substituídos por botões "Mudar Lista" e "Mudar Quadro" no nav bar
@@ -3753,9 +3965,9 @@ function togTC(i){
 }
 
 async function importTC(){
-  if(!cfg.akey){toast(t('e.configure_anthropic_ai'),'err');return;}
+  if(!cfg.akey){toast(t('err.configure_ai'),'err');return;}
   const cards=(window._tcards||[]).filter((_,i)=>{const cb=g('tch-'+i);return cb&&cb.checked;});
-  if(!cards.length){toast(t('e.select_cards'),'warn');return;}
+  if(!cards.length){toast(t('err.select_card'),'warn');return;}
   if(clients.length>0){
     const sub=confirm('Já existem '+clients.length+' cliente(s) na rota.\n\nOK = Substituir tudo\nCancelar = Adicionar aos existentes');
     if(sub){clients=[];order=[];}
@@ -3840,7 +4052,7 @@ async function importTC(){
     }
     // v4.6.7: Se a API falhou, parar importação e avisar
     if(apiFailed){
-      toast(t('e.anthropic_api'),'err');
+      toast(t('e.anthropic'),'err');
       g('trello-cards').innerHTML='<div class="ab w"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <div><strong>Importação interrompida!</strong><br>A API da Anthropic retornou erro. Verifique se há créditos disponíveis em <a href="https://console.anthropic.com/settings/billing" target="_blank" style="color:var(--pu)">console.anthropic.com</a>.</div></div>';
       break;
     }
@@ -3860,7 +4072,7 @@ function connectTrelloOAuth(){
   // Fluxo client-side do Trello: abre popup de autorização
   const key=cfg.tkey||TRELLO_APP_KEY;
   if(!key||key==='a1b2c3d4e5f6'){
-    toast(t('e.trello_key_manual'),'warn');return;
+    toast(t('err.configure_trello_manual'),'warn');return;
   }
   const returnUrl=window.location.origin+window.location.pathname;
   const authUrl='https://trello.com/1/authorize?expiration=never&name=Roteiro+de+Coleta&scope=read&response_type=token&key='+key+'&return_url='+encodeURIComponent(returnUrl+'?trello_auth=1');
@@ -3894,7 +4106,7 @@ function disconnectTrello(){
   document.getElementById('cfg-ttoken').value='';
   document.getElementById('trello-connected').style.display='none';
   document.getElementById('trello-not-connected').style.display='block';
-  toast(t('t.trello_disconnected'),'');
+  toast(t('t.trellodisc'),'');
 }
 async function checkTrelloConnection(){
   if(!cfg.tkey||!cfg.ttoken){
@@ -3957,7 +4169,7 @@ function showTrelloQuickPanel(){
 
 async function reloadTrelloList(){
   const dv=document.getElementById('td2')?.value||v('td');
-  if(!dv){toast(t('e.select_date'),'warn');return;}
+  if(!dv){toast(t('err.select_date'),'warn');return;}
   g('td').value=dv;
   if(selList)await trelloSelectList(selList.id,selList.name);
 }
@@ -4042,7 +4254,7 @@ function selAmb(i){
   document.querySelectorAll('.ao').forEach(a=>a.classList.remove('sel'));
   g('ao-'+i)?.classList.add('sel');ambSel=i;
   // v4.6.3: Preserve user's original address — only use Google result to resolve ambiguity (lat/lng/CEP), not to overwrite the address text
-  if(ambRes[i]){g('amb-box').style.display='none';toast(t('t.addr_confirmed'),'ok');}
+  if(ambRes[i]){g('amb-box').style.display='none';toast(t('msg.addr_confirmed'),'ok');}
 }
 function confirmAmb(){closeModal('amb-modal');ambRes=[];ambSel=-1;} // v4.6.3: don't overwrite address
 
@@ -4065,14 +4277,14 @@ function addClient(){
   if(end.length<10||!/\d/.test(end)){toast(t('e.addrinv'),'err');return;}
   if(!tipos.length){toast(t('e.tag'),'err');return;}
   const qtd=parseInt(v('f-qtd'))||0;
-  if(qtd<0){toast(t('e.qty_negative'),'err');return;}
+  if(qtd<0){toast(t('err.qty_neg'),'err');return;}
   const valTipo=g('f-valtipo')?.value||'normal';
   const val=valTipo==='normal'?(parseFloat(v('f-val').replace(',','.'))||0):0;
-  if(val<0){toast(t('e.value_negative'),'err');return;}
+  if(val<0){toast(t('err.val_neg'),'err');return;}
   const janela=g('f-janela').value;
   if(janela==='custom'){
     const hi=v('f-hi'),hf=v('f-hf');
-    if(hi&&hf&&hi>=hf){toast(t('e.time_order'),'err');return;}
+    if(hi&&hf&&hi>=hf){toast(t('err.time_order'),'err');return;}
   }
   const cep=v('f-cep').replace(/\D/g,'');
   clients.push({id:Date.now()+Math.random(),nome,endereco:end,cep,complemento:'',tel:v('f-tel'),tipo:tipos,qtd,val,valTipo,data:v('f-data')||new Date().toISOString().split('T')[0],janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null});
@@ -4153,10 +4365,10 @@ function saveEditC(){
   c.hi=c.janela==='custom'?g('em-hi').value:'';
   c.hf=c.janela==='custom'?g('em-hf').value:'';
   c.obs=_emObs||'';
-  if(c.janela==='custom'&&c.hi&&c.hf&&c.hi>=c.hf){toast(t('e.time_order'),'err');return;}
+  if(c.janela==='custom'&&c.hi&&c.hf&&c.hi>=c.hf){toast(t('err.time_order'),'err');return;}
   closeModal('edit-modal');
   renderC();updStats();
-  toast(t('t.client_updated'),'ok');
+  toast(t('msg.client_updated'),'ok');
 }
 
 function renderC(){
@@ -4404,7 +4616,7 @@ function onDragEnd(e){
       const item=order.splice(from,1)[0];
       order.splice(to,0,item);
       // v4.6.6: Recalcular ETAs instantaneamente via cache, depois refinar com Google
-      if(recalcETAsFromCache()){renderC();toast(t('t.order_updated'),'ok');}
+      if(recalcETAsFromCache()){renderC();toast(t('t.orderupd'),'ok');}
       else{renderC();}
       recalcRouteFromOrder();updateUndoBtn();
     }
@@ -4429,7 +4641,7 @@ function undoRoute(){
   prev.clients.forEach((saved,i)=>{if(clients[i]){clients[i].estT=saved.estT;clients[i].conflict=saved.conflict;clients[i].cmsg=saved.cmsg;}});
   animateRouteTransition();
   renderC();recalcRouteFromOrder();updateMapSidebar();updateUndoBtn(); // v4.6.2: removed pushRouteState after undo (was causing double entries)
-  toast(t('t.undo'),'ok');
+  toast(t('t.undone'),'ok');
 }
 function updateUndoBtn(){
   const btn=document.querySelector('.undo-btn');
@@ -5303,8 +5515,8 @@ function initMapSidebarDragDrop(){
         const item=order.splice(msDrag.stop,1)[0];
         order.splice(to,0,item);
         // v4.6.9: Recalcular ETAs via cache (instantâneo) + Google Directions (async)
-        if(recalcETAsFromCache()){renderC();toast(t('t.order_updated'),'ok');}
-        else{renderC();toast(t('t.order_updated'),'ok');}
+        if(recalcETAsFromCache()){renderC();toast(t('t.orderupd'),'ok');}
+        else{renderC();toast(t('t.orderupd'),'ok');}
         recalcRouteFromOrder();updateMapSidebar();updateUndoBtn();
       }
     }
@@ -5521,7 +5733,7 @@ function clientDeadlineMin(c){
 async function calcRoute(){
   if(!clients.length)return;
   if(!cfg.base||!cfg.base.trim()){
-    toast(t('e.configure_departure'),'err');
+    toast(t('err.start_addr'),'err');
     showConfirm('Endere\xE7o de partida necess\xE1rio',
       'Para calcular os hor\xE1rios de chegada corretamente, o sistema precisa saber de onde o motorista sai.<br><br>V\xE1 em <strong>Configura\xE7\xF5es</strong> e preencha o campo <strong>Endere\xE7o de partida</strong>.',
       ()=>{closeModal('confirm-modal');goPage('cfg',document.querySelectorAll('.ntab')[4]);});
@@ -5543,11 +5755,11 @@ async function calcRoute(){
       }
       await new Promise(res=>setTimeout(res,200));
     }
-    if(notFound.length)toast(t('e.addr_not_found')+': '+notFound.join(', '),'warn');
+    if(notFound.length)toast(t('err.addr_not_found')+': '+notFound.join(', '),'warn');
     const geocodedIdx=[];
     for(let i=0;i<clients.length;i++){if(clients[i].lat&&clients[i].lng)geocodedIdx.push(i);}
     const geocoded=geocodedIdx.map(i=>clients[i]);
-    if(!geocoded.length){toast(t('e.no_addresses'),'err');return;}
+    if(!geocoded.length){toast(t('e.noaddr'),'err');return;}
     if(geocoded.length===1){
       gMap.setCenter({lat:geocoded[0].lat,lng:geocoded[0].lng});gMap.setZoom(15);
       createAdvMarker({position:{lat:geocoded[0].lat,lng:geocoded[0].lng},map:gMap,label:'1',fillColor:'#6C5CE7'});
@@ -5565,11 +5777,11 @@ async function calcRoute(){
     let baseCoords,retCoords;
     const baseGeo=await nominatim(baseAddr);
     if(baseGeo){baseCoords={lat:baseGeo.lat,lng:baseGeo.lng};}
-    else{toast(t('e.departure_not_found'),'err');return;}
+    else{toast(t('err.start_addr'),'err');return;}
     const retGeo=await nominatim(retAddr);
     retCoords=retGeo?{lat:retGeo.lat,lng:retGeo.lng}:{...baseCoords};
     // Otimizar via motor v2 (matriz + heurísticas + SA)
-    toast(t('t.optimizing'),'');
+    toast(t('msg.optimizing'),'');
     const optV2=await optimizeRouteV2(geocodedIdx,baseCoords,retCoords);
     // Aplicar ordem otimizada
     const noCoords=[];
@@ -5587,7 +5799,7 @@ async function calcRoute(){
       recalcETAsFromCache();
       renderC();updStats();saveHist();
       const urgCount=geocoded.filter(c=>clientDeadlineMin(c)<24*60).length;
-      toast(t('t.optimized_no_map')+(urgCount?' ('+urgCount+' '+t('t.with_window')+')':''),'ok');
+      toast(t('msg.optimized_nomap')+(urgCount?' ('+urgCount+' '+t('t.with_window')+')':''),'ok');
       return; // Pular renderização do mapa
     }
     // Renderizar mapa com resultado do Google
@@ -5633,7 +5845,7 @@ async function calcRoute(){
     renderC();updStats();
     saveHist();
     toast(t('t.optimized')+urgMsg,'ok');
-  }catch(e){toast(t('e.calculate_route')+': '+e.message,'err');console.error(e);}
+  }catch(e){toast(t('e.calc')+': '+e.message,'err');console.error(e);}
   finally{g('rp').classList.remove('on');g('route-btn').disabled=!clients.length;}
 }
 
@@ -5704,7 +5916,7 @@ function resetMap(){if(leafRoute&&leafMap){leafMap.removeLayer(leafRoute);leafRo
 async function genImage(){
   if(!clients.length)return;
   const btn=g('pdf-btn');btn.disabled=true;btn.innerHTML='<span class="spin"></span> Gerando...';
-  toast(t('t.generating_image'),'');
+  toast(t('msg.gen_image'),'');
   const col=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}),ent=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');});
   const tapR=col.reduce((s,c)=>s+(c.qtd||0),0),tapE=ent.reduce((s,c)=>s+(c.qtd||0),0);
   const d=clients[0]?.data?new Date(clients[0].data+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
@@ -5749,7 +5961,7 @@ async function genImage(){
     link.click();
     toast(t('t.imggen'),'ok');
     saveHist();
-  }catch(e){toast(t('e.generate_image')+': '+e.message,'err');console.error(e);}
+  }catch(e){toast(t('err.gen_image')+': '+e.message,'err');console.error(e);}
   finally{
     try{document.body.removeChild(wrap);}catch(e){}
     const btn=g('pdf-btn');if(btn){btn.disabled=false;btn.innerHTML='<span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span> Gerar imagem do roteiro';}
@@ -5892,7 +6104,14 @@ function openHist(i){
     +'<select onchange="filterHistType(this.value)"><option value="">'+t('hist.all')+'</option><option value="coleta">'+t('mot.coleta')+'</option><option value="entrega">'+t('mot.entrega')+'</option></select>'
   +'</div>';
   html+='<div id="hist-card-list">';
-  h.order.forEach((idx,stop)=>{const c=h.clients[idx]||h.clients[stop];if(!c)return;const tipos=normalizeTipo(c.tipo);const primaryColor=tipos.length?_getTagColor(tipos[0]):'rgba(108,92,231,.18)';const tagChips=renderTagChips(tipos);const bw=tagBorderWidth(tipos);const borderStyle=tipos.length<=1?'border-left:3px solid '+primaryColor:'border-left:none;padding-left:'+(13+bw)+'px;overflow:hidden;position:relative';const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';html+='<div class="hist-card" data-hc-name="'+(c.nome||'').toLowerCase()+'" data-hc-type="'+(tipos.join(','))+'" style="'+borderStyle+'">'+(tipos.length>1?renderTagBorder(tipos):'')+'<div class="hc-num" style="background:'+primaryColor+'">'+(stop+1)+'</div><div class="hc-info"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px"><span class="hc-name">'+c.nome+'</span>'+(tagChips?'<div style="display:flex;gap:3px;flex-wrap:wrap;flex-shrink:0">'+tagChips+'</div>':'')+'</div><div class="hc-addr">'+c.endereco+(c.complemento?' \u2014 '+c.complemento:'')+'</div><div class="hc-meta">'+(c.tel?'<span>\u260E '+c.tel+'</span>':'')+(c.qtd?'<span>'+c.qtd+' '+(cfg._itemLabel||'item')+(c.qtd>1?'s':'')+'</span>':'')+(vd?'<span>'+vd+'</span>':'')+'</div></div></div>';});
+  h.order.forEach((idx,stop)=>{const c=h.clients[idx]||h.clients[stop];if(!c)return;const tipos=normalizeTipo(c.tipo);const primaryColor=tipos.length?_getTagColor(tipos[0]):'rgba(108,92,231,.18)';const tagChips=renderTagChips(tipos);const bw=tagBorderWidth(tipos);const borderStyle=tipos.length<=1?'border-left:3px solid '+primaryColor:'border-left:none;padding-left:'+(13+bw)+'px;overflow:hidden;position:relative';const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';html+='<div class="hist-card" data-hc-name="'+(c.nome||'').toLowerCase()+'" data-hc-type="'+(tipos.join(','))+'" style="'+borderStyle+'">'+(tipos.length>1?renderTagBorder(tipos):'')+'<div class="hc-num" style="background:'+primaryColor+'">'+(stop+1)+'</div><div class="hc-info"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px"><span class="hc-name">'+c.nome+'</span>'+(tagChips?'<div style="display:flex;gap:3px;flex-wrap:wrap;flex-shrink:0">'+tagChips+'</div>':'')+'</div><div class="hc-addr">'+c.endereco+(c.complemento?' \u2014 '+c.complemento:'')+'</div><div class="hc-meta">'+(c.tel?'<span>\u260E '+c.tel+'</span>':'')+(c.qtd?'<span>'+c.qtd+' '+(cfg._itemLabel||'item')+(c.qtd>1?'s':'')+'</span>':'')+(vd?'<span>'+vd+'</span>':'')+'</div>'
+// v4.7.2: Show motorist data (status, payment, obs) in history cards
++(c._motStatus||c._motPay||c._motObs?'<div class="hc-motor" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">'
++(c._motStatus?'<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:'+(c._motStatus==='ausente'||c._motStatus==='reagendar'?'var(--rl)':'var(--gnl)')+';color:'+(c._motStatus==='ausente'||c._motStatus==='reagendar'?'var(--rd)':'var(--gnd)')+'">'+({coletado:t('mot.status_coletado'),entregue:t('mot.status_entregue'),ausente:t('mot.status_ausente'),reagendar:t('mot.status_reagendar')}[c._motStatus]||c._motStatus)+'</span>':'')
++(c._motPay?'<span style="font-size:11px;padding:2px 8px;border-radius:6px;background:var(--pul);color:var(--pu)">'+c._motPay+'</span>':'')
++(c._motObs?'<div style="font-size:11px;color:var(--mu);margin-top:4px;width:100%;font-style:italic">\u201C'+esc(c._motObs)+'\u201D</div>':'')
++'</div>':'')
++'</div></div>';});
   html+='</div>';
   g('hm-body').innerHTML=html;g('hist-modal').classList.add('on');
 }
@@ -6151,20 +6370,20 @@ function getMotoristaLink(){
 }
 function copyMotLink(){
   if(!_currentRouteId){
-    toast(t('e.publish_first'),'err');return;
+    toast(t('msg.publish_first'),'err');return;
   }
   const link=getMotoristaLink();
   navigator.clipboard.writeText(link).then(()=>{
-    toast(t('t.link_copied'),'ok');
+    toast(t('msg.link_copied'),'ok');
   }).catch(()=>{
     const ta=document.createElement('textarea');ta.value=link;ta.style.position='fixed';ta.style.opacity='0';
     document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
-    toast(t('t.link_copied'),'ok');
+    toast(t('msg.link_copied'),'ok');
   });
 }
 function shareMotWhatsApp(){
   if(!_currentRouteId){
-    toast(t('e.publish_first'),'err');return;
+    toast(t('msg.publish_first'),'err');return;
   }
   const link=getMotoristaLink();
   const text='Acesse o roteiro do dia aqui:\n'+link;
@@ -6189,7 +6408,7 @@ function dismissUpdateBanner(){
 }
 
 function showMotQR(){
-  if(!_currentRouteId){toast(t('e.publish_first'),'err');return;}
+  if(!_currentRouteId){toast(t('msg.publish_first'),'err');return;}
   const link=getMotoristaLink();
   const box=g('mot-qr-box');box.style.display='block';
   // Carregar lib QR leve via CDN se não disponível
@@ -6432,9 +6651,10 @@ function setMotStatus(idx,status){
   renderMotor();
   const card=document.getElementById('mot-card-'+idx);
   if(card)card.scrollIntoView({behavior:'smooth',block:'center'});
-  toast(c.nome+': '+(c._motStatus||t('t.status_removed')),'ok');
+  toast(c.nome+': '+(c._motStatus||t('msg.status_removed')),'ok');
   cloudUpdateStatus(idx,'status',c._motStatus);
   saveHist();
+  autoSaveRoute(); // v4.7.2: persist to rota_ativa from motorist mode
 }
 function setMotPay(idx,pay){
   if(_motScrolling)return;
@@ -6446,11 +6666,13 @@ function setMotPay(idx,pay){
   else{c._motPay=pay;}
   renderMotor();
   cloudUpdateStatus(idx,'pay',c._motPay);
+  saveHist(); // v4.7.2: persist payment to history
+  autoSaveRoute(); // v4.7.2: persist to rota_ativa from motorist mode
 }
 function setMotObs(idx,obs){
   clients[idx]._motObs=obs;
   clearTimeout(clients[idx]._obsTimeout);
-  clients[idx]._obsTimeout=setTimeout(()=>cloudUpdateStatus(idx,'obs',obs),2000);
+  clients[idx]._obsTimeout=setTimeout(()=>{cloudUpdateStatus(idx,'obs',obs);saveHist();},2000); // v4.7.2: persist obs to history (debounced)
 }
 // ── Concluir card manualmente ──
 function finishMotClient(idx){
@@ -6462,6 +6684,7 @@ function finishMotClient(idx){
   cloudUpdateStatus(idx,'done',true);
   recalcDynamicETAs();
   saveHist();
+  autoSaveRoute(); // v4.7.2: persist to rota_ativa from motorist mode
   renderMotor();
   checkCompletion();
   toast(c.nome+': '+t('mot.status_coletado'),'ok');
@@ -6473,7 +6696,7 @@ function editDoneCard(idx){
   renderMotor();
   const card=document.getElementById('mot-card-'+idx);
   if(card)card.scrollIntoView({behavior:'smooth',block:'center'});
-  toast(clients[idx].nome+': '+t('t.editing'),'ok');
+  toast(clients[idx].nome+': '+t('msg.editing'),'ok');
 }
 
 // v4.4.1: Bairro hover highlight on heatmap
@@ -6711,6 +6934,6 @@ function rerenderHeatmap(){
   }catch(e){}
 })();
 </script>
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.7.1</div>
+<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v4.7.2</div>
 </body>
 </html>
