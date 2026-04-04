@@ -4,6 +4,8 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v4.8.5 — 04/04/2026 — PERF: haversine-first + OSRM race + dead time diag ║
+║  v4.8.4 — 04/04/2026 — PERF: timeout em TODAS as chamadas externas      ║
 ║  v4.8.3 — 04/04/2026 — FIX: sidebar drag false positive + emoji M1     ║
 ║  v4.8.2 — 04/04/2026 — FIX: two-col overflow, emoji in render, timing  ║
 ║  v4.8.1 — 04/04/2026 — DIAG: timing instrumentation + emoji sanitize   ║
@@ -1531,7 +1533,7 @@ html,body{overflow-x:hidden;max-width:100vw}
       </button>
       <div class="map-sidebar" id="map-sidebar"></div>
     </div>
-    <button class="btn bp" style="width:100%" id="route-btn" onclick="calcRoute()" disabled><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg></span> <span data-i18n="btn.generate">Gerar rota</span></button>
+    <button class="btn bp" style="width:100%" id="route-btn" onclick="calcRouteClick()" disabled><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg></span> <span data-i18n="btn.generate">Gerar rota</span></button>
     <button class="btn bo" style="width:100%;margin-top:8px" id="publish-btn" onclick="cloudPublish()" disabled><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/><polyline points="13 13 17 9 21 13"/></svg></span> <span data-i18n="btn.publish">Publicar rota no cloud</span></button>
     <button class="btn bo" style="width:100%;margin-top:8px" id="insert-btn" onclick="openSmartInsert()" disabled><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span> <span data-i18n="btn.insert">Inserir cliente na rota ativa</span></button>
   </div>
@@ -4788,13 +4790,18 @@ async function _rebuildCachedMatrix(){
     // Geocodificar endereço base via Google Geocoding API
     const baseAddr=cfg.base;
     if(!baseAddr)return;
-    const geoResp=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(baseAddr+', Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
+    // v4.8.4: Timeout 6s para geocoding em rebuild background
+    const _rbC1=new AbortController();const _rbT1=setTimeout(()=>_rbC1.abort(),6000);
+    const geoResp=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(baseAddr+', Brasil')+'&region=br&key='+GKEY,{signal:_rbC1.signal}).then(r=>r.json());
+    clearTimeout(_rbT1);
     if(geoResp.status!=='OK'||!geoResp.results[0]?.geometry?.location)return; // v4.7.0: null-safe
     const baseLoc=geoResp.results[0].geometry.location;
     const baseCoords={lat:baseLoc.lat,lng:baseLoc.lng};
     let retCoords=baseCoords;
     if(cfg.retaddr&&cfg.retaddr!==baseAddr){
-      const retResp=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(cfg.retaddr+', Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
+      const _rbC2=new AbortController();const _rbT2=setTimeout(()=>_rbC2.abort(),6000);
+      const retResp=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(cfg.retaddr+', Brasil')+'&region=br&key='+GKEY,{signal:_rbC2.signal}).then(r=>r.json());
+      clearTimeout(_rbT2);
       if(retResp.status==='OK'&&retResp.results[0]){const rl=retResp.results[0].geometry.location;retCoords={lat:rl.lat,lng:rl.lng};}
     }
     const allCoords=[baseCoords,...geocodedIdx.map(i=>({lat:clients[i].lat,lng:clients[i].lng})),retCoords];
@@ -4811,74 +4818,90 @@ async function _rebuildCachedMatrix(){
 function _matrixCacheKey(allCoords){
   return 'tmx_'+allCoords.map(c=>c.lat.toFixed(5)+','+c.lng.toFixed(5)).join('|');
 }
+// v4.8.5: Polyfill Promise.any para browsers antigos (Safari <14, Chrome <85)
+if(!Promise.any){Promise.any=function(promises){return new Promise((resolve,reject)=>{let errors=[];let remaining=promises.length;if(!remaining)return reject(new AggregateError([],'All promises were rejected'));promises.forEach((p,i)=>{Promise.resolve(p).then(resolve).catch(e=>{errors[i]=e;if(--remaining===0)reject(new AggregateError(errors,'All promises were rejected'));});});});};}
+// v4.8.5: Flags de falha — skip OSRM/Worker se já falharam nesta sessão
+let _osrmFailCount=0,_workerFailCount=0;
+const _FAIL_THRESHOLD=2; // Após 2 falhas, skip automático na sessão
+
 async function buildTimeMatrix(allCoords){
   const N=allCoords.length;
-  // v4.7.6: Verificar cache antes de fetch
+  const _mt0=performance.now();
+  // v4.7.6: Verificar cache antes de tudo
   const cacheKey=_matrixCacheKey(allCoords);
   try{
     const cached=sessionStorage.getItem(cacheKey);
     if(cached){
       const data=JSON.parse(cached);
       if(data.durations&&data.distances){
-        console.log('[MATRIX] Cache hit — '+N+'x'+N);
+        console.log('[MATRIX] Cache hit — '+N+'x'+N+' ('+Math.round(performance.now()-_mt0)+'ms)');
         return data;
       }
     }
   }catch(e){}
-  // Tentar OSRM Table API primeiro (gratuito)
-  try{
-    const coordStr=allCoords.map(c=>c.lng+','+c.lat).join(';');
-    const url='https://router.project-osrm.org/table/v1/driving/'+coordStr+'?annotations=duration,distance';
-    // v4.8.1: Timeout de 8s para OSRM (servidor publico pode travar)
-    const ctrl=new AbortController();
-    const tid=setTimeout(()=>ctrl.abort(),8000);
-    const resp=await fetch(url,{signal:ctrl.signal});
-    clearTimeout(tid);
-    if(!resp.ok)throw new Error('HTTP '+resp.status);
-    const data=await resp.json();
-    if(data.code==='Ok'&&data.durations&&data.distances){
-      console.log('[MATRIX] OSRM Table API OK — '+N+'x'+N);
-      const r1={durations:data.durations,distances:data.distances,source:'osrm'};
-      try{sessionStorage.setItem(cacheKey,JSON.stringify(r1));}catch(e){}
-      return r1;
-    }
-    throw new Error('OSRM code: '+(data.code||'unknown'));
-  }catch(e){
-    console.warn('[MATRIX] OSRM falhou:',e.message,'→ tentando proxy Worker...');
-  }
-  // Tentar proxy via Cloudflare Worker
-  try{
-    const coordStr=allCoords.map(c=>c.lng+','+c.lat).join(';');
-    const workerUrl='https://roteiro-lavanderia.nigel-guandalini.workers.dev/osrm-proxy?coords='+encodeURIComponent(coordStr);
-    // v4.8.1: Timeout de 8s para Worker proxy
-    const ctrl2=new AbortController();
-    const tid2=setTimeout(()=>ctrl2.abort(),8000);
-    const resp=await fetch(workerUrl,{signal:ctrl2.signal});
-    clearTimeout(tid2);
-    if(resp.ok){
-      const data=await resp.json();
-      if(data.durations&&data.distances){
-        console.log('[MATRIX] Worker proxy OK — '+N+'x'+N);
-        const r2={durations:data.durations,distances:data.distances,source:'worker-proxy'};
-        try{sessionStorage.setItem(cacheKey,JSON.stringify(r2));}catch(e){}
-        return r2;
-      }
-    }
-  }catch(e){
-    console.warn('[MATRIX] Worker proxy falhou:',e.message);
-  }
-  // Fallback: Haversine × fator urbano
-  console.log('[MATRIX] Usando fallback haversine × 1.4');
-  const durs=[],dists=[];
+  // v4.8.5: HAVERSINE PRIMEIRO — calcular instantaneamente como fallback garantido
+  const hvDurs=[],hvDists=[];
   for(let i=0;i<N;i++){
-    durs[i]=[];dists[i]=[];
+    hvDurs[i]=[];hvDists[i]=[];
     for(let j=0;j<N;j++){
       const km=_haversineKm(allCoords[i].lat,allCoords[i].lng,allCoords[j].lat,allCoords[j].lng);
-      dists[i][j]=km*1000;
-      durs[i][j]=(km*1.4/25)*3600; // fator urbano SP: ×1.4, 25km/h média
+      hvDists[i][j]=km*1000;
+      hvDurs[i][j]=(km*1.4/25)*3600; // fator urbano SP: ×1.4, 25km/h média
     }
   }
-  return {durations:durs,distances:dists,source:'haversine'};
+  const haversineResult={durations:hvDurs,distances:hvDists,source:'haversine'};
+  console.log('[MATRIX] Haversine pronto em '+Math.round(performance.now()-_mt0)+'ms — '+N+'x'+N);
+  // v4.8.5: Tentar OSRM e Worker em CORRIDA PARALELA com 3s timeout
+  // Se algum responder a tempo, usa (mais preciso). Se não, haversine já está pronto.
+  const coordStr=allCoords.map(c=>c.lng+','+c.lat).join(';');
+  const racers=[];
+  if(_osrmFailCount<_FAIL_THRESHOLD){
+    racers.push((async()=>{
+      const ctrl=new AbortController();const tid=setTimeout(()=>ctrl.abort(),3000);
+      try{
+        const resp=await fetch('https://router.project-osrm.org/table/v1/driving/'+coordStr+'?annotations=duration,distance',{signal:ctrl.signal});
+        clearTimeout(tid);
+        if(!resp.ok)throw new Error('HTTP '+resp.status);
+        const data=await resp.json();
+        if(data.code==='Ok'&&data.durations&&data.distances){
+          _osrmFailCount=0; // Reset no sucesso
+          return {durations:data.durations,distances:data.distances,source:'osrm'};
+        }
+        throw new Error('OSRM code: '+(data.code||'unknown'));
+      }catch(e){clearTimeout(tid);_osrmFailCount++;console.warn('[MATRIX] OSRM falhou ('+_osrmFailCount+'/'+_FAIL_THRESHOLD+'):',e.message);throw e;}
+    })());
+  } else {console.log('[MATRIX] OSRM skip — '+_osrmFailCount+' falhas consecutivas');}
+  if(_workerFailCount<_FAIL_THRESHOLD){
+    racers.push((async()=>{
+      const ctrl=new AbortController();const tid=setTimeout(()=>ctrl.abort(),3000);
+      try{
+        const resp=await fetch('https://roteiro-lavanderia.nigel-guandalini.workers.dev/osrm-proxy?coords='+encodeURIComponent(coordStr),{signal:ctrl.signal});
+        clearTimeout(tid);
+        if(!resp.ok)throw new Error('HTTP '+resp.status);
+        const data=await resp.json();
+        if(data.durations&&data.distances){
+          _workerFailCount=0;
+          return {durations:data.durations,distances:data.distances,source:'worker-proxy'};
+        }
+        throw new Error('Worker: no data');
+      }catch(e){clearTimeout(tid);_workerFailCount++;console.warn('[MATRIX] Worker falhou ('+_workerFailCount+'/'+_FAIL_THRESHOLD+'):',e.message);throw e;}
+    })());
+  } else {console.log('[MATRIX] Worker skip — '+_workerFailCount+' falhas consecutivas');}
+  // Se tem racers, tentar Promise.any (primeiro que resolver ganha)
+  if(racers.length>0){
+    try{
+      const result=await Promise.any(racers);
+      console.log('[MATRIX] '+result.source+' OK — '+N+'x'+N+' ('+Math.round(performance.now()-_mt0)+'ms)');
+      try{sessionStorage.setItem(cacheKey,JSON.stringify(result));}catch(e){}
+      return result;
+    }catch(e){
+      // Todos falharam — usar haversine (já calculado)
+      console.log('[MATRIX] OSRM+Worker falharam — usando haversine ('+Math.round(performance.now()-_mt0)+'ms total desperdiçado em rede)');
+    }
+  }
+  // Fallback: haversine já pronto
+  console.log('[MATRIX] Final: haversine × 1.4 — '+N+'x'+N+' ('+Math.round(performance.now()-_mt0)+'ms)');
+  return haversineResult;
 }
 function _haversineKm(lat1,lon1,lat2,lon2){
   const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
@@ -5640,7 +5663,10 @@ async function _resolveGeoAnchor(){
   const base=cfg.base;
   if(!base)return null;
   try{
-    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(base+', Brasil')+'&region=br&key='+GKEY).then(r=>r.json());
+    // v4.8.4: Timeout de 6s para resolver ancora
+    const _acCtrl=new AbortController();const _acTid=setTimeout(()=>_acCtrl.abort(),6000);
+    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(base+', Brasil')+'&region=br&key='+GKEY,{signal:_acCtrl.signal}).then(r=>r.json());
+    clearTimeout(_acTid);
     if(d.status==='OK'&&d.results[0]){
       const loc=d.results[0].geometry.location;
       const comps=d.results[0].address_components;
@@ -5694,7 +5720,10 @@ async function nominatim(addr){
     // Montar sufixo de contexto geográfico baseado na âncora
     const suffix=_geoAnchor?(_geoAnchor.state?', '+_geoAnchor.state+', Brasil':', Brasil'):', Brasil';
     const url='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+suffix)+'&region=br&key='+GKEY+_getAnchorBounds()+_getAnchorComponents();
-    const d=await fetch(url).then(r=>r.json());
+    // v4.8.4: Timeout de 6s para Google Geocoding (evita pendura infinita)
+    const _gc1=new AbortController();const _gt1=setTimeout(()=>_gc1.abort(),6000);
+    const d=await fetch(url,{signal:_gc1.signal}).then(r=>r.json());
+    clearTimeout(_gt1);
     if(d.status==='OK'&&d.results.length){
       // Preferir resultado mais próximo da âncora
       const nearResult=d.results.find(r=>_isNearAnchor(r.geometry.location.lat,r.geometry.location.lng));
@@ -5703,7 +5732,10 @@ async function nominatim(addr){
       // Se caiu longe da âncora, tentar com cidade da âncora explícita
       if(!_isNearAnchor(result.lat,result.lng)&&_geoAnchor?.city){
         const url2='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+', '+_geoAnchor.city+', '+(_geoAnchor.state||'')+', Brasil')+'&region=br&key='+GKEY+_getAnchorBounds();
-        const d2=await fetch(url2).then(r=>r.json());
+        // v4.8.4: Timeout de 6s para retry geocoding
+        const _gc2=new AbortController();const _gt2=setTimeout(()=>_gc2.abort(),6000);
+        const d2=await fetch(url2,{signal:_gc2.signal}).then(r=>r.json());
+        clearTimeout(_gt2);
         if(d2.status==='OK'&&d2.results.length){
           const near2=d2.results.find(r=>_isNearAnchor(r.geometry.location.lat,r.geometry.location.lng));
           if(near2){
@@ -5745,7 +5777,15 @@ function clientDeadlineMin(c){
   return 24*60; // sem restrição
 }
 
+// v4.8.5: Wrapper de timing para capturar dead time percebido
+let _calcRouteClickTime=0;
+function calcRouteClick(){
+  _calcRouteClickTime=performance.now();
+  console.log('[PERF] Botão "Gerar rota" clicado — timestamp: '+Math.round(_calcRouteClickTime));
+  calcRoute();
+}
 async function calcRoute(){
+  if(_calcRouteClickTime>0)console.log('[PERF] calcRoute() iniciou — delta desde clique: '+Math.round(performance.now()-_calcRouteClickTime)+'ms');
   if(!clients.length)return;
   if(!cfg.base||!cfg.base.trim()){
     toast(t('err.start_addr'),'err');
@@ -5821,7 +5861,11 @@ async function calcRoute(){
     let dirResult;
     try{
       _perf.dirStart=performance.now();
-      dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR'},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
+      // v4.8.4: Timeout de 10s para Google Directions (evita pendura infinita)
+      dirResult=await Promise.race([
+        new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR'},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status)))),
+        new Promise((_,rErr)=>setTimeout(()=>rErr(new Error('TIMEOUT_10s')),10000))
+      ]);
       _perf.dirEnd=performance.now();
       console.log('[CALC-ROUTE] 5/6 Google Directions: '+Math.round(_perf.dirEnd-_perf.dirStart)+'ms');
     }catch(dirErr){
@@ -5879,6 +5923,8 @@ async function calcRoute(){
     console.log('[CALC-ROUTE] 6/6 Render+Save: '+Math.round(_perf.end-(_perf.dirEnd||_perf.optimize))+'ms');
     console.log('[CALC-ROUTE] === TOTAL: '+Math.round(_perf.end-_perf.start)+'ms ('+clients.length+' clientes) ===');
     console.log('[CALC-ROUTE] Breakdown: Ancora='+Math.round((_perf.anchor-_perf.start))+'ms | Geocode='+Math.round((_perf.geocode-_perf.anchor))+'ms | Base/Ret='+Math.round((_perf.baseRet-_perf.geocode))+'ms | OptV2='+Math.round((_perf.optimize-_perf.baseRet))+'ms | GDir='+Math.round(((_perf.dirEnd||_perf.optimize)-_perf.optimize))+'ms | Render='+Math.round((_perf.end-(_perf.dirEnd||_perf.optimize)))+'ms');
+    // v4.8.5: Timing percebido (desde clique do botão até fim completo)
+    if(_calcRouteClickTime>0){console.log('[PERF] TOTAL PERCEBIDO (clique→fim): '+Math.round(_perf.end-_calcRouteClickTime)+'ms');_calcRouteClickTime=0;}
     toast(t('t.optimized')+urgMsg,'ok');
   }catch(e){toast(t('e.calc')+': '+e.message,'err');console.error(e);}
   finally{g('rp').classList.remove('on');g('route-btn').disabled=!clients.length;}
