@@ -4,6 +4,7 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
+║  v5.2.0 — 04/04/2026 — FIX: Worker deploy + USERS KV + avatar dropdown + Facebook  ║
 ║  v5.0.0 — 04/04/2026 — FEAT: Sistema de Contas + Login + Google OAuth + Sync       ║
 ║  v4.9.3 — 04/04/2026 — FIX: cards mapa = reflexo exato + modais responsivos 375px ║
 ║  v4.9.2 — 04/04/2026 — FIX: auto-restore silencioso + donuts histórico +          ║
@@ -1367,9 +1368,26 @@ body.dark .auth-card{box-shadow:0 8px 32px rgba(0,0,0,.3)}
 .auth-user-name{font-weight:700;font-size:14px;color:var(--tx)}
 .auth-user-email{font-size:12px;color:var(--mu)}
 .auth-provider-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:var(--sf);color:var(--mu)}
-.nav-auth-btn{background:none;border:none;color:var(--mu);cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .2s}
-.nav-auth-btn:hover{background:var(--sf);color:var(--pu)}
+.nav-auth-btn{background:none;border:none;color:var(--mu);cursor:pointer;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:all .2s;position:relative}
+.nav-auth-btn:hover{opacity:.85}
 .nav-auth-btn.logged-in{color:var(--pu)}
+.nav-avatar{width:32px;height:32px;border-radius:50%;background:var(--pu);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;letter-spacing:.5px;user-select:none}
+.nav-avatar.generic{background:transparent;color:var(--mu)}
+/* v5.2.0: Account dropdown (Linear/Notion style) */
+.nav-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:var(--bg);border:1px solid var(--bd);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);min-width:240px;padding:6px;z-index:99999;display:none;animation:dropIn .15s ease}
+@keyframes dropIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.nav-dropdown.open{display:block}
+.nav-dd-header{padding:10px 12px;border-bottom:1px solid var(--bd);margin-bottom:4px}
+.nav-dd-name{font-weight:700;font-size:14px;color:var(--tx);line-height:1.3}
+.nav-dd-email{font-size:12px;color:var(--mu);margin-top:2px;line-height:1.3}
+.nav-dd-plan{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:6px;margin-top:6px;background:var(--gnl);color:var(--gnd)}
+.nav-dd-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--tx);transition:background .15s;border:none;background:none;width:100%;text-align:left;font-family:inherit}
+.nav-dd-item:hover{background:var(--pul)}
+.nav-dd-item svg{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nav-dd-item.danger{color:var(--rd)}
+.nav-dd-item.danger:hover{background:var(--rl)}
+.nav-dd-divider{height:1px;background:var(--bd);margin:4px 0}
+body.dark .nav-dropdown{box-shadow:0 8px 32px rgba(0,0,0,.4)}
 </style>
 </head>
 <body>
@@ -1424,7 +1442,19 @@ body.dark .auth-card{box-shadow:0 8px 32px rgba(0,0,0,.3)}
   <button class="ntab" onclick="goPage('motor',this)"><svg class="ntab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg><span data-i18n="nav.motor">Motorista</span></button>
   <button class="ntab" onclick="goPage('cfg',this)"><svg class="ntab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span data-i18n="nav.cfg">Configura&#xE7;&#xF5;es</span></button>
   <div class="nav-r" id="nav-date"></div>
-  <button id="nav-auth-btn" class="nav-auth-btn" onclick="_navAuthClick()" title="Conta" style="display:none"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
+  <button id="nav-auth-btn" class="nav-auth-btn" onclick="_navAuthToggleDropdown(event)" title="Conta" style="display:none">
+    <div class="nav-avatar generic" id="nav-avatar"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+    <div class="nav-dropdown" id="nav-dropdown">
+      <div class="nav-dd-header">
+        <div class="nav-dd-name" id="nav-dd-name">---</div>
+        <div class="nav-dd-email" id="nav-dd-email">---</div>
+        <div class="nav-dd-plan" id="nav-dd-plan">free</div>
+      </div>
+      <button class="nav-dd-item" onclick="_navDdGoSettings()"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Configurações</button>
+      <div class="nav-dd-divider"></div>
+      <button class="nav-dd-item danger" onclick="_authLogout()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sair da conta</button>
+    </div>
+  </button>
   <div class="theme-toggle-wrap">
     <button class="theme-toggle" onclick="toggleTheme()">
       <div class="knob">
@@ -1824,6 +1854,8 @@ body.dark .auth-card{box-shadow:0 8px 32px rgba(0,0,0,.3)}
     </div>
   </div>
   </div>
+  <!-- v5.2.0: Version badge -->
+  <div style="text-align:center;padding:16px 0 8px;font-size:11px;color:var(--mu);opacity:.6">Roteiro de Coleta v5.2.0</div>
   <!-- v4.3.4: Sticky save bar at bottom -->
   <div class="cfg-save-bar" id="cfg-save-bar" style="display:none">
     <div id="cfg-msg" style="flex:1;display:flex;align-items:center"></div>
@@ -3374,9 +3406,11 @@ function _doFBLogin(){FB.login(async function(r){if(!r.authResponse)return;try{c
 
 function _authLogout(){showConfirm('Sair da conta','Tem certeza que deseja sair? Seus dados locais serao mantidos.',()=>{_authClearSession();_updateNavAuthBtn();toast('Voce saiu da conta','ok');});}
 
-// v5.0.1: Nav auth button — permite login para quem pulou, ou mostra conta
-function _navAuthClick(){if(_authUser){goPage('cfg',document.querySelectorAll('.ntab')[4]);}else{localStorage.removeItem('rota_auth_skipped');_authShowLogin();_authShowScreen();}}
-function _updateNavAuthBtn(){const btn=document.getElementById('nav-auth-btn');if(!btn)return;btn.style.display='flex';if(_authUser){btn.classList.add('logged-in');btn.title=_authUser.name||'Conta';}else{btn.classList.remove('logged-in');btn.title='Entrar';}}
+// v5.2.0: Nav avatar + dropdown (Linear/Notion style)
+function _navAuthToggleDropdown(e){e.stopPropagation();const dd=document.getElementById('nav-dropdown');if(!_authUser){_authShowLogin();_authShowScreen();return;}dd.classList.toggle('open');}
+function _navDdGoSettings(){document.getElementById('nav-dropdown').classList.remove('open');goPage('cfg',document.querySelectorAll('.ntab')[4]);}
+document.addEventListener('click',function(e){const dd=document.getElementById('nav-dropdown');if(dd&&!e.target.closest('#nav-auth-btn'))dd.classList.remove('open');});
+function _updateNavAuthBtn(){const btn=document.getElementById('nav-auth-btn');const av=document.getElementById('nav-avatar');if(!btn)return;btn.style.display='flex';if(_authUser){btn.classList.add('logged-in');btn.title=_authUser.name||'Conta';const initials=(_authUser.name||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);av.textContent=initials;av.classList.remove('generic');av.style.background='';document.getElementById('nav-dd-name').textContent=_authUser.name||'Usuario';document.getElementById('nav-dd-email').textContent=_authUser.email||'';const plan=_authUser.plan||'free';document.getElementById('nav-dd-plan').textContent=plan;}else{btn.classList.remove('logged-in');btn.title='Entrar';av.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';av.classList.add('generic');}}
 
 function _authUpdateConfigUI(){const card=document.getElementById('cfg-account-card');if(!card)return;if(_authUser){card.style.display='';document.getElementById('cfg-user-name').textContent=_authUser.name||'Usuario';document.getElementById('cfg-user-email').textContent=_authUser.email||'';document.getElementById('cfg-avatar').textContent=(_authUser.name||'U').charAt(0).toUpperCase();document.getElementById('cfg-auth-providers').innerHTML=_authUser.provider==='google'?'<span class="auth-provider-badge">Google</span>':_authUser.provider==='facebook'?'<span class="auth-provider-badge">Facebook</span>':'<span class="auth-provider-badge">Email</span>';}else card.style.display='none';}
 
