@@ -1482,7 +1482,7 @@ body.dark .nav-dropdown{box-shadow:0 8px 32px rgba(0,0,0,.4)}
 
     <!-- TRELLO TAB -->
     <div class="tp on" id="tp-trello">
-      <div id="trello-nocred" style="display:none"><div class="ab w"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> Configure sua <strong>Chave e Token do Trello</strong> em <a href="#" onclick="goPage('cfg',document.querySelectorAll('.ntab')[4]);return false;" style="color:var(--pud)">Configura&#xE7;&#xF5;es</a> para usar esta funcionalidade.</div></div>
+      <div id="trello-nocred" style="display:none"><div class="ab w"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> Conecte seu <strong>Trello</strong> em <a href="#" onclick="goPage('cfg',document.querySelectorAll('.ntab')[4]);return false;" style="color:var(--pud)">Configura&#xE7;&#xF5;es</a> para usar esta funcionalidade.</div></div>
       <div id="trello-step1">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;margin-bottom:13px">
           <div class="fg">
@@ -3457,7 +3457,7 @@ function _initApp(){
   setTimeout(()=>{preloadDashData();},2000);
   renderTagsConfig();updateTagSelects();initPreferredTab();initCustomSelects();
   applyI18n();updateLangBtns();
-  if(!cfg.tkey||!cfg.ttoken){const el=g('trello-nocred');if(el)el.style.display='block';const s1=g('trello-step1');if(s1)s1.style.display='none';}
+  if(!cfg.ttoken){const el=g('trello-nocred');if(el)el.style.display='block';const s1=g('trello-step1');if(s1)s1.style.display='none';}
   _authUpdateConfigUI();
   _updateNavAuthBtn();
 }
@@ -4611,19 +4611,27 @@ function importTC(){
   g('trello-cards').innerHTML='<div class="ab ok"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> '+count+' cliente(s) importado(s)!</div>';
 }
 
-// v4.3.2: OAuth do Trello — login simplificado
-const TRELLO_APP_KEY='a1b2c3d4e5f6'; // TODO: substituir pela chave real do Power-Up registrado
-function connectTrelloOAuth(){
-  // Fluxo client-side do Trello: abre popup de autorização
-  const key=cfg.tkey||TRELLO_APP_KEY;
-  if(!key||key==='a1b2c3d4e5f6'){
-    toast(t('err.configure_trello_manual'),'warn');return;
+// v5.2.0: OAuth do Trello — server-side key via Worker
+async function connectTrelloOAuth(){
+  // Se tem key manual no cfg, usa direto (modo avançado)
+  if(cfg.tkey&&cfg.tkey!=='a1b2c3d4e5f6'){
+    const returnUrl=window.location.origin+window.location.pathname;
+    const authUrl='https://trello.com/1/authorize?expiration=never&name=Roteiro+de+Coleta&scope=read&response_type=token&key='+cfg.tkey+'&return_url='+encodeURIComponent(returnUrl+'?trello_auth=1');
+    _openTrelloPopup(authUrl);return;
   }
-  const returnUrl=window.location.origin+window.location.pathname;
-  const authUrl='https://trello.com/1/authorize?expiration=never&name=Roteiro+de+Coleta&scope=read&response_type=token&key='+key+'&return_url='+encodeURIComponent(returnUrl+'?trello_auth=1');
-  // Abre popup de autorização
+  // Busca auth URL do Worker (key server-side)
+  try{
+    const returnUrl=window.location.origin+window.location.pathname;
+    const res=await fetch(WORKER_URL+'/api/trello/auth-url?return_url='+encodeURIComponent(returnUrl));
+    const d=await res.json();
+    if(!d.ok||!d.authUrl){toast(d.error||'Erro ao conectar Trello. Tente config manual.','warn');return;}
+    // Salva a key do server no cfg pra uso no proxy
+    if(d.key){cfg.tkey=d.key;localStorage.setItem('rota_cfg',JSON.stringify(cfg));}
+    _openTrelloPopup(d.authUrl);
+  }catch(e){toast('Sem conexao com o servidor. Tente config manual.','warn');}
+}
+function _openTrelloPopup(authUrl){
   const popup=window.open(authUrl,'trello_auth','width=600,height=700,scrollbars=yes');
-  // Escuta o retorno do token via fragmento da URL
   const checkPopup=setInterval(()=>{
     try{
       if(!popup||popup.closed){clearInterval(checkPopup);return;}
@@ -4632,7 +4640,6 @@ function connectTrelloOAuth(){
         const token=pUrl.match(/token=([^&]+)/)?.[1];
         if(token){
           cfg.ttoken=token;
-          if(!cfg.tkey)cfg.tkey=TRELLO_APP_KEY;
           localStorage.setItem('rota_cfg',JSON.stringify(cfg));
           document.getElementById('cfg-ttoken').value=token;
           popup.close();
@@ -4654,7 +4661,7 @@ function disconnectTrello(){
   toast(t('t.trellodisc'),'');
 }
 async function checkTrelloConnection(){
-  if(!cfg.tkey||!cfg.ttoken){
+  if(!cfg.ttoken){
     document.getElementById('trello-connected').style.display='none';
     document.getElementById('trello-not-connected').style.display='block';
     return;
