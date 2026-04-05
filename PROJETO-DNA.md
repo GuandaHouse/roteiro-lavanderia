@@ -116,6 +116,10 @@
 
 ## Historico de Versoes
 
+### v5.5.1 — 05/04/2026
+- FIX: Botao "Sair da conta" nao aparecia no mobile — _authUpdateConfigUI fazia early return
+  quando cfg-account-card nao existia no HTML, impedindo o logoutWrap de ser mostrado
+
 ### v5.5.0 — 05/04/2026
 - FIX: Google Sign-In mobile — duplo toque resolvido definitivamente
   - SDK carrega eager ao abrir tela de login, flag _googlePendingClick rastreia clique do usuario
