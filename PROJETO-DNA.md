@@ -117,11 +117,11 @@
 ## Historico de Versoes
 
 ### v5.5.0 — 05/04/2026
-- FIX URGENTE: Worker — guard para `env.USERS` undefined antes de todos os endpoints de auth/sync/admin
+- FIX URGENTE: wrangler.toml — binding USERS faltando (causa raiz do erro de login no celular)
   - Erro "Cannot read properties of undefined (reading 'get')" na tela de login do celular
-  - Causa: binding USERS ausente ou nao configurado no Cloudflare Worker
-  - Solucao: se `env.USERS` for undefined, retorna erro 503 claro em vez de crashar com 500
-  - Afeta: /api/auth/*, /api/user/*, /api/admin/*
+  - Causa raiz: wrangler.toml nao tinha o binding USERS (KV namespace fff395a3bd844ea589c1eafc339b0a4c)
+  - Solucao: adicionado [[kv_namespaces]] binding=USERS ao wrangler.toml
+  - Bonus: guard adicionado no worker.js para retornar 503 claro se USERS nao estiver configurado
 
 ### v5.4.9 — 05/04/2026
 - FIX: Google Sign-In mobile — dois problemas corrigidos
