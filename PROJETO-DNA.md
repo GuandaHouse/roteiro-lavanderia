@@ -18,7 +18,7 @@
 ## Arquitetura
 
 ### Frontend (index.html — SPA monolitico)
-- ~7900+ linhas em arquivo unico
+- ~8000+ linhas em arquivo unico
 - Design system M1 com CSS variables (light/dark mode)
 - i18n completo (PT/EN) via data-i18n attributes
 - Google Maps API para visualizacao de rotas
@@ -82,20 +82,30 @@
 
 ## UX / Design
 
-### Navbar Premium (v5.2.0)
+### Navbar Premium (v5.3.0)
 - Avatar circular 32px no canto direito da navbar
 - Mostra inicial do nome (ou foto do Google se disponivel)
 - Dropdown ao clicar: nome, email, provedor, link para configuracoes, botao sair
 - Estilo Linear/Notion/Stripe
 - Removido card "Conta" das Configuracoes (era janela branca feia)
 
+### Bottom Navigation Mobile (v5.3.0)
+- Abas de navegacao movidas para bottom bar fixa no mobile (<=768px)
+- Estilo Instagram/WhatsApp/Uber — sempre visivel, polegar alcanca
+- 5 icones SVG: Rota (mapa), Historico (relogio), Mapa (pin), Motorista (caminhao), Config (engrenagem)
+- Desktop: abas inline no topo (sem mudanca visual)
+- safe-area-inset-bottom para iPhones com notch
+- Dark mode: fundo semi-transparente
+- Toast e save-bar reposicionados acima da bottom nav
+
 ### Auth Flow
 - Login obrigatorio (sem "Continuar sem conta")
-- Google Sign-In via `renderButton()` (FedCM desabilitado)
-- Facebook Login via SDK
+- Google Sign-In: botao customizado + overlay invisivel do SDK (sem troca de visual, login direto)
+- Facebook Login: desativado temporariamente (codigo preservado em comentarios)
 - Email/senha com PBKDF2
 - JWT com 30 dias de validade
 - Auto-sync ao login
+- Sem One Tap popup (prompt() removido)
 
 ### Dark Mode
 - Toggle na navbar
@@ -105,6 +115,20 @@
 ---
 
 ## Historico de Versoes
+
+### v5.3.0 — 05/04/2026
+- FEAT: Bottom navigation bar fixa no mobile (estilo Instagram/WhatsApp)
+- FEAT: 5 icones SVG nas abas — sempre visiveis no rodape mobile
+- FEAT: Google Sign-In reescrito — login direto sem troca de botao
+  - Overlay invisivel do SDK sobre botao customizado
+  - Removido One Tap popup (prompt())
+  - auto_select:false, cancel_on_tap_outside:true
+- FEAT: Facebook removido do login/cadastro (decisao Philip, codigo preservado)
+- FIX: Touch scroll abria modal de edicao no mobile (threshold 10px)
+- FIX: Debug overflow info (v4.7.8) visivel na tela — removido
+- FIX: Endereco + CEP empilhados verticalmente no mobile (<=480px)
+- FIX: Toast e cfg-save-bar reposicionados acima da bottom nav
+- FIX: safe-area-inset-bottom para iPhones com notch
 
 ### v5.2.0 — 04/04/2026
 - FEAT: Painel Administrativo completo (dashboard + usuarios + planos)
@@ -173,6 +197,7 @@
 2. **Cloudflare Workers** — serverless, edge computing, KV storage
 3. **JWT client-side** — 30 dias, sem refresh token (SPA simples)
 4. **PBKDF2 100k** — seguranca adequada para CF Workers (sem bcrypt nativo)
-5. **Google renderButton vs prompt** — FedCM causa NetworkError em popup, renderButton funciona
+5. **Google overlay invisivel** — renderButton como overlay opacity:0.01 sobre botao customizado; sem prompt/One Tap; callback dispara login direto
 6. **Motor client-side** — VRPTW + SA roda no browser, sem custo de servidor
 7. **Trello key server-side** — seguranca, usuario nao precisa configurar nada
+8. **Bottom nav mobile** — abas fixas no rodape (<=768px), desktop inline no topo; zero JS adicional, puro CSS
