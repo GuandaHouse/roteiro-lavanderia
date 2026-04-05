@@ -600,8 +600,8 @@ body.dark .completion-card{background:#1a1925;border:1px solid rgba(255,255,255,
 
 /* UTILITY */
 hr{border:none;border-top:1.5px solid var(--bd);margin:16px 0}
-.empty{text-align:center;padding:36px 18px;color:var(--mu);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:120px}
-.empty .mot-ico{width:32px;height:32px}
+.empty{text-align:center;padding:36px 18px;color:var(--mu);display:flex;flex-direction:row;align-items:center;justify-content:center;gap:8px;min-height:120px}
+.empty .mot-ico{width:16px;height:16px;flex-shrink:0}
 .empty p{font-size:14px;font-weight:500;margin:0}
 .row{display:flex;gap:8px;align-items:flex-end}
 .row .fg{flex:1}
