@@ -116,6 +116,11 @@
 
 ## Historico de Versoes
 
+### v5.4.5 — 05/04/2026
+- FIX: Cartoes voltavam apos limpar rota e atualizar pagina (causa raiz)
+  - autoSaveRoute agora remove rota_ativa IMEDIATAMENTE quando clients esta vazio
+  - Antes usava setTimeout 300ms — qualquer render no intervalo podia vencer o remove
+
 ### v5.4.4 — 05/04/2026
 - FIX: Botao salvar configuracoes agora flutua sozinho (sem barra de fundo)
   - Removidos background, border-top e backdrop-filter da cfg-save-bar

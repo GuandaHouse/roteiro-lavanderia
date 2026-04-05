@@ -2572,7 +2572,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.4.4';
+const APP_VERSION='v5.4.5';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -3957,12 +3957,12 @@ requestAnimationFrame(()=>requestAnimationFrame(()=>{document.body.classList.add
 let _autoSaveTimer=null;
 function autoSaveRoute(){
   clearTimeout(_autoSaveTimer);
+  // v5.4.5: rota vazia = remove IMEDIATAMENTE (sem timer), evita race condition
+  if(!clients.length){localStorage.removeItem('rota_ativa');return;}
   _autoSaveTimer=setTimeout(()=>{
     if(clients.length>0){
       // v4.9.2: Salvar estado cloud junto — sem isso, refresh perde conexão cloud e donuts do histórico ficam zerados
       localStorage.setItem('rota_ativa',JSON.stringify({clients:clients,order:order,savedAt:new Date().toISOString(),routeId:_currentRouteId||null,cloudVersion:_cloudVersion||0,cloudHash:_cloudHash||null}));
-    } else {
-      localStorage.removeItem('rota_ativa');
     }
   },300);
 }
