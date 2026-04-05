@@ -116,6 +116,11 @@
 
 ## Historico de Versoes
 
+### v5.4.1 — 05/04/2026
+- FIX: Botao "Salvar configuracoes" agora fixo no rodape da viewport (position:fixed) — nao precisa mais rolar para ver
+  - Desktop: bottom:0, padding-bottom:65px no page-cfg para nao cobrir conteudo
+  - Mobile: bottom:56px (acima da bottom nav), padding-bottom:121px
+
 ### v5.4.0 — 05/04/2026
 - FEAT: Painel Administrativo completo no frontend (visivel apenas para superadmin)
   - Dashboard com stats: total usuarios, ativos hoje, novos 7 dias, MRR
@@ -129,6 +134,10 @@
 - FIX: Data removida da navbar (desktop e mobile) por decisao do Philip
 - FIX: Dropdown leak na navbar — trocado `<button>` por `<div>` no nav-auth-btn
 - FIX: Touch targets mobile 44px minimo (WCAG)
+- FIX: Logo "Roteiro de Coleta" nao fechava mapa fullscreen (goPage ignorava rota)
+- FIX: Conflito nome _admSort (variavel + funcao) causava SyntaxError fatal — renomeado pra _admSetSort
+- FIX: Rodape duplicado "v5.2.0" hardcoded no final do HTML removido
+- FIX: Texto "Roteiro de Coleta" removido do badge de versao em Configuracoes
 
 ### v5.3.1 — 05/04/2026
 - FIX: Dropdown leak na navbar — itens "Configurações" e "Sair" apareciam inline no desktop

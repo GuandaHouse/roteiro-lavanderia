@@ -1141,12 +1141,11 @@ body.dark .toast-center{background:#1e1b4b;color:#e4e4e7;box-shadow:0 2px 8px rg
 .toast-center .tc-dot{width:6px;height:6px;border-radius:50%;background:#34c759;box-shadow:0 0 6px rgba(52,199,89,.4);flex-shrink:0}
 .toast-center.show{opacity:1;transform:translateX(0) scale(1);transition:opacity .3s ease,transform .35s cubic-bezier(.4,0,.2,1)}
 .toast-center.fade{opacity:0;transform:translateX(4px) scale(.98);transition:opacity .5s ease,transform .5s ease}
-/* v4.3.4: Config page sticky save bar */
-/* v4.7.9: padding-bottom:0 em page-cfg pra eliminar ghost space abaixo do save-bar */
-#page-cfg{padding-bottom:0!important}
+/* v5.4.1: Config save bar — fixed ao viewport, sempre visivel */
+#page-cfg{padding-bottom:65px!important}
 #page-cfg .two-col{margin-bottom:0}
 #page-cfg .card:last-child{margin-bottom:16px}
-.cfg-save-bar{position:sticky;bottom:0;left:0;right:0;z-index:100;background:var(--bg);border-top:1px solid var(--bd);padding:12px 16px;display:flex;justify-content:flex-end;gap:8px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.cfg-save-bar{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--bg);border-top:1px solid var(--bd);padding:12px 16px;display:flex;justify-content:flex-end;gap:8px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
 
 /* ═══════════════════════════════════════════════
@@ -1259,7 +1258,8 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   /* v5.2.0: toast e save-bar acima da bottom nav (56px) */
   .toast{bottom:68px;right:12px;left:12px;max-width:none;font-size:12px;padding:10px 14px;border-radius:12px}
   .confirm-toast{bottom:72px!important}
-  .cfg-save-bar{bottom:56px!important;position:sticky}
+  .cfg-save-bar{bottom:56px!important;position:fixed}
+  #page-cfg{padding-bottom:121px!important}
 
   /* Map fullscreen + sidebar */
   .map-fullscreen{top:48px!important;height:calc(100vh - 48px)!important}
