@@ -116,6 +116,12 @@
 
 ## Historico de Versoes
 
+### v5.4.4 — 05/04/2026
+- FIX: Botao salvar configuracoes agora flutua sozinho (sem barra de fundo)
+  - Removidos background, border-top e backdrop-filter da cfg-save-bar
+  - Botao fica no canto inferior direito com sombra sutil
+  - Mobile: posicionado acima da bottom nav
+
 ### v5.4.3 — 05/04/2026
 - FIX: Cartoes voltavam apos limpar rota e atualizar pagina
   - clearAllClients agora para o gestor polling e limpa _currentRouteId/_cloudHash
