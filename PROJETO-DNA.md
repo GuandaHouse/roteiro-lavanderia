@@ -116,6 +116,13 @@
 
 ## Historico de Versoes
 
+### v5.4.6 — 05/04/2026
+- FIX: Causa raiz dos cartoes voltando apos limpar — race condition nos pollings
+  - cloudPoll e startGestorPolling fazem awaits async: o clearInterval nao cancela fetches ja em voo
+  - Quando a promise resolvia apos o clear, restaurava clients e re-salvava rota_ativa
+  - Fix: snapshot de _currentRouteId antes de cada await, verificacao apos cada await
+  - Se _currentRouteId mudou durante o await (rota limpa), abandona sem restaurar nada
+
 ### v5.4.5 — 05/04/2026
 - FIX: Cartoes voltavam apos limpar rota e atualizar pagina (causa raiz)
   - autoSaveRoute agora remove rota_ativa IMEDIATAMENTE quando clients esta vazio
