@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.5.7';
+const APP_VERSION='v5.5.8';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -2795,7 +2795,7 @@ function importTC(){
         // Extrair complemento INLINE do endere\u00e7o
         const inlineComps=endereco.match(compReGlobal)||[];
         inlineComps.forEach(c=>compParts.push(c.trim()));
-        if(inlineComps.length)endereco=endereco.replace(compReGlobal,'').replace(/,\s*,/g,',').replace(/,\s*[-\u2014]/g,' \u2014').replace(/[\s,\-\u2014]+$/,'').replace(/^\s*[,\-\u2014]\s*/,'').trim();
+        if(inlineComps.length)endereco=endereco.replace(compReGlobal,'').replace(/,\s*,/g,',').replace(/,\s*[-\u2014]/g,' \u2014').replace(/[-\u2014][\s,]*[-\u2014]/g,'\u2014').replace(/[\s,\-\u2014]+$/,'').replace(/^\s*[,\-\u2014]\s*/,'').trim();
         continue;
       }
       lineRoles[li]='unknown';
@@ -2809,7 +2809,7 @@ function importTC(){
           endereco=lines[li];
           const inlineComps=endereco.match(compReGlobal)||[];
           inlineComps.forEach(c=>compParts.push(c.trim()));
-          if(inlineComps.length)endereco=endereco.replace(compReGlobal,'').replace(/,\s*,/g,',').replace(/,\s*[-\u2014]/g,' \u2014').replace(/[\s,\-\u2014]+$/,'').replace(/^\s*[,\-\u2014]\s*/,'').trim();
+          if(inlineComps.length)endereco=endereco.replace(compReGlobal,'').replace(/,\s*,/g,',').replace(/,\s*[-\u2014]/g,' \u2014').replace(/[-\u2014][\s,]*[-\u2014]/g,'\u2014').replace(/[\s,\-\u2014]+$/,'').replace(/^\s*[,\-\u2014]\s*/,'').trim();
           break;
         }
       }
@@ -2884,6 +2884,8 @@ function importTC(){
       }
     }
 
+    // Se _p.c contém complemento (capturado erroneamente como cidade), limpar — já está em complemento
+    if(_p.c&&compRe.test(_p.c))_p.c='';
     // Remontar: "Logradouro, N\u00famero \u2014 Bairro, Cidade \u2014 Complemento"
     let endFmt=titleCase(_p.l);
     if(_p.n)endFmt+=', '+_p.n;
