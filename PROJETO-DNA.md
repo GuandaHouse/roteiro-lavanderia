@@ -116,6 +116,13 @@
 
 ## Historico de Versoes
 
+### v5.5.0 — 05/04/2026
+- FIX URGENTE: Worker — guard para `env.USERS` undefined antes de todos os endpoints de auth/sync/admin
+  - Erro "Cannot read properties of undefined (reading 'get')" na tela de login do celular
+  - Causa: binding USERS ausente ou nao configurado no Cloudflare Worker
+  - Solucao: se `env.USERS` for undefined, retorna erro 503 claro em vez de crashar com 500
+  - Afeta: /api/auth/*, /api/user/*, /api/admin/*
+
 ### v5.4.9 — 05/04/2026
 - FIX: Google Sign-In mobile — dois problemas corrigidos
   - Duplo toque: SDK carregado de forma antecipada ao exibir tela de login (_authShowScreen chama _authGoogle)

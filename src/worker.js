@@ -598,6 +598,11 @@ async function handleRequest(request, env) {
     // AUTH ENDPOINTS
     // ═══════════════════════════════════════════
 
+    // Guard: KV binding USERS é obrigatório para auth/sync/admin
+    if (!env.USERS && (path.startsWith('/api/auth/') || path.startsWith('/api/user/') || path.startsWith('/api/admin/'))) {
+      return err('KV binding USERS nao configurado no Worker', 503);
+    }
+
     if (path === '/api/auth/register' && method === 'POST') return handleRegister(request, env);
     if (path === '/api/auth/login' && method === 'POST') return handleLogin(request, env);
     if (path === '/api/auth/forgot' && method === 'POST') return handleForgot(request, env);
