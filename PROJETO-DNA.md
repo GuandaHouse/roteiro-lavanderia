@@ -117,6 +117,9 @@
 ## Historico de Versoes
 
 ### v5.4.3 — 05/04/2026
+- FIX: Cartoes voltavam apos limpar rota e atualizar pagina
+  - clearAllClients agora para o gestor polling e limpa _currentRouteId/_cloudHash
+  - Sem isso, o polling continuava rodando, carregava do cloud e re-salvava no rota_ativa
 - FIX: Tags criadas/renomeadas em Configuracoes agora sao aplicadas automaticamente aos cartoes ja na rota
   - Funcao _reapplyTagsToClients varre todos os clients e aplica tags cujo label aparece no nome/obs
   - Chamada em setTagLabel (renomear) e addNewTag (criar nova tag)

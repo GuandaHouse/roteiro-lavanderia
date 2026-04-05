@@ -5329,6 +5329,9 @@ function clearAllClients(){
   if(!clients.length)return;
   const n=clients.length;
   showConfirm(t('confirm.clear_title'),t('confirm.clear_msg',{n}),()=>{
+    // v5.4.3: parar polling e limpar cloud state para evitar restauração automática
+    if(_gestorPollTimer){clearInterval(_gestorPollTimer);_gestorPollTimer=null;}
+    _currentRouteId=null;_cloudVersion=0;_cloudHash='';
     pushRouteState();clients=[];order=[];renderC();updStats();updBtns();resetMap();
     localStorage.removeItem('rota_ativa');
     toast(n+' '+t('cli.cli_removed',{n:n}),'ok');
