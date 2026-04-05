@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.5.8';
+const APP_VERSION='v5.5.9';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -2988,7 +2988,7 @@ function importTC(){
     }).map(tag=>tag.id);
     // Fallback: usar tipo detectado pelo parser se nenhuma tag casou
     const tipoFinal=matchedTags.length?matchedTags:normalizeTipo(ext.tipo||'coleta');
-    const newClient={id:Date.now()+Math.random(),nome:_stripEmoji(nomeFmt),endereco:_stripEmoji(endFinal),complemento:ext.complemento||'',tel:ext.telefone||'',tipo:tipoFinal,qtd:ext.qtd||0,val:ext.valor||0,valTipo,data:dv,janela:ext.janela||'livre',hi:ext.hi||'',hf:ext.hf||'',obs:_stripEmoji(ext.obs||''),estT:null,conflict:false,cmsg:'',lat:null,lng:null,_cidade:null};
+    const newClient={id:Date.now()+Math.random(),nome:_stripEmoji(nomeFmt),endereco:_stripEmoji(endFinal),complemento:'',tel:ext.telefone||'',tipo:tipoFinal,qtd:ext.qtd||0,val:ext.valor||0,valTipo,data:dv,janela:ext.janela||'livre',hi:ext.hi||'',hf:ext.hf||'',obs:_stripEmoji(ext.obs||''),estT:null,conflict:false,cmsg:'',lat:null,lng:null,_cidade:null};
     // Fire-and-forget: geocodifica em background
     if(endFinal)preGeocode(newClient);
     console.log('[TRELLO-IMPORT] processCard: '+Math.round(performance.now()-_pc0)+'ms — '+card.name.substring(0,30)+(matchedTags.length?' tags:'+matchedTags.join(','):''));
