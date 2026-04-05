@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.5.6';
+const APP_VERSION='v5.5.7';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -444,8 +444,10 @@ function _reapplyTagsToClients(){
       const lbl=_norm(tag.label);
       return lbl&&new RegExp('\\b'+lbl.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b').test(texto);
     }).map(tag=>tag.id);
-    if(!matched.length)return;
-    const atual=Array.isArray(c.tipo)?c.tipo:[c.tipo].filter(Boolean);
+    const validIds=new Set(_tags.map(t=>t.id));
+    const raw=Array.isArray(c.tipo)?c.tipo:[c.tipo].filter(Boolean);
+    const atual=raw.filter(v=>validIds.has(v));
+    if(!matched.length&&atual.length===raw.length)return;
     const merged=[...new Set([...atual,...matched])];
     if(merged.length!==atual.length||merged.some((v,i)=>v!==atual[i])){c.tipo=merged;changed++;}
   });
