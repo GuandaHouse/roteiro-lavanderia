@@ -116,6 +116,13 @@
 
 ## Historico de Versoes
 
+### v5.4.2 — 05/04/2026
+- FIX: Auto-deteccao de tags na importacao Trello restaurada
+  - processCard agora varre o texto do cartao (titulo + descricao) contra os labels das tags configuradas pelo usuario
+  - Matching por word-boundary (case-insensitive, sem acentos)
+  - Fallback para tipo detectado pelo parser (coleta/entrega) se nenhuma tag casar
+  - Suporta multiplas tags simultaneas no mesmo cartao
+
 ### v5.4.1 — 05/04/2026
 - FIX: Botao "Salvar configuracoes" agora fixo no rodape da viewport (position:fixed) — nao precisa mais rolar para ver
   - Desktop: bottom:0, padding-bottom:65px no page-cfg para nao cobrir conteudo

@@ -5014,10 +5014,21 @@ function importTC(){
     const valTipo=ext.valorTipo==='medir'?'medir':ext.valorTipo==='pago'?'pago':'normal';
     let endFinal=ext.endereco||'';
     const nomeFmt=fmtNomeValor(card.name,ext.valor||0,valTipo);
-    const newClient={id:Date.now()+Math.random(),nome:_stripEmoji(nomeFmt),endereco:_stripEmoji(endFinal),complemento:ext.complemento||'',tel:ext.telefone||'',tipo:ext.tipo||'coleta',qtd:ext.qtd||0,val:ext.valor||0,valTipo,data:dv,janela:ext.janela||'livre',hi:ext.hi||'',hf:ext.hf||'',obs:_stripEmoji(ext.obs||''),estT:null,conflict:false,cmsg:'',lat:null,lng:null,_cidade:null};
+    // v5.4.2: Auto-detectar tags configuradas pelo usuário — busca label da tag no texto do cartão
+    const _cardNorm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const cardText=_cardNorm((card.name||'')+' '+(card.desc||''));
+    const matchedTags=_tags.filter(tag=>{
+      const lbl=_cardNorm(tag.label);
+      if(!lbl)return false;
+      // word-boundary: não casar "coletas" se a tag é "coleta" quando é parte de outra palavra não relacionada
+      return new RegExp('\\b'+lbl.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b').test(cardText);
+    }).map(tag=>tag.id);
+    // Fallback: usar tipo detectado pelo parser se nenhuma tag casou
+    const tipoFinal=matchedTags.length?matchedTags:normalizeTipo(ext.tipo||'coleta');
+    const newClient={id:Date.now()+Math.random(),nome:_stripEmoji(nomeFmt),endereco:_stripEmoji(endFinal),complemento:ext.complemento||'',tel:ext.telefone||'',tipo:tipoFinal,qtd:ext.qtd||0,val:ext.valor||0,valTipo,data:dv,janela:ext.janela||'livre',hi:ext.hi||'',hf:ext.hf||'',obs:_stripEmoji(ext.obs||''),estT:null,conflict:false,cmsg:'',lat:null,lng:null,_cidade:null};
     // Fire-and-forget: geocodifica em background
     if(endFinal)preGeocode(newClient);
-    console.log('[TRELLO-IMPORT] processCard: '+Math.round(performance.now()-_pc0)+'ms — '+card.name.substring(0,30));
+    console.log('[TRELLO-IMPORT] processCard: '+Math.round(performance.now()-_pc0)+'ms — '+card.name.substring(0,30)+(matchedTags.length?' tags:'+matchedTags.join(','):''));
     return newClient;
   }
   // v4.8.8: IMPORTAÇÃO SÍNCRONA — parser programático, zero API
