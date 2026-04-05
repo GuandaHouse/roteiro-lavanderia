@@ -116,6 +116,10 @@
 
 ## Historico de Versoes
 
+### v5.5.3 — 05/04/2026
+- FIX: cfg-save-bar mobile sem faixa preta — removido background:var(--bg) e border-top do override mobile
+- FIX: botao centrado (left:50% + transform) no rodape fixo, sem container escuro
+
 ### v5.5.2 — 05/04/2026
 - FIX #1: cfg-save-bar agora full-width fixo no rodape mobile (acima da bottom nav)
 - FIX #2: Trello banner nao quebra palavra no meio (word-break:normal); credenciais persistem no mobile via re-leitura do localStorage quando popup fecha
