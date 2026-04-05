@@ -116,6 +116,14 @@
 
 ## Historico de Versoes
 
+### v5.5.3 — 05/04/2026
+- REFACTOR: SPA monolitico dividido em 3 arquivos para reduzir consumo de tokens
+  - index.html: 8188 → 1223 linhas (estrutura HTML + scripts inline criticos)
+  - style.css: 972 linhas (todo o CSS extraido)
+  - app.js: 6053 linhas (todo o JS com 12 marcadores de secao)
+- Marcadores SECTION no app.js: i18n, UTILS, CEP/GEOCODING, CLOUD SYNC, AUTH, ADMIN PANEL,
+  INIT/STARTUP, MULTI-IMPORT, TRELLO, OPTIMIZATION ENGINE, GOOGLE MAPS, HISTORY
+
 ### v5.5.2 — 05/04/2026
 - FIX #1: cfg-save-bar agora full-width fixo no rodape mobile (acima da bottom nav)
 - FIX #2: Trello banner nao quebra palavra no meio (word-break:normal); credenciais persistem no mobile via re-leitura do localStorage quando popup fecha
