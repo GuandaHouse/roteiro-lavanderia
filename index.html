@@ -5195,6 +5195,7 @@ function _openTrelloPopup(authUrl){
           popup.close();
           clearInterval(checkPopup);
           checkTrelloConnection();
+          _syncPushDebounced();
           toast(t('t.trelloconn'),'ok');
         }
       }
