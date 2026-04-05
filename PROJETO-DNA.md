@@ -116,6 +116,9 @@
 
 ## Historico de Versoes
 
+### v5.5.4 — 05/04/2026
+- FIX: botao "Salvar configuracoes" agora fixo no rodape no mobile (position:fixed!important forçado na media query)
+
 ### v5.5.3 — 05/04/2026
 - FIX: cfg-save-bar mobile sem faixa preta — removido background:var(--bg) e border-top do override mobile
 - FIX: botao centrado (left:50% + transform) no rodape fixo, sem container escuro

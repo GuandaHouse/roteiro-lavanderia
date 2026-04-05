@@ -740,8 +740,8 @@ body.dark .cfg-save-bar .btn{box-shadow:0 4px 16px rgba(0,0,0,.45);}
   /* v5.2.0: toast e save-bar acima da bottom nav (56px) */
   .toast{bottom:68px;right:12px;left:12px;max-width:none;font-size:12px;padding:10px 14px;border-radius:12px}
   .confirm-toast{bottom:72px!important}
-  /* v5.5.3: cfg-save-bar fixo no rodapé, sem faixa preta — botão centrado acima da bottom nav */
-  .cfg-save-bar{left:50%!important;right:auto!important;transform:translateX(-50%)!important;bottom:calc(64px + env(safe-area-inset-bottom,0px))!important;padding:0!important;background:transparent!important;border:none!important;box-shadow:none!important;border-radius:0!important;justify-content:center!important}
+  /* v5.5.4: cfg-save-bar fixo no rodapé mobile — position:fixed forçado */
+  .cfg-save-bar{position:fixed!important;left:50%!important;right:auto!important;transform:translateX(-50%)!important;bottom:calc(64px + env(safe-area-inset-bottom,0px))!important;padding:0!important;background:transparent!important;border:none!important;box-shadow:none!important;border-radius:0!important;justify-content:center!important}
   #page-cfg{padding-bottom:80px!important}
 
   /* Map fullscreen + sidebar */
