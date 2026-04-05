@@ -549,6 +549,8 @@ nav{background:rgba(255,255,255,.7);backdrop-filter:blur(20px);-webkit-backdrop-
 body.dark nav{background:rgba(15,14,23,.8);border-bottom-color:rgba(255,255,255,.06)}
 .logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:14px;padding:14px 18px 14px 0;border-right:1px solid var(--bd);margin-right:4px;white-space:nowrap;flex-shrink:0;color:var(--tx);transition:color .4s ease,border-color .4s ease}
 .logo-i{width:30px;height:30px;background:linear-gradient(135deg,#6C5CE7,#a78bfa);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
+/* v5.2.0: ntab-bar wraps tab buttons — inline on desktop, fixed bottom on mobile */
+.ntab-bar{display:flex;align-items:center;gap:0}
 .ntab{padding:15px 14px;font-size:13px;font-weight:500;color:var(--mu);cursor:pointer;border:none;border-bottom:2px solid transparent;background:none;font-family:'Plus Jakarta Sans',sans-serif;transition:all .3s;white-space:nowrap;display:flex;align-items:center;gap:6px}
 .ntab-ico{display:none;width:18px;height:18px;flex-shrink:0}
 .ntab:hover{color:var(--tx)}
@@ -1000,6 +1002,7 @@ body.dark .map-expand-btn{background:rgba(30,27,50,.85);color:#e4e4e7;box-shadow
 .map-sidebar .ms-client.drag-over-bottom{border-bottom:2px solid var(--pu)}
 .map-sidebar .ms-client-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
 body.map-fs nav{position:fixed;top:0;left:0;right:0;z-index:10003}
+body.map-fs .ntab-bar{position:static!important;bottom:auto!important}/* v5.2.0: bottom nav inline no map fullscreen */
 body.map-fs .map-fullscreen{top:56px!important;height:calc(100vh - 56px)!important}/* redundant safety net */
 @media(max-width:768px){.map-sidebar{width:100%;height:40vh;border-right:none;border-top:1px solid var(--bd);order:1}.map-fullscreen{flex-direction:column!important}.map-fullscreen #map{height:60vh!important}}
 #map{position:absolute;inset:0;display:block}
@@ -1150,13 +1153,18 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   html,body{overflow-x:hidden!important;width:100%!important;max-width:100vw!important}
   body{overflow-x:hidden!important}
 
-  /* Nav: icon-only abaixo de 768px */
-  nav{padding:0 4px!important;gap:0!important;overflow:hidden!important;flex-wrap:nowrap!important;scrollbar-width:none;-ms-overflow-style:none;width:100%!important}
+  /* Nav: top bar minima no mobile — logo + avatar + theme */
+  nav{padding:0 8px!important;gap:0!important;overflow:visible!important;flex-wrap:nowrap!important;scrollbar-width:none;-ms-overflow-style:none;width:100%!important}
   nav::-webkit-scrollbar{display:none}
   .nav-r{display:none!important}
   .logo span{display:none!important}
-  .logo{padding:10px 6px 10px 0!important;gap:4px!important;margin-right:0!important;border-right:none!important}
-  .ntab{padding:12px 0!important;font-size:0!important;flex:1!important;min-width:0!important;justify-content:center!important}
+  .logo{padding:10px 6px 10px 0!important;gap:4px!important;margin-right:auto!important;border-right:none!important}
+
+  /* v5.2.0: Bottom navigation bar — ntab-bar fixa no rodapé (estilo Instagram/WhatsApp) */
+  .ntab-bar{position:fixed!important;bottom:0!important;left:0!important;right:0!important;z-index:9999!important;background:var(--bg)!important;border-top:1px solid var(--bd)!important;border-bottom:none!important;display:flex!important;justify-content:space-around!important;padding:4px 0 env(safe-area-inset-bottom, 4px)!important;box-shadow:0 -2px 12px rgba(0,0,0,.06)!important;gap:0!important}
+  body.dark .ntab-bar{background:rgba(15,14,23,.97)!important;border-top-color:rgba(255,255,255,.08)!important;box-shadow:0 -2px 12px rgba(0,0,0,.3)!important}
+  .ntab{padding:8px 0 6px!important;font-size:0!important;flex:1!important;min-width:0!important;justify-content:center!important;border-bottom:none!important;border-top:2px solid transparent!important;flex-direction:column!important;align-items:center!important;gap:2px!important}
+  .ntab.on{border-bottom:none!important;border-top-color:var(--pu)!important}
   .ntab-ico{display:block!important;width:22px!important;height:22px!important}
   .ntab span{display:none!important}
   .theme-toggle-wrap{padding-left:2px!important;flex-shrink:0!important;min-height:44px!important;display:flex!important;align-items:center!important}
@@ -1166,7 +1174,8 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   .theme-toggle .knob svg{width:10px!important;height:10px!important}
 
   /* Pages — width:100% + !important garante que não herda max-width:1160px */
-  .page{padding:52px 12px 20px!important;overflow-x:hidden!important;width:100%!important;max-width:100%!important}
+  /* v5.2.0: padding-bottom:72px pra conteúdo não ficar atrás da bottom nav */
+  .page{padding:52px 12px 72px!important;overflow-x:hidden!important;width:100%!important;max-width:100%!important}
 
   /* Anti-overflow em todos os containers */
   .card,.mot-card,.hist-card{overflow:hidden!important}
@@ -1239,7 +1248,10 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   .completion-stat .cs-val{font-size:20px}
 
   /* Toast */
-  .toast{bottom:12px;right:12px;left:12px;max-width:none;font-size:12px;padding:10px 14px;border-radius:12px}
+  /* v5.2.0: toast e save-bar acima da bottom nav (56px) */
+  .toast{bottom:68px;right:12px;left:12px;max-width:none;font-size:12px;padding:10px 14px;border-radius:12px}
+  .confirm-toast{bottom:72px!important}
+  .cfg-save-bar{bottom:56px!important;position:sticky}
 
   /* Map fullscreen + sidebar */
   .map-fullscreen{top:48px!important;height:calc(100vh - 48px)!important}
@@ -1438,11 +1450,14 @@ body.dark .nav-dropdown{box-shadow:0 8px 32px rgba(0,0,0,.4)}
 
 <nav>
   <div class="logo" onclick="goPage('rota',document.querySelectorAll('.ntab')[0])" style="cursor:pointer"><div class="logo-i"><span class="mot-ico" style="width:15px;height:15px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span></div><span>Roteiro de Coleta</span></div>
+  <!-- v5.2.0: ntab-bar — desktop: inline no nav / mobile: fixed bottom bar -->
+  <div class="ntab-bar" id="ntab-bar">
   <button class="ntab on" onclick="goPage('rota',this)"><svg class="ntab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg><span data-i18n="nav.rota">Rota do Dia</span></button>
   <button class="ntab" onclick="goPage('hist',this)"><svg class="ntab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span data-i18n="nav.hist">Hist&#xF3;rico</span></button>
   <button class="ntab" onclick="goPage('dash',this)"><svg class="ntab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span data-i18n="nav.dash">Mapa de Clientes</span></button>
   <button class="ntab" onclick="goPage('motor',this)"><svg class="ntab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg><span data-i18n="nav.motor">Motorista</span></button>
   <button class="ntab" onclick="goPage('cfg',this)"><svg class="ntab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span data-i18n="nav.cfg">Configura&#xE7;&#xF5;es</span></button>
+  </div>
   <div class="nav-r" id="nav-date"></div>
   <button id="nav-auth-btn" class="nav-auth-btn" onclick="_navAuthToggleDropdown(event)" title="Conta" style="display:none">
     <div class="nav-avatar generic" id="nav-avatar"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
