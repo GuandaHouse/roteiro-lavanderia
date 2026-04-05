@@ -4,7 +4,7 @@
 ║              ROTEIRO DE COLETA — PATCH NOTES                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  v5.3.0 — 05/04/2026 — UX: Bottom nav mobile + Google login direto + Facebook off   ║
+║  v5.4.0 — 05/04/2026 — FEAT: Painel Admin + data removida da navbar                ║
 ║  v5.2.0 — 04/04/2026 — FIX: Worker deploy + USERS KV + avatar dropdown + Facebook  ║
 ║  v5.0.0 — 04/04/2026 — FEAT: Sistema de Contas + Login + Google OAuth + Sync       ║
 ║  v4.9.3 — 04/04/2026 — FIX: cards mapa = reflexo exato + modais responsivos 375px ║
@@ -560,7 +560,8 @@ body.dark nav{background:rgba(15,14,23,.88);border-bottom-color:rgba(255,255,255
 .ntab:hover{color:var(--tx)}
 .ntab.on{color:var(--pu);border-bottom-color:var(--pu);font-weight:600}
 /* Zona direita: Data + controles */
-.nav-r{margin-left:0;font-size:11px;color:var(--mu);font-family:'DM Mono',monospace;padding:0 12px;white-space:nowrap;flex-shrink:0;opacity:.7}
+/* v5.4.0: data removida da navbar por decisão do Philip */
+.nav-r{display:none!important}
 /* THEME TOGGLE — v5.3.0: espaçamento consistente com avatar */
 .theme-toggle-wrap{display:flex;align-items:center;padding-left:8px;flex-shrink:0;margin-left:4px}
 .theme-toggle{width:48px;height:26px;border-radius:13px;background:rgba(108,92,231,.18);position:relative;cursor:pointer;transition:background .3s ease;border:1px solid rgba(108,92,231,.15);outline:none;padding:0;flex-shrink:0}
@@ -1173,7 +1174,8 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
   .ntab.on{border-bottom:none!important;border-top-color:var(--pu)!important}
   .ntab-ico{display:block!important;width:22px!important;height:22px!important}
   .ntab span{display:none!important}
-  .theme-toggle-wrap{padding-left:2px!important;flex-shrink:0!important;min-height:44px!important;display:flex!important;align-items:center!important}
+  .nav-auth-btn{min-width:44px!important;min-height:44px!important;display:flex!important;align-items:center!important;justify-content:center!important}
+  .theme-toggle-wrap{padding-left:2px!important;flex-shrink:0!important;min-width:44px!important;min-height:44px!important;display:flex!important;align-items:center!important;justify-content:center!important}
   .theme-toggle{width:36px!important;height:20px!important;border-radius:10px!important}
   .theme-toggle .knob{width:16px!important;height:16px!important}
   body.dark .theme-toggle .knob{transform:translateX(16px)!important}
@@ -1349,7 +1351,8 @@ body.dark .cfg-save-bar{background:rgba(15,14,23,.95)}
 }
 
 /* v4.7.9: Mobile date banner — hidden on desktop, shown when nav-r is hidden */
-.mobile-date-banner{display:none}
+/* v5.4.0: data removida do mobile também */
+.mobile-date-banner{display:none!important}
 @media(max-width:768px){
   .mobile-date-banner{display:block;text-align:center;font-size:12px;font-weight:500;color:var(--mu);font-family:'DM Mono',monospace;margin-bottom:12px;letter-spacing:.02em}
 }
@@ -1416,6 +1419,72 @@ body.dark .auth-card{box-shadow:0 8px 32px rgba(0,0,0,.3)}
 .nav-dd-item.danger:hover{background:var(--rl)}
 .nav-dd-divider{height:1px;background:var(--bd);margin:4px 0}
 body.dark .nav-dropdown{box-shadow:0 8px 32px rgba(0,0,0,.4)}
+
+/* ═══ v5.4.0: ADMIN PANEL ═══ */
+.ntab.admin-tab{display:none}
+body.is-superadmin .ntab.admin-tab{display:flex}
+.adm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px}
+.adm-stat{background:var(--bg);border:1px solid var(--bd);border-radius:14px;padding:18px 16px;transition:all .2s}
+.adm-stat:hover{border-color:var(--pu);box-shadow:0 4px 16px rgba(108,92,231,.08)}
+.adm-stat-val{font-size:28px;font-weight:800;color:var(--tx);line-height:1.2;letter-spacing:-.02em}
+.adm-stat-lbl{font-size:12px;font-weight:500;color:var(--mu);margin-top:4px;text-transform:uppercase;letter-spacing:.04em}
+.adm-stat.accent .adm-stat-val{color:var(--pu)}
+.adm-stat.green .adm-stat-val{color:var(--gn)}
+.adm-section{margin-bottom:28px}
+.adm-section-title{font-size:15px;font-weight:700;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.adm-section-title svg{width:18px;height:18px;stroke:var(--pu);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.adm-toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.adm-toolbar input[type="text"]{flex:1;min-width:180px;padding:8px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font-size:13px;font-family:inherit;outline:none;transition:border-color .2s}
+.adm-toolbar input[type="text"]:focus{border-color:var(--pu)}
+.adm-toolbar select{padding:8px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font-size:13px;font-family:inherit;cursor:pointer}
+.adm-table-wrap{overflow-x:auto;border:1px solid var(--bd);border-radius:12px}
+.adm-table{width:100%;border-collapse:collapse;font-size:13px}
+.adm-table th{text-align:left;padding:10px 12px;font-weight:600;color:var(--mu);font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--bd);background:var(--sf);white-space:nowrap;cursor:pointer;user-select:none}
+.adm-table th:hover{color:var(--tx)}
+.adm-table td{padding:10px 12px;border-bottom:1px solid var(--bd);color:var(--tx);white-space:nowrap}
+.adm-table tr:last-child td{border-bottom:none}
+.adm-table tr:hover td{background:var(--pul)}
+.adm-badge{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:6px}
+.adm-badge.free{background:var(--sf);color:var(--mu)}
+.adm-badge.pro{background:var(--gnl);color:var(--gnd)}
+.adm-badge.promax{background:rgba(108,92,231,.12);color:var(--pu)}
+.adm-badge.ultimate{background:rgba(255,184,0,.12);color:#b8860b}
+.adm-badge.active{background:var(--gnl);color:var(--gn)}
+.adm-badge.inactive{background:var(--rl);color:var(--rd)}
+.adm-badge.google{background:rgba(66,133,244,.12);color:#4285f4}
+.adm-badge.email{background:var(--sf);color:var(--mu)}
+.adm-actions{display:flex;gap:4px}
+.adm-actions button{padding:4px 10px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx);font-size:11px;font-family:inherit;cursor:pointer;transition:all .15s}
+.adm-actions button:hover{border-color:var(--pu);color:var(--pu)}
+.adm-pagination{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;font-size:13px;color:var(--mu)}
+.adm-pagination button{padding:6px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font-size:12px;font-family:inherit;cursor:pointer;transition:all .15s}
+.adm-pagination button:hover{border-color:var(--pu);color:var(--pu)}
+.adm-pagination button:disabled{opacity:.4;cursor:default;border-color:var(--bd);color:var(--mu)}
+.adm-plans-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.adm-plan-card{border:1px solid var(--bd);border-radius:14px;padding:18px 16px;background:var(--bg);transition:all .2s}
+.adm-plan-card:hover{border-color:var(--pu)}
+.adm-plan-name{font-size:16px;font-weight:700;color:var(--tx)}
+.adm-plan-price{font-size:24px;font-weight:800;color:var(--pu);margin:4px 0 8px}
+.adm-plan-price span{font-size:13px;font-weight:500;color:var(--mu)}
+.adm-plan-features{list-style:none;padding:0;margin:0;font-size:12px;color:var(--mu)}
+.adm-plan-features li{padding:3px 0;display:flex;align-items:center;gap:6px}
+.adm-plan-features li::before{content:'✓';color:var(--gn);font-weight:700;font-size:11px}
+.adm-plan-features li.off::before{content:'✗';color:var(--rd)}
+/* v5.4.0: User detail modal */
+.adm-user-modal .modal{max-width:520px}
+.adm-detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd);font-size:13px}
+.adm-detail-row:last-child{border-bottom:none}
+.adm-detail-label{font-weight:600;color:var(--mu)}
+.adm-detail-val{color:var(--tx);font-weight:500}
+@media(max-width:768px){
+  .adm-grid{grid-template-columns:1fr 1fr}
+  .adm-plans-grid{grid-template-columns:1fr}
+  .adm-toolbar{flex-direction:column}
+  .adm-toolbar input[type="text"]{min-width:100%}
+}
+@media(max-width:480px){
+  .adm-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -1481,9 +1550,10 @@ body.dark .nav-dropdown{box-shadow:0 8px 32px rgba(0,0,0,.4)}
   <button class="ntab" onclick="goPage('dash',this)"><svg class="ntab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span data-i18n="nav.dash">Mapa de Clientes</span></button>
   <button class="ntab" onclick="goPage('motor',this)"><svg class="ntab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg><span data-i18n="nav.motor">Motorista</span></button>
   <button class="ntab" onclick="goPage('cfg',this)"><svg class="ntab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span data-i18n="nav.cfg">Configura&#xE7;&#xF5;es</span></button>
+  <button class="ntab admin-tab" onclick="goPage('adm',this)"><svg class="ntab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span>Admin</span></button>
   </div>
   <div class="nav-r" id="nav-date"></div>
-  <button id="nav-auth-btn" class="nav-auth-btn" onclick="_navAuthToggleDropdown(event)" title="Conta" style="display:none">
+  <div id="nav-auth-btn" class="nav-auth-btn" onclick="_navAuthToggleDropdown(event)" title="Conta" role="button" tabindex="0" style="display:none">
     <div class="nav-avatar generic" id="nav-avatar"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
     <div class="nav-dropdown" id="nav-dropdown">
       <div class="nav-dd-header">
@@ -1495,7 +1565,7 @@ body.dark .nav-dropdown{box-shadow:0 8px 32px rgba(0,0,0,.4)}
       <div class="nav-dd-divider"></div>
       <button class="nav-dd-item danger" onclick="_authLogout()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sair da conta</button>
     </div>
-  </button>
+  </div>
   <div class="theme-toggle-wrap">
     <button class="theme-toggle" onclick="toggleTheme()">
       <div class="knob">
@@ -1896,11 +1966,90 @@ body.dark .nav-dropdown{box-shadow:0 8px 32px rgba(0,0,0,.4)}
   </div>
   </div>
   <!-- v5.2.0: Version badge -->
-  <div style="text-align:center;padding:16px 0 8px;font-size:11px;color:var(--mu);opacity:.6">Roteiro de Coleta v5.3.0</div>
+  <div style="text-align:center;padding:16px 0 8px;font-size:11px;color:var(--mu);opacity:.6">Roteiro de Coleta v5.4.0</div>
   <!-- v4.3.4: Sticky save bar at bottom -->
   <div class="cfg-save-bar" id="cfg-save-bar" style="display:none">
     <div id="cfg-msg" style="flex:1;display:flex;align-items:center"></div>
     <button class="btn bp" onclick="saveCfg()" style="gap:8px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span> <span data-i18n="btn.savecfg">Salvar configura&#xE7;&#xF5;es</span></button>
+  </div>
+</div>
+
+<!-- v5.4.0: ADMIN PANEL — visível apenas para superadmin -->
+<div class="page" id="page-adm">
+  <div class="ph"><h2><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Painel Administrativo</h2></div>
+
+  <!-- Stats Grid -->
+  <div class="adm-grid" id="adm-stats">
+    <div class="adm-stat accent"><div class="adm-stat-val" id="adm-total-users">--</div><div class="adm-stat-lbl">Usuários Total</div></div>
+    <div class="adm-stat green"><div class="adm-stat-val" id="adm-active-today">--</div><div class="adm-stat-lbl">Ativos Hoje</div></div>
+    <div class="adm-stat"><div class="adm-stat-val" id="adm-new-week">--</div><div class="adm-stat-lbl">Novos (7 dias)</div></div>
+    <div class="adm-stat accent"><div class="adm-stat-val" id="adm-mrr">--</div><div class="adm-stat-lbl">MRR (R$)</div></div>
+  </div>
+
+  <!-- Distribution badges -->
+  <div class="adm-section">
+    <div class="adm-section-title"><svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Distribuição</div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px">
+      <div><strong style="color:var(--mu)">Por plano:</strong> <span id="adm-by-plan">--</span></div>
+      <div><strong style="color:var(--mu)">Por status:</strong> <span id="adm-by-status">--</span></div>
+      <div><strong style="color:var(--mu)">Por provedor:</strong> <span id="adm-by-provider">--</span></div>
+    </div>
+  </div>
+
+  <!-- Users Table -->
+  <div class="adm-section">
+    <div class="adm-section-title"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Usuários</div>
+    <div class="adm-toolbar">
+      <input type="text" id="adm-search" placeholder="Buscar por nome ou email..." oninput="_admSearchDebounce()"/>
+      <select id="adm-filter-plan" onchange="_admLoadUsers()">
+        <option value="">Todos os planos</option>
+        <option value="free">Free</option>
+        <option value="pro">Pro</option>
+        <option value="promax">Pro Max</option>
+        <option value="ultimate">Ultimate</option>
+      </select>
+      <select id="adm-filter-status" onchange="_admLoadUsers()">
+        <option value="">Todos os status</option>
+        <option value="active">Ativo</option>
+        <option value="inactive">Inativo</option>
+      </select>
+      <button class="btn" onclick="_admExportCSV()" style="font-size:12px;padding:8px 12px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar CSV</button>
+    </div>
+    <div class="adm-table-wrap">
+      <table class="adm-table">
+        <thead>
+          <tr>
+            <th onclick="_admSort('name')">Nome</th>
+            <th onclick="_admSort('email')">Email</th>
+            <th onclick="_admSort('provider')">Provedor</th>
+            <th onclick="_admSort('plan')">Plano</th>
+            <th onclick="_admSort('status')">Status</th>
+            <th onclick="_admSort('createdAt')">Criado</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="adm-users-body">
+          <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--mu)">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="adm-pagination" id="adm-pagination"></div>
+  </div>
+
+  <!-- Plans -->
+  <div class="adm-section">
+    <div class="adm-section-title"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>Planos</div>
+    <div class="adm-plans-grid" id="adm-plans"></div>
+  </div>
+</div>
+
+<!-- v5.4.0: User detail modal -->
+<div class="mbg adm-user-modal" id="adm-user-modal" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal" style="max-width:520px">
+    <h2 style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Detalhes do Usuário</h2>
+    <div id="adm-user-detail"></div>
+    <div style="display:flex;gap:8px;margin-top:16px" id="adm-user-actions"></div>
+    <div style="text-align:right;margin-top:12px"><button class="btn" onclick="document.getElementById('adm-user-modal').style.display='none'">Fechar</button></div>
   </div>
 </div>
 
@@ -3396,8 +3545,8 @@ let _authUser=null,_authToken=null;
 const _AUTH_KEY='rota_auth';
 
 function _authGetSession(){try{const r=localStorage.getItem(_AUTH_KEY);if(!r)return null;const d=JSON.parse(r);if(!d||!d.token||!d.user||!d.user.id)return null;if(d.expiresAt&&Date.now()>d.expiresAt){localStorage.removeItem(_AUTH_KEY);return null;}return d;}catch(e){return null;}}
-function _authSaveSession(u,t){_authUser=u;_authToken=t;localStorage.setItem(_AUTH_KEY,JSON.stringify({user:u,token:t,expiresAt:Date.now()+(30*86400000)}));_authUpdateConfigUI();}
-function _authClearSession(){_authUser=null;_authToken=null;localStorage.removeItem(_AUTH_KEY);_authUpdateConfigUI();}
+function _authSaveSession(u,t){_authUser=u;_authToken=t;localStorage.setItem(_AUTH_KEY,JSON.stringify({user:u,token:t,expiresAt:Date.now()+(30*86400000)}));_authUpdateConfigUI();_admCheckSuperadmin();}
+function _authClearSession(){_authUser=null;_authToken=null;localStorage.removeItem(_AUTH_KEY);_authUpdateConfigUI();_admCheckSuperadmin();}
 function _authShowScreen(){document.documentElement.classList.add('auth-pending');document.getElementById('auth-screen').style.display='flex';}
 function _authHideScreen(){document.documentElement.classList.remove('auth-pending');document.getElementById('auth-screen').style.display='none';document.querySelector('nav').style.display='';}
 function _authShowLogin(){document.getElementById('auth-login-form').style.display='';document.getElementById('auth-register-form').style.display='none';document.getElementById('auth-forgot-form').style.display='none';const e=document.getElementById('auth-login-error');if(e)e.style.display='none';}
@@ -3509,6 +3658,195 @@ function _updateNavAuthBtn(){const btn=document.getElementById('nav-auth-btn');c
 
 function _authUpdateConfigUI(){const card=document.getElementById('cfg-account-card');if(!card)return;if(_authUser){card.style.display='';document.getElementById('cfg-user-name').textContent=_authUser.name||'Usuario';document.getElementById('cfg-user-email').textContent=_authUser.email||'';document.getElementById('cfg-avatar').textContent=(_authUser.name||'U').charAt(0).toUpperCase();document.getElementById('cfg-auth-providers').innerHTML=_authUser.provider==='google'?'<span class="auth-provider-badge">Google</span>':_authUser.provider==='facebook'?'<span class="auth-provider-badge">Facebook</span>':'<span class="auth-provider-badge">Email</span>';}else card.style.display='none';}
 
+// ═══════════════════════════════════════════════════════════════
+// v5.4.0: ADMIN PANEL
+// ═══════════════════════════════════════════════════════════════
+let _admPage=1,_admSort='createdAt',_admDir='desc',_admSearchTimer=null,_admInited=false;
+
+function _admCheckSuperadmin(){
+  if(_authUser&&_authUser.role==='superadmin'){
+    document.body.classList.add('is-superadmin');
+  }else{
+    document.body.classList.remove('is-superadmin');
+  }
+}
+
+function _admInit(){
+  if(!_authUser||_authUser.role!=='superadmin'){toast('Acesso restrito a administradores.','warn');return;}
+  _admLoadStats();
+  _admLoadUsers();
+  _admLoadPlans();
+}
+
+async function _admLoadStats(){
+  try{
+    const res=await fetch(WORKER_URL+'/api/admin/stats',{headers:_authHeaders()});
+    if(!res.ok)throw new Error('Erro '+res.status);
+    const d=await res.json();
+    document.getElementById('adm-total-users').textContent=d.totalUsers||0;
+    document.getElementById('adm-active-today').textContent=d.activeToday||0;
+    document.getElementById('adm-new-week').textContent=d.newThisWeek||0;
+    document.getElementById('adm-mrr').textContent='R$ '+(d.mrr||0).toLocaleString('pt-BR');
+    // Distribution
+    const fmtObj=(obj)=>Object.entries(obj||{}).map(([k,v])=>'<span class="adm-badge '+k+'">'+k+': '+v+'</span>').join(' ');
+    document.getElementById('adm-by-plan').innerHTML=fmtObj(d.byPlan);
+    document.getElementById('adm-by-status').innerHTML=fmtObj(d.byStatus);
+    document.getElementById('adm-by-provider').innerHTML=fmtObj(d.byProvider);
+  }catch(e){console.warn('[ADM] Stats error:',e.message);toast('Erro ao carregar stats admin','error');}
+}
+
+async function _admLoadUsers(){
+  const search=document.getElementById('adm-search')?.value||'';
+  const plan=document.getElementById('adm-filter-plan')?.value||'';
+  const status=document.getElementById('adm-filter-status')?.value||'';
+  const params=new URLSearchParams({search,plan,status,sort:_admSort,dir:_admDir,page:_admPage,limit:20});
+  try{
+    const res=await fetch(WORKER_URL+'/api/admin/users?'+params,{headers:_authHeaders()});
+    if(!res.ok)throw new Error('Erro '+res.status);
+    const d=await res.json();
+    const tbody=document.getElementById('adm-users-body');
+    if(!d.users||d.users.length===0){
+      tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--mu)">Nenhum usuário encontrado</td></tr>';
+    }else{
+      tbody.innerHTML=d.users.map(u=>{
+        const created=u.createdAt?new Date(u.createdAt).toLocaleDateString('pt-BR'):'--';
+        const prov=u.provider||'email';
+        const plan=u.plan||'free';
+        const st=u.status||'active';
+        return '<tr>'+
+          '<td><strong>'+_escHtml(u.name||'--')+'</strong></td>'+
+          '<td>'+_escHtml(u.email||'--')+'</td>'+
+          '<td><span class="adm-badge '+prov+'">'+prov+'</span></td>'+
+          '<td><span class="adm-badge '+plan+'">'+plan+'</span></td>'+
+          '<td><span class="adm-badge '+st+'">'+st+'</span></td>'+
+          '<td>'+created+'</td>'+
+          '<td class="adm-actions"><button onclick="_admShowUser(\''+u.id+'\')">Ver</button></td>'+
+        '</tr>';
+      }).join('');
+    }
+    // Pagination
+    const pg=document.getElementById('adm-pagination');
+    if(d.totalPages>1){
+      pg.innerHTML='<button onclick="_admGoPage('+(d.page-1)+')" '+(d.page<=1?'disabled':'')+'>← Anterior</button>'+
+        '<span>Página '+d.page+' de '+d.totalPages+' ('+d.total+' usuários)</span>'+
+        '<button onclick="_admGoPage('+(d.page+1)+')" '+(d.page>=d.totalPages?'disabled':'')+'>Próxima →</button>';
+    }else{
+      pg.innerHTML=d.total?'<span>'+d.total+' usuário(s)</span>':'';
+    }
+  }catch(e){console.warn('[ADM] Users error:',e.message);toast('Erro ao carregar usuários','error');}
+}
+
+function _admGoPage(p){_admPage=p;_admLoadUsers();}
+function _admSort(field){
+  if(_admSort===field){_admDir=_admDir==='asc'?'desc':'asc';}
+  else{_admSort=field;_admDir='asc';}
+  _admPage=1;_admLoadUsers();
+}
+function _admSearchDebounce(){clearTimeout(_admSearchTimer);_admSearchTimer=setTimeout(()=>{_admPage=1;_admLoadUsers();},350);}
+
+function _escHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+async function _admShowUser(userId){
+  try{
+    const res=await fetch(WORKER_URL+'/api/admin/users/'+userId,{headers:_authHeaders()});
+    if(!res.ok)throw new Error('Erro '+res.status);
+    const u=await res.json();
+    const detail=document.getElementById('adm-user-detail');
+    const created=u.createdAt?new Date(u.createdAt).toLocaleString('pt-BR'):'--';
+    const lastLogin=u.lastLogin?new Date(u.lastLogin).toLocaleString('pt-BR'):'Nunca';
+    let html='<div class="adm-detail-row"><span class="adm-detail-label">Nome</span><span class="adm-detail-val">'+_escHtml(u.name||'--')+'</span></div>'+
+      '<div class="adm-detail-row"><span class="adm-detail-label">Email</span><span class="adm-detail-val">'+_escHtml(u.email||'--')+'</span></div>'+
+      '<div class="adm-detail-row"><span class="adm-detail-label">Provedor</span><span class="adm-detail-val"><span class="adm-badge '+(u.provider||'email')+'">'+(u.provider||'email')+'</span></span></div>'+
+      '<div class="adm-detail-row"><span class="adm-detail-label">Plano</span><span class="adm-detail-val"><span class="adm-badge '+(u.plan||'free')+'">'+(u.plan||'free')+'</span></span></div>'+
+      '<div class="adm-detail-row"><span class="adm-detail-label">Status</span><span class="adm-detail-val"><span class="adm-badge '+(u.status||'active')+'">'+(u.status||'active')+'</span></span></div>'+
+      '<div class="adm-detail-row"><span class="adm-detail-label">Criado em</span><span class="adm-detail-val">'+created+'</span></div>'+
+      '<div class="adm-detail-row"><span class="adm-detail-label">Último login</span><span class="adm-detail-val">'+lastLogin+'</span></div>';
+    if(u.syncSummary){
+      html+='<div class="adm-detail-row"><span class="adm-detail-label">Último sync</span><span class="adm-detail-val">'+(u.syncSummary.lastSync?new Date(u.syncSummary.lastSync).toLocaleString('pt-BR'):'Nunca')+'</span></div>'+
+        '<div class="adm-detail-row"><span class="adm-detail-label">Tags</span><span class="adm-detail-val">'+u.syncSummary.tagsCount+'</span></div>'+
+        '<div class="adm-detail-row"><span class="adm-detail-label">Histórico</span><span class="adm-detail-val">'+u.syncSummary.histCount+' rotas</span></div>';
+    }
+    if(u.planHistory&&u.planHistory.length>0){
+      html+='<div style="margin-top:12px;font-size:12px;color:var(--mu)"><strong>Histórico de planos:</strong><br>'+
+        u.planHistory.map(h=>h.from+' → '+h.to+' ('+new Date(h.date).toLocaleDateString('pt-BR')+')').join('<br>')+'</div>';
+    }
+    detail.innerHTML=html;
+    // Action buttons
+    const actions=document.getElementById('adm-user-actions');
+    const curPlan=u.plan||'free';
+    const curStatus=u.status||'active';
+    actions.innerHTML='<select id="adm-change-plan" style="padding:6px 10px;border:1px solid var(--bd);border-radius:8px;font-size:12px;font-family:inherit">'+
+      ['free','pro','promax','ultimate'].map(p=>'<option value="'+p+'"'+(p===curPlan?' selected':'')+'>'+p+'</option>').join('')+'</select>'+
+      '<button class="btn bp" style="font-size:12px;padding:6px 12px" onclick="_admChangePlan(\''+userId+'\')">Alterar Plano</button>'+
+      '<button class="btn '+(curStatus==='active'?'bd':'bp')+'" style="font-size:12px;padding:6px 12px" onclick="_admToggleStatus(\''+userId+'\',\''+(curStatus==='active'?'inactive':'active')+'\')">'+(curStatus==='active'?'Desativar':'Ativar')+'</button>';
+    document.getElementById('adm-user-modal').style.display='flex';
+  }catch(e){console.warn('[ADM] User detail error:',e.message);toast('Erro ao carregar detalhes','error');}
+}
+
+async function _admChangePlan(userId){
+  const plan=document.getElementById('adm-change-plan')?.value;
+  if(!plan)return;
+  try{
+    const res=await fetch(WORKER_URL+'/api/admin/users/'+userId+'/plan',{method:'PUT',headers:_authHeaders(),body:JSON.stringify({plan})});
+    if(!res.ok)throw new Error('Erro');
+    toast('Plano alterado para '+plan,'ok');
+    document.getElementById('adm-user-modal').style.display='none';
+    _admLoadUsers();_admLoadStats();
+  }catch(e){toast('Erro ao alterar plano','error');}
+}
+
+async function _admToggleStatus(userId,newStatus){
+  try{
+    const res=await fetch(WORKER_URL+'/api/admin/users/'+userId+'/status',{method:'PUT',headers:_authHeaders(),body:JSON.stringify({status:newStatus})});
+    if(!res.ok)throw new Error('Erro');
+    toast('Status alterado para '+newStatus,'ok');
+    document.getElementById('adm-user-modal').style.display='none';
+    _admLoadUsers();_admLoadStats();
+  }catch(e){toast('Erro ao alterar status','error');}
+}
+
+async function _admLoadPlans(){
+  try{
+    const res=await fetch(WORKER_URL+'/api/admin/plans',{headers:_authHeaders()});
+    if(!res.ok)throw new Error('Erro');
+    const plans=await res.json();
+    const container=document.getElementById('adm-plans');
+    container.innerHTML=Object.entries(plans).map(([key,p])=>{
+      const features=[];
+      features.push({on:true,text:'Motoristas: '+(p.motoristas===-1?'Ilimitado':p.motoristas)});
+      features.push({on:true,text:'Rotas/dia: '+(p.rotasDia===-1?'Ilimitado':p.rotasDia)});
+      features.push({on:p.importTrello,text:'Import Trello'});
+      features.push({on:p.importExcel,text:'Import Excel'});
+      features.push({on:p.cloudSync,text:'Cloud Sync'});
+      features.push({on:p.ia,text:'IA ('+( p.iaCreditsMes===-1?'∞':p.iaCreditsMes)+' créditos/mês)'});
+      features.push({on:p.whatsapp,text:'WhatsApp'});
+      features.push({on:p.pod,text:'POD (Prova de Entrega)'});
+      features.push({on:p.relatorios,text:'Relatórios'});
+      features.push({on:p.apiAccess,text:'API Access'});
+      features.push({on:p.whiteLabel,text:'White Label'});
+      features.push({on:p.suportePrio,text:'Suporte Prioritário'});
+      return '<div class="adm-plan-card">'+
+        '<div class="adm-plan-name"><span class="adm-badge '+key+'">'+key+'</span> '+(p.name||key)+'</div>'+
+        '<div class="adm-plan-price">R$ '+p.price+'<span>/mês</span></div>'+
+        '<ul class="adm-plan-features">'+features.map(f=>'<li'+(f.on?'':' class="off"')+'>'+f.text+'</li>').join('')+'</ul>'+
+      '</div>';
+    }).join('');
+  }catch(e){console.warn('[ADM] Plans error:',e.message);}
+}
+
+async function _admExportCSV(){
+  try{
+    const res=await fetch(WORKER_URL+'/api/admin/users/export',{headers:_authHeaders()});
+    if(!res.ok)throw new Error('Erro');
+    const csv=await res.text();
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download='usuarios_roteiro_'+new Date().toISOString().split('T')[0]+'.csv';
+    a.click();URL.revokeObjectURL(url);
+    toast('CSV exportado!','ok');
+  }catch(e){toast('Erro ao exportar CSV','error');}
+}
+
 // Sync
 let _syncTimer=null;
 function _authHeaders(){return _authToken?{'Authorization':'Bearer '+_authToken,'Content-Type':'application/json'}:{'Content-Type':'application/json'};}
@@ -3555,12 +3893,13 @@ function _initApp(){
   if(!cfg.ttoken){const el=g('trello-nocred');if(el)el.style.display='block';const s1=g('trello-step1');if(s1)s1.style.display='none';}
   _authUpdateConfigUI();
   _updateNavAuthBtn();
+  _admCheckSuperadmin();
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
   // v5.0.0: Auth gate
   if(_isMotoristaMode){_authHideScreen();_initApp();}
-  else{const s=_authGetSession();if(s){_authUser=s.user;_authToken=s.token;_authHideScreen();_initApp();_syncPull().catch(()=>{});}else if(localStorage.getItem('rota_auth_skipped')==='1'){_authHideScreen();_initApp();}else{_authShowScreen();}}
+  else{const s=_authGetSession();if(s){_authUser=s.user;_authToken=s.token;_authHideScreen();_initApp();_admCheckSuperadmin();_syncPull().catch(()=>{});}else if(localStorage.getItem('rota_auth_skipped')==='1'){_authHideScreen();_initApp();}else{_authShowScreen();}}
   document.querySelectorAll('.mbg').forEach(m=>{let downOnBg=false;m.addEventListener('mousedown',e=>{downOnBg=e.target===m;});m.addEventListener('click',e=>{if(e.target===m&&downOnBg)m.classList.remove('on');downOnBg=false;});});
   document.addEventListener('paste',e=>{
     const img=Array.from(e.clipboardData.items).find(i=>i.type.startsWith('image/'));
@@ -3786,6 +4125,7 @@ function goPage(p,el){if(_isMotoristaMode)return;window.scrollTo(0,0);window.scr
   if(p==='dash')requestAnimationFrame(()=>renderDash());
   if(p==='motor')requestAnimationFrame(()=>{renderMotor();if(!_isMotoristaMode&&_currentRouteId&&_cloudVersion>0)startGestorPolling();});
   if(p==='hist')requestAnimationFrame(()=>renderHist());
+  if(p==='adm')requestAnimationFrame(()=>_admInit());
 }
 
 function stab(n,el){

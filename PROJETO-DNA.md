@@ -116,6 +116,27 @@
 
 ## Historico de Versoes
 
+### v5.4.0 — 05/04/2026
+- FEAT: Painel Administrativo completo no frontend (visivel apenas para superadmin)
+  - Dashboard com stats: total usuarios, ativos hoje, novos 7 dias, MRR
+  - Distribuicao por plano, status e provedor
+  - Tabela de usuarios com busca, filtros e paginacao
+  - Modal de detalhes do usuario (sync summary, historico de planos)
+  - Acoes: alterar plano, ativar/desativar usuario
+  - Cards de planos com features detalhadas
+  - Exportar CSV de todos os usuarios
+  - Aba "Admin" na navbar aparece apenas para superadmin (body.is-superadmin)
+- FIX: Data removida da navbar (desktop e mobile) por decisao do Philip
+- FIX: Dropdown leak na navbar — trocado `<button>` por `<div>` no nav-auth-btn
+- FIX: Touch targets mobile 44px minimo (WCAG)
+
+### v5.3.1 — 05/04/2026
+- FIX: Dropdown leak na navbar — itens "Configurações" e "Sair" apareciam inline no desktop
+  - Root cause: `<button>` nao esconde filhos absolute+display:none em alguns browsers
+  - Solucao: trocado `<button id="nav-auth-btn">` por `<div>` com role="button"
+- FIX: Touch targets mobile — auth button e theme toggle agora 44px minimo (WCAG)
+- FIX: Modal max-width ja coberto por CSS existente (calc(100vw - 32px) no 480px)
+
 ### v5.3.0 — 05/04/2026
 - FEAT: Bottom navigation bar fixa no mobile (estilo Instagram/WhatsApp)
 - FEAT: 5 icones SVG nas abas — sempre visiveis no rodape mobile
