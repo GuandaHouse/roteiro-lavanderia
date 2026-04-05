@@ -1966,7 +1966,7 @@ body.is-superadmin .ntab.admin-tab{display:flex}
   </div>
   </div>
   <!-- v5.2.0: Version badge -->
-  <div style="text-align:center;padding:16px 0 8px;font-size:11px;color:var(--mu);opacity:.6">Roteiro de Coleta v5.4.0</div>
+  <div style="text-align:center;padding:16px 0 8px;font-size:11px;color:var(--mu);opacity:.6">v5.4.0</div>
   <!-- v4.3.4: Sticky save bar at bottom -->
   <div class="cfg-save-bar" id="cfg-save-bar" style="display:none">
     <div id="cfg-msg" style="flex:1;display:flex;align-items:center"></div>
@@ -4097,8 +4097,8 @@ function updateTagSelects(){
 }
 
 function goPage(p,el){if(_isMotoristaMode)return;window.scrollTo(0,0);window.scrollTo(0,0);
-  // v4.3.7: Fechar mapa fullscreen ao navegar para outra aba
-  if(mapIsFullscreen&&p!=='rota'){toggleMapFullscreen();}
+  // v4.3.7 / v5.4.0: Fechar mapa fullscreen ao navegar (inclusive ao clicar no logo estando em rota)
+  if(mapIsFullscreen){toggleMapFullscreen();}
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(x=>x.classList.remove('on'));
   g('page-'+p).classList.add('on');if(el)el.classList.add('on');
@@ -8048,6 +8048,6 @@ function rerenderHeatmap(){
 })();
 </script>
 <!-- v5.2.0: Debug de overflow removido (era v4.7.8 diagnostico temporario) -->
-<div style="text-align:center;padding:24px 0 12px;font-size:11px;font-weight:600;color:var(--mu);opacity:.75;letter-spacing:.03em;position:relative;z-index:1">v5.2.0</div>
+<!-- v5.4.0: Rodapé de versão duplicado removido — já existe dentro de page-cfg -->
 </body>
 </html>
