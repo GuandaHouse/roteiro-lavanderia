@@ -116,6 +116,20 @@
 
 ## Historico de Versoes
 
+### v5.5.0 — 05/04/2026
+- FIX: Google Sign-In mobile — duplo toque resolvido definitivamente
+  - SDK carrega eager ao abrir tela de login, flag _googlePendingClick rastreia clique do usuario
+  - Se SDK ainda carregando quando usuario clica, prompt() dispara automaticamente ao finalizar
+  - Previne carregamento duplicado do script com flag _googleLoading
+- NEW: Botao "Sair da conta" visivel na pagina Configuracoes (antes so existia no dropdown do avatar)
+- FIX: Mapa de Clientes (heatmap) tela branca — mapa era criado em initGoogleMaps com div display:none
+  - Removida criacao prematura; heatmap agora cria lazily em renderDashStats quando div esta visivel
+  - Adicionado mapId no heatmap para consistencia com mapa principal
+- NEW: Botao voltar do celular navega entre abas do app (pushState + popstate)
+  - goPage() agora faz history.pushState a cada navegacao
+  - popstate listener restaura a aba correta ao pressionar voltar
+  - Evita que o botao voltar saia do browser
+
 ### v5.4.9 — 05/04/2026
 - FIX: Google Sign-In mobile — dois problemas corrigidos
   - Duplo toque: SDK carregado de forma antecipada ao exibir tela de login (_authShowScreen chama _authGoogle)

@@ -1501,7 +1501,7 @@ body.is-superadmin .ntab.admin-tab{display:flex}
 <h2>Entrar</h2><div id="auth-login-error" class="auth-error"></div>
 <!-- v5.2.0: Google Sign-In — botão bonito com overlay invisível do Google SDK por cima -->
 <div class="auth-google-wrap" style="position:relative;margin-bottom:10px">
-<button class="auth-social google" onclick="_authGoogle()" style="margin-bottom:0"><svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Entrar com Google</button>
+<button class="auth-social google" onclick="_authGoogle(true)" style="margin-bottom:0"><svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Entrar com Google</button>
 <div class="g-signin-wrap"></div>
 </div>
 <!-- v5.2.0: Facebook removido por decisão do Philip — reativar no futuro se necessário
@@ -1518,7 +1518,7 @@ body.is-superadmin .ntab.admin-tab{display:flex}
 <h2>Criar conta</h2><div id="auth-reg-error" class="auth-error"></div>
 <!-- v5.2.0: Google Sign-In — botão bonito com overlay invisível do Google SDK por cima -->
 <div class="auth-google-wrap" style="position:relative;margin-bottom:10px">
-<button class="auth-social google" onclick="_authGoogle()" style="margin-bottom:0"><svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Criar com Google</button>
+<button class="auth-social google" onclick="_authGoogle(true)" style="margin-bottom:0"><svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Criar com Google</button>
 <div class="g-signin-wrap"></div>
 </div>
 <!-- v5.2.0: Facebook removido por decisão do Philip — reativar no futuro se necessário
@@ -1968,6 +1968,10 @@ body.is-superadmin .ntab.admin-tab{display:flex}
       </div>
     </div>
   </div>
+  </div>
+  <!-- v5.5.0: Botao Sair visivel no mobile (antes so dropdown no avatar) -->
+  <div id="cfg-logout-wrap" style="display:none;text-align:center;padding:16px 0 0">
+    <button onclick="_authLogout()" style="background:none;border:1px solid var(--rd);color:var(--rd);padding:10px 24px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sair da conta</button>
   </div>
   <!-- v5.4.2: Version badge — preenchido via JS após DOMContentLoaded (APP_VERSION) -->
   <div id="app-version-badge" style="text-align:center;padding:16px 0 8px;font-size:11px;color:var(--mu);opacity:.6"></div>
@@ -2574,7 +2578,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.4.9';
+const APP_VERSION='v5.5.0';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -3621,12 +3625,17 @@ async function _authForgotSubmit(){
    Nosso botão bonito fica sempre visível. O widget do Google renderiza como overlay invisível por cima.
    Quando o usuário clica, o SDK do Google captura o clique → popup abre → seleciona conta → callback dispara → login imediato. */
 let _googleInited=false;
-function _authGoogle(){
+let _googleLoading=false;
+let _googlePendingClick=false;
+function _authGoogle(fromClick){
+  if(fromClick)_googlePendingClick=true;
   if(!window.google?.accounts?.id){
+    if(_googleLoading)return;
+    _googleLoading=true;
     const s=document.createElement('script');
     s.src='https://accounts.google.com/gsi/client';
-    s.onload=()=>_initGoogleAuth();
-    s.onerror=()=>_authShowError('auth-login-error','Erro ao carregar Google. Tente novamente.');
+    s.onload=()=>{_googleLoading=false;_initGoogleAuth();};
+    s.onerror=()=>{_googleLoading=false;_googlePendingClick=false;_authShowError('auth-login-error','Erro ao carregar Google. Tente novamente.');};
     document.head.appendChild(s);
   }else{
     _initGoogleAuth();
@@ -3639,15 +3648,15 @@ function _initGoogleAuth(){
     google.accounts.id.initialize({client_id:cid,callback:_handleGoogleCred,auto_select:false,cancel_on_tap_outside:true,use_fedcm_for_prompt:false});
     _googleInited=true;
   }
-  /* Renderizar widget do Google como overlay invisível sobre nosso botão bonito.
-     O usuário vê nosso botão mas clica no widget do Google → popup abre direto.
-     NÃO chamar google.accounts.id.prompt() — isso cria o One Tap popup embaixo da tela. */
   document.querySelectorAll('.g-signin-wrap').forEach(el=>{
     google.accounts.id.renderButton(el,{type:'standard',theme:'outline',size:'large',text:'signin_with',width:400,logo_alignment:'left'});
   });
-  /* v5.3.0: Ativar overlay SOMENTE agora que o renderButton() populou o .g-signin-wrap.
-     Antes disto, o overlay fica display:none + pointer-events:none → botão customizado funciona. */
   document.querySelectorAll('.auth-google-wrap').forEach(w=>w.classList.add('gsi-ready'));
+  /* v5.5.0: Se o usuario clicou antes do SDK carregar, dispara prompt() automaticamente */
+  if(_googlePendingClick){
+    _googlePendingClick=false;
+    google.accounts.id.prompt();
+  }
 }
 async function _handleGoogleCred(r){
   if(!r.credential)return;
@@ -3701,7 +3710,7 @@ function _navDdGoSettings(){document.getElementById('nav-dropdown').classList.re
 document.addEventListener('click',function(e){const dd=document.getElementById('nav-dropdown');if(dd&&!e.target.closest('#nav-auth-btn'))dd.classList.remove('open');});
 function _updateNavAuthBtn(){const btn=document.getElementById('nav-auth-btn');const av=document.getElementById('nav-avatar');if(!btn)return;btn.style.display='flex';if(_authUser){btn.classList.add('logged-in');btn.title=_authUser.name||'Conta';const initials=(_authUser.name||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);av.textContent=initials;av.classList.remove('generic');av.style.background='';document.getElementById('nav-dd-name').textContent=_authUser.name||'Usuario';document.getElementById('nav-dd-email').textContent=_authUser.email||'';const plan=_authUser.plan||'free';document.getElementById('nav-dd-plan').textContent=plan;}else{btn.classList.remove('logged-in');btn.title='Entrar';av.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';av.classList.add('generic');}}
 
-function _authUpdateConfigUI(){const card=document.getElementById('cfg-account-card');if(!card)return;if(_authUser){card.style.display='';document.getElementById('cfg-user-name').textContent=_authUser.name||'Usuario';document.getElementById('cfg-user-email').textContent=_authUser.email||'';document.getElementById('cfg-avatar').textContent=(_authUser.name||'U').charAt(0).toUpperCase();document.getElementById('cfg-auth-providers').innerHTML=_authUser.provider==='google'?'<span class="auth-provider-badge">Google</span>':_authUser.provider==='facebook'?'<span class="auth-provider-badge">Facebook</span>':'<span class="auth-provider-badge">Email</span>';}else card.style.display='none';}
+function _authUpdateConfigUI(){const card=document.getElementById('cfg-account-card');const logoutWrap=document.getElementById('cfg-logout-wrap');if(!card)return;if(_authUser){card.style.display='';document.getElementById('cfg-user-name').textContent=_authUser.name||'Usuario';document.getElementById('cfg-user-email').textContent=_authUser.email||'';document.getElementById('cfg-avatar').textContent=(_authUser.name||'U').charAt(0).toUpperCase();document.getElementById('cfg-auth-providers').innerHTML=_authUser.provider==='google'?'<span class="auth-provider-badge">Google</span>':_authUser.provider==='facebook'?'<span class="auth-provider-badge">Facebook</span>':'<span class="auth-provider-badge">Email</span>';if(logoutWrap)logoutWrap.style.display='';}else{card.style.display='none';if(logoutWrap)logoutWrap.style.display='none';}}
 
 // ═══════════════════════════════════════════════════════════════
 // v5.4.0: ADMIN PANEL
@@ -4147,6 +4156,7 @@ function updateTagSelects(){
   });
 }
 
+let _goPageFromPop=false;
 function goPage(p,el){if(_isMotoristaMode)return;window.scrollTo(0,0);window.scrollTo(0,0);
   // v4.3.7 / v5.4.0: Fechar mapa fullscreen ao navegar (inclusive ao clicar no logo estando em rota)
   if(mapIsFullscreen){toggleMapFullscreen();}
@@ -4155,6 +4165,8 @@ function goPage(p,el){if(_isMotoristaMode)return;window.scrollTo(0,0);window.scr
   g('page-'+p).classList.add('on');if(el)el.classList.add('on');
   // v4.6.3: Persist active tab
   localStorage.setItem('rota_active_tab',p);
+  // v5.5.0: pushState para botao voltar funcionar no mobile
+  if(!_goPageFromPop){history.pushState({page:p},'',null);}
   // v4.3.7: Botão salvar só visível na aba Configurações
   const saveBar=g('cfg-save-bar');if(saveBar)saveBar.style.display=p==='cfg'?'flex':'none';
   // v4.5.1: Ao retornar para aba Rota, re-trigger resize + fitBounds no minimap
@@ -4178,6 +4190,18 @@ function goPage(p,el){if(_isMotoristaMode)return;window.scrollTo(0,0);window.scr
   if(p==='hist')requestAnimationFrame(()=>renderHist());
   if(p==='adm')requestAnimationFrame(()=>_admInit());
 }
+/* v5.5.0: Botao voltar do mobile navega entre abas em vez de sair do app */
+window.addEventListener('popstate',function(e){
+  if(e.state&&e.state.page){
+    _goPageFromPop=true;
+    const tabs=document.querySelectorAll('.ntab');
+    const tabMap={rota:0,hist:1,dash:2,motor:3,cfg:4,adm:5};
+    goPage(e.state.page,tabs[tabMap[e.state.page]]||null);
+    _goPageFromPop=false;
+  }
+});
+/* Inicializar state para a pagina atual */
+history.replaceState({page:localStorage.getItem('rota_active_tab')||'rota'},'',null);
 
 function stab(n,el){
   document.querySelectorAll('.tp').forEach(x=>{x.style.opacity='0';x.classList.remove('on');});
@@ -6648,8 +6672,7 @@ function initGoogleMaps(){
       (async()=>{try{const a=await _resolveGeoAnchor();if(a&&gMap){gMap.panTo({lat:a.lat,lng:a.lng});}}catch(e){}})();
     }
   }
-  const hmEl=document.getElementById('heatmap');
-  if(hmEl)hmMap=new google.maps.Map(hmEl,{center:{lat:-23.55,lng:-46.63},zoom:11,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});
+  /* v5.5.0: heatmap (Mapa de Clientes) criado lazily em renderDashStats quando o div esta visivel */
 }
 function initLeafMap(){}
 // v4.9.1: Invalidar cache de geocoding quando versão muda (corrige endereços cacheados errados)
@@ -7436,7 +7459,7 @@ function renderDashStats(br,pts){
     +'</div>'
   ).join(''):'<p style="font-size:12px;color:var(--mu);padding:4px 0">Nenhum bairro identificado.</p>';
   if(!pts.length)return;
-  if(!hmMap){hmMap=new google.maps.Map(document.getElementById('heatmap'),{center:{lat:-23.55,lng:-46.63},zoom:11,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});}
+  if(!hmMap){hmMap=new google.maps.Map(document.getElementById('heatmap'),{center:{lat:-23.55,lng:-46.63},zoom:11,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});}
   if(hmHeatLayer)hmHeatLayer.setMap(null);
   hmHeatLayer=new google.maps.visualization.HeatmapLayer({data:pts.map(pt=>new google.maps.LatLng(pt[0],pt[1])),radius:35,map:hmMap});
   const hmBnds=new google.maps.LatLngBounds();pts.forEach(pt=>hmBnds.extend({lat:pt[0],lng:pt[1]}));hmMap.fitBounds(hmBnds);
