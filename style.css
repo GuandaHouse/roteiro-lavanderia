@@ -638,6 +638,10 @@ body.dark .cfg-save-bar .btn{box-shadow:0 4px 16px rgba(0,0,0,.45);}
 @media(max-width:768px){
   /* v4.7.8: NUCLEAR anti-overflow — !important pra sobrescrever regras base */
   *,*::before,*::after{box-sizing:border-box!important;max-width:100%!important}
+  /* v5.5.11: Fix tiles Google Maps no mobile — nuclear max-width:100% comprima os tiles (256px fixo)
+     Resetar para os containers internos do Maps: sem isso logo/markers aparecem mas tiles ficam em branco */
+  #map,#map *,#map img,#map canvas,
+  #heatmap,#heatmap *,#heatmap img,#heatmap canvas{max-width:none!important;max-height:none!important;width:auto}
   html,body{overflow-x:hidden!important;width:100%!important;max-width:100vw!important}
   body{overflow-x:hidden!important}
 
