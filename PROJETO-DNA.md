@@ -116,6 +116,18 @@
 
 ## Historico de Versoes
 
+### v5.5.2 — 05/04/2026
+- FIX #1: cfg-save-bar agora full-width fixo no rodape mobile (acima da bottom nav)
+- FIX #2: Trello banner nao quebra palavra no meio (word-break:normal); credenciais persistem no mobile via re-leitura do localStorage quando popup fecha
+- FIX #3: Google login funciona no primeiro clique — GIS SDK pre-carregado ao mostrar tela de login
+- FIX #4: Admin panel com padding-top:64px no mobile para nao ficar atras da navbar
+- FIX #5: Versao e botao "Sair da conta" no rodape do Painel Admin
+- FIX #6: Mapa de Clientes — guard para google.maps nao carregado (retry automatico); dash-drawer com padding-bottom para nao ser cortado pela bottom nav
+- FIX #7: Empty state "Nenhum cliente ainda" centralizado vertical e horizontalmente
+- FIX #8: Historico — complemento nao duplicado se ja estiver no endereco
+- FIX #9: Botao Voltar Android fecha popup do Historico (History API pushState)
+- FIX #10: Atalhos de teclado (Enter/Esc) escondidos no mobile
+
 ### v5.5.1 — 05/04/2026
 - FIX: Botao "Sair da conta" nao aparecia no mobile — _authUpdateConfigUI fazia early return
   quando cfg-account-card nao existia no HTML, impedindo o logoutWrap de ser mostrado
