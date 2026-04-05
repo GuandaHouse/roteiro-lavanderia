@@ -117,6 +117,7 @@
 ## Historico de Versoes
 
 ### v5.4.2 — 05/04/2026
+- FIX: Versao no rodape agora lida de constante APP_VERSION (nunca mais dessincroniza)
 - FIX: Auto-deteccao de tags na importacao Trello restaurada
   - processCard agora varre o texto do cartao (titulo + descricao) contra os labels das tags configuradas pelo usuario
   - Matching por word-boundary (case-insensitive, sem acentos)
