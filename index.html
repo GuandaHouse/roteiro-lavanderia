@@ -2574,7 +2574,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.4.8';
+const APP_VERSION='v5.4.9';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -3578,7 +3578,7 @@ const _AUTH_KEY='rota_auth';
 function _authGetSession(){try{const r=localStorage.getItem(_AUTH_KEY);if(!r)return null;const d=JSON.parse(r);if(!d||!d.token||!d.user||!d.user.id)return null;if(d.expiresAt&&Date.now()>d.expiresAt){localStorage.removeItem(_AUTH_KEY);return null;}return d;}catch(e){return null;}}
 function _authSaveSession(u,t){_authUser=u;_authToken=t;localStorage.setItem(_AUTH_KEY,JSON.stringify({user:u,token:t,expiresAt:Date.now()+(30*86400000)}));_authUpdateConfigUI();_admCheckSuperadmin();}
 function _authClearSession(){_authUser=null;_authToken=null;localStorage.removeItem(_AUTH_KEY);_authUpdateConfigUI();_admCheckSuperadmin();}
-function _authShowScreen(){document.documentElement.classList.add('auth-pending');document.getElementById('auth-screen').style.display='flex';}
+function _authShowScreen(){document.documentElement.classList.add('auth-pending');document.getElementById('auth-screen').style.display='flex';_authGoogle();/* v5.4.9: eager-load SDK para evitar duplo toque */}
 function _authHideScreen(){document.documentElement.classList.remove('auth-pending');document.getElementById('auth-screen').style.display='none';document.querySelector('nav').style.display='';}
 function _authShowLogin(){document.getElementById('auth-login-form').style.display='';document.getElementById('auth-register-form').style.display='none';document.getElementById('auth-forgot-form').style.display='none';const e=document.getElementById('auth-login-error');if(e)e.style.display='none';}
 function _authShowRegister(){document.getElementById('auth-login-form').style.display='none';document.getElementById('auth-register-form').style.display='';document.getElementById('auth-forgot-form').style.display='none';const e=document.getElementById('auth-reg-error');if(e)e.style.display='none';}
@@ -3653,9 +3653,23 @@ async function _handleGoogleCred(r){
   if(!r.credential)return;
   /* Feedback visual imediato — loading no botão */
   document.querySelectorAll('.auth-social.google').forEach(b=>{b.style.opacity='0.6';b.style.pointerEvents='none';});
+  const _restoreBtn=()=>document.querySelectorAll('.auth-social.google').forEach(b=>{b.style.opacity='';b.style.pointerEvents='';});
   try{
-    const res=await fetch(WORKER_URL+'/api/auth/google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:r.credential})});
-    const d=await res.json();
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(),20000);
+    let res;
+    try{
+      res=await fetch(WORKER_URL+'/api/auth/google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:r.credential}),signal:ctrl.signal});
+    }catch(netErr){
+      clearTimeout(timer);
+      const msg=netErr.name==='AbortError'?'Conexao lenta. Tente novamente.':'Sem conexao com o servidor. Verifique sua internet.';
+      _authShowError('auth-login-error',msg);_restoreBtn();return;
+    }
+    clearTimeout(timer);
+    let d;
+    try{d=await res.json();}catch(e){
+      _authShowError('auth-login-error','Erro inesperado do servidor ('+res.status+'). Tente novamente.');_restoreBtn();return;
+    }
     if(d.ok&&d.token){
       _authSaveSession(d.user,d.token);
       _authHideScreen();
@@ -3663,12 +3677,12 @@ async function _handleGoogleCred(r){
       _initApp();
       toast(d.isNew?'Conta criada com Google!':'Bem-vindo de volta!','ok');
     }else{
-      _authShowError('auth-login-error',d.error||'Erro com Google');
-      document.querySelectorAll('.auth-social.google').forEach(b=>{b.style.opacity='';b.style.pointerEvents='';});
+      _authShowError('auth-login-error',d.error||'Erro ao autenticar com Google');
+      _restoreBtn();
     }
   }catch(e){
-    _authShowError('auth-login-error','Sem conexao.');
-    document.querySelectorAll('.auth-social.google').forEach(b=>{b.style.opacity='';b.style.pointerEvents='';});
+    _authShowError('auth-login-error','Erro inesperado. Tente novamente.');
+    _restoreBtn();
   }
 }
 

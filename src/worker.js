@@ -576,6 +576,15 @@ async function handleAdminExport(request, env) {
 
 export default {
   async fetch(request, env) {
+    try {
+      return await handleRequest(request, env);
+    } catch (e) {
+      return json({ ok: false, error: 'Erro interno do servidor: ' + e.message }, 500);
+    }
+  }
+};
+
+async function handleRequest(request, env) {
     // CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -807,5 +816,4 @@ export default {
     // ═══════════════════════════════════════════
     if (env.ASSETS) return env.ASSETS.fetch(request);
     return new Response('Not found', { status: 404, headers: CORS_HEADERS });
-  },
-};
+}

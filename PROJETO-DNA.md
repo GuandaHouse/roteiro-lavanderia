@@ -116,6 +116,16 @@
 
 ## Historico de Versoes
 
+### v5.4.9 — 05/04/2026
+- FIX: Google Sign-In mobile — dois problemas corrigidos
+  - Duplo toque: SDK carregado de forma antecipada ao exibir tela de login (_authShowScreen chama _authGoogle)
+  - "Sem conexao" apos selecionar conta: tratamento de erros melhorado em _handleGoogleCred
+    - Timeout de 20s com AbortController (mensagem especifica se lento)
+    - Erro de rede vs erro do servidor distinguidos com mensagens claras
+    - Resposta nao-JSON do servidor tratada com status HTTP na mensagem
+  - Worker: try/catch global no fetch handler — erros internos nao retornam mais HTML 500, retornam JSON
+- FIX: Worker — adicionado try/catch global no handler principal (handleRequest) para sempre retornar JSON em caso de excecao nao tratada
+
 ### v5.4.8 — 05/04/2026
 - FIX: Geocodificacao classificava enderecos na cidade errada (ex: Uberlandia)
   - Causa: _resolveGeoAnchor geocodificava cfg.base sem cidade, Google retornava 1a ocorrencia do Brasil
