@@ -1369,11 +1369,13 @@ body.dark .auth-card{box-shadow:0 8px 32px rgba(0,0,0,.3)}
 .auth-social{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:11px 16px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;margin-bottom:10px;font-family:inherit}
 .auth-social:hover{background:var(--sf);border-color:var(--pu)}
 .auth-social svg{width:18px;height:18px;flex-shrink:0}
-/* v5.2.0: Google Sign-In — nosso botão bonito fica visível, widget do Google renderiza como overlay invisível por cima.
-   Quando o usuário clica, aciona o Google SDK → popup → seleciona conta → callback _handleGoogleCred → login direto. */
-.auth-google-wrap{position:relative;overflow:hidden}
-.g-signin-wrap{position:absolute!important;top:0!important;left:0!important;right:0!important;bottom:0!important;opacity:0.01!important;z-index:2!important;overflow:hidden!important;display:block!important;margin:0!important;padding:0!important}
-.g-signin-wrap iframe,.g-signin-wrap div,.g-signin-wrap *{min-height:100%!important;min-width:100%!important;cursor:pointer!important}
+/* v5.3.0: Google Sign-In — overlay invisível do SDK aparece SOMENTE após renderButton().
+   Antes disso, o botão customizado funciona normalmente via onclick→_authGoogle().
+   Classe .gsi-ready é adicionada pelo JS após renderButton() ser chamado. */
+.auth-google-wrap{position:relative}
+.g-signin-wrap{position:absolute;top:0;left:0;right:0;bottom:0;opacity:0.01;z-index:2;overflow:hidden;display:none;margin:0;padding:0;pointer-events:none}
+.auth-google-wrap.gsi-ready .g-signin-wrap{display:block!important;pointer-events:auto!important}
+.g-signin-wrap iframe,.g-signin-wrap div{min-height:100%!important;min-width:100%!important;cursor:pointer!important}
 .auth-divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:var(--mu);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
 .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--bd)}
 .auth-input{width:100%;padding:11px 14px;border:1px solid var(--bd);border-radius:10px;font-size:14px;color:var(--tx);background:var(--bg);outline:none;transition:border-color .2s;margin-bottom:10px;box-sizing:border-box;font-family:inherit}
@@ -3463,7 +3465,9 @@ function _initGoogleAuth(){
   document.querySelectorAll('.g-signin-wrap').forEach(el=>{
     google.accounts.id.renderButton(el,{type:'standard',theme:'outline',size:'large',text:'signin_with',width:400,logo_alignment:'left'});
   });
-  /* Nosso botão NUNCA é escondido — fica sempre bonito por baixo do overlay */
+  /* v5.3.0: Ativar overlay SOMENTE agora que o renderButton() populou o .g-signin-wrap.
+     Antes disto, o overlay fica display:none + pointer-events:none → botão customizado funciona. */
+  document.querySelectorAll('.auth-google-wrap').forEach(w=>w.classList.add('gsi-ready'));
 }
 async function _handleGoogleCred(r){
   if(!r.credential)return;
