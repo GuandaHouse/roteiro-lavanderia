@@ -116,6 +116,13 @@
 
 ## Historico de Versoes
 
+### v5.4.3 — 05/04/2026
+- FIX: Tags criadas/renomeadas em Configuracoes agora sao aplicadas automaticamente aos cartoes ja na rota
+  - Funcao _reapplyTagsToClients varre todos os clients e aplica tags cujo label aparece no nome/obs
+  - Chamada em setTagLabel (renomear) e addNewTag (criar nova tag)
+  - Nao remove tags existentes, apenas adiciona as novas que casarem
+  - Toast informa quantos cartoes foram atualizados
+
 ### v5.4.2 — 05/04/2026
 - FIX: Versao no rodape agora lida de constante APP_VERSION (nunca mais dessincroniza)
 - FIX: Auto-deteccao de tags na importacao Trello restaurada
