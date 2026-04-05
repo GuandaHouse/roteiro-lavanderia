@@ -116,6 +116,13 @@
 
 ## Historico de Versoes
 
+### v5.4.7 — 05/04/2026
+- FIX: Cartoes voltavam apos limpar — abordagem definitiva via sessionStorage
+  - clearAllClients seta sessionStorage rota_user_cleared=1
+  - restoreActiveRoute verifica o flag e recusa restaurar se estiver setado
+  - Nova importacao do Trello limpa o flag (restore volta a funcionar)
+  - sessionStorage persiste no refresh mas e limpo ao fechar a aba
+
 ### v5.4.6 — 05/04/2026
 - FIX: Causa raiz dos cartoes voltando apos limpar — race condition nos pollings
   - cloudPoll e startGestorPolling fazem awaits async: o clearInterval nao cancela fetches ja em voo
