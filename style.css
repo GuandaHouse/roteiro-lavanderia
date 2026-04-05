@@ -669,6 +669,8 @@ body.dark .cfg-save-bar .btn{box-shadow:0 4px 16px rgba(0,0,0,.45);}
   /* Anti-overflow em todos os containers */
   .card,.mot-card,.hist-card{overflow:hidden!important}
   .cc{overflow:hidden!important}
+  /* fix mapa mobile: card que contém heatmap precisa de overflow:visible */
+  .card:has(#heatmap){overflow:visible!important}
 
   /* Cards */
   .card{padding:16px;border-radius:14px;margin-bottom:12px}

@@ -1,4 +1,4 @@
-let clients=[],order=[],gMap=null,gRoute=null,gMarkers=[],gBaseMarkers=[],hmMap=null,hmHeatLayer=null;
+let clients=[],order=[],gMap=null,gRoute=null,gMarkers=[],gBaseMarkers=[],hmMap=null,hmHeatLayer=null,_gmapsApiReady=false;
 let imgData=null,ambRes=[],ambSel=-1,histIdx=-1,geoT=null,cfg={},_pendingCoords=null;
 let selBoard=null,selList=null,_tboardsHtml='',_tlistsHtml='';
 
@@ -2040,18 +2040,27 @@ function goPage(p,el){if(_isMotoristaMode)return;window.scrollTo(0,0);window.scr
   // v4.3.7: Botão salvar só visível na aba Configurações
   const saveBar=g('cfg-save-bar');if(saveBar)saveBar.style.display=p==='cfg'?'flex':'none';
   // v4.5.1: Ao retornar para aba Rota, re-trigger resize + fitBounds no minimap
-  if(p==='rota'&&gMap){
-    setTimeout(()=>{
-      google.maps.event.trigger(gMap,'resize');
-      if(gMarkers.length){
-        const bnds=new google.maps.LatLngBounds();
-        gMarkers.forEach(m=>{const pos=m.position;if(pos)bnds.extend(pos);});
-        gMap.fitBounds(bnds,{top:40,bottom:40,left:40,right:40});
-        google.maps.event.addListenerOnce(gMap,'idle',()=>{if(gMap.getZoom()>16)gMap.setZoom(16);if(gMap.getZoom()<10)gMap.setZoom(10);});
-      } else if(cfg.base&&cfg.base.trim()){
-        (async()=>{try{const a=await _resolveGeoAnchor();if(a&&gMap){gMap.panTo({lat:a.lat,lng:a.lng});gMap.setZoom(12);}}catch(e){}})();
+  // fix mapa mobile: se API carregou mas mapa não foi criado (container estava oculto), criar agora
+  if(p==='rota'){
+    if(_gmapsApiReady&&!gMap){
+      const mapEl=document.getElementById('map');
+      if(mapEl){
+        // double rAF garante que o layout foi calculado antes de criar o mapa
+        requestAnimationFrame(()=>{requestAnimationFrame(()=>{_createMainMap(mapEl);});});
       }
-    },200);
+    } else if(gMap){
+      setTimeout(()=>{
+        google.maps.event.trigger(gMap,'resize');
+        if(gMarkers.length){
+          const bnds=new google.maps.LatLngBounds();
+          gMarkers.forEach(m=>{const pos=m.position;if(pos)bnds.extend(pos);});
+          gMap.fitBounds(bnds,{top:40,bottom:40,left:40,right:40});
+          google.maps.event.addListenerOnce(gMap,'idle',()=>{if(gMap.getZoom()>16)gMap.setZoom(16);if(gMap.getZoom()<10)gMap.setZoom(10);});
+        } else if(cfg.base&&cfg.base.trim()){
+          (async()=>{try{const a=await _resolveGeoAnchor();if(a&&gMap){gMap.panTo({lat:a.lat,lng:a.lng});gMap.setZoom(12);}}catch(e){}})();
+        }
+      },200);
+    }
   }
   // v4.7.9: requestAnimationFrame para evitar freeze visual ao trocar aba
   // Permite o browser pintar a troca antes de executar render pesado
@@ -4572,20 +4581,30 @@ function createBaseMarker({position,map,title,type}){
   return mk;
 }
 function initGoogleMaps(){
+  _gmapsApiReady=true; // flag global: API carregou
   const mapEl=document.getElementById('map');
-  if(mapEl){mapEl.style.display='block';document.getElementById('mph').style.display='none';
-    document.getElementById('map-expand-btn').style.display='flex';
-    gMap=new google.maps.Map(mapEl,{center:{lat:-23.55,lng:-46.63},zoom:12,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});
-    // v4.5.1: Multiple resize triggers to fix gray tiles on small containers
-    const _triggerResize=()=>{if(gMap)google.maps.event.trigger(gMap,'resize');};
-    google.maps.event.addListenerOnce(gMap,'tilesloaded',_triggerResize);
-    setTimeout(_triggerResize,300);setTimeout(_triggerResize,1000);setTimeout(_triggerResize,3000);
-    // Centralizar no endereço base se configurado
-    if(cfg.base&&cfg.base.trim()){
-      (async()=>{try{const a=await _resolveGeoAnchor();if(a&&gMap){gMap.panTo({lat:a.lat,lng:a.lng});}}catch(e){}})();
-    }
+  if(!mapEl)return;
+  // fix mapa mobile: só criar se container tem dimensões reais
+  // Se container está oculto (display:none no pai), offsetWidth=0 e Maps não carrega tiles
+  if(mapEl.offsetWidth>0&&mapEl.offsetHeight>0){
+    _createMainMap(mapEl);
   }
+  // Se não tem dimensões, o mapa será criado em goPage quando a aba ficar visível
   /* v5.5.0: heatmap (Mapa de Clientes) criado lazily em renderDashStats quando o div esta visivel */
+}
+function _createMainMap(mapEl){
+  if(gMap)return; // já existe
+  mapEl.style.display='block';document.getElementById('mph').style.display='none';
+  document.getElementById('map-expand-btn').style.display='flex';
+  gMap=new google.maps.Map(mapEl,{center:{lat:-23.55,lng:-46.63},zoom:12,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});
+  // v4.5.1: Multiple resize triggers to fix gray tiles on small containers
+  const _triggerResize=()=>{if(gMap)google.maps.event.trigger(gMap,'resize');};
+  google.maps.event.addListenerOnce(gMap,'tilesloaded',_triggerResize);
+  setTimeout(_triggerResize,300);setTimeout(_triggerResize,1000);setTimeout(_triggerResize,3000);
+  // Centralizar no endereço base se configurado
+  if(cfg.base&&cfg.base.trim()){
+    (async()=>{try{const a=await _resolveGeoAnchor();if(a&&gMap){gMap.panTo({lat:a.lat,lng:a.lng});}}catch(e){}})();
+  }
 }
 function initLeafMap(){}
 // v4.9.1: Invalidar cache de geocoding quando versão muda (corrige endereços cacheados errados)
@@ -5387,13 +5406,16 @@ function renderDashStats(br,pts){
     },300);
     return;
   }
-  if(!hmMap){hmMap=new google.maps.Map(document.getElementById('heatmap'),{center:{lat:-23.55,lng:-46.63},zoom:11,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});}
-  if(hmHeatLayer)hmHeatLayer.setMap(null);
-  hmHeatLayer=new google.maps.visualization.HeatmapLayer({data:pts.map(pt=>new google.maps.LatLng(pt[0],pt[1])),radius:35,map:hmMap});
-  const hmBnds=new google.maps.LatLngBounds();pts.forEach(pt=>hmBnds.extend({lat:pt[0],lng:pt[1]}));hmMap.fitBounds(hmBnds);
-  // v4.4.0: Enforce minimum zoom level to prevent extreme zoom out
-  google.maps.event.addListenerOnce(hmMap,'idle',()=>{if(hmMap.getZoom()>15)hmMap.setZoom(15);if(hmMap.getZoom()<10)hmMap.setZoom(10);});
-  renderGeoDash(pts);
+  // fix mapa mobile: double rAF garante container visível antes de criar o mapa heatmap
+  requestAnimationFrame(()=>{requestAnimationFrame(()=>{
+    if(!hmMap){hmMap=new google.maps.Map(document.getElementById('heatmap'),{center:{lat:-23.55,lng:-46.63},zoom:11,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});}
+    if(hmHeatLayer)hmHeatLayer.setMap(null);
+    hmHeatLayer=new google.maps.visualization.HeatmapLayer({data:pts.map(pt=>new google.maps.LatLng(pt[0],pt[1])),radius:35,map:hmMap});
+    const hmBnds=new google.maps.LatLngBounds();pts.forEach(pt=>hmBnds.extend({lat:pt[0],lng:pt[1]}));hmMap.fitBounds(hmBnds);
+    // v4.4.0: Enforce minimum zoom level to prevent extreme zoom out
+    google.maps.event.addListenerOnce(hmMap,'idle',()=>{if(hmMap.getZoom()>15)hmMap.setZoom(15);if(hmMap.getZoom()<10)hmMap.setZoom(10);});
+    renderGeoDash(pts);
+  });});
   // v4.6.1: Day grouping removido
 }
 // v4.3.9: Dashboard geográfico — zonas, cobertura, densidade
