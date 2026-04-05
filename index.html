@@ -1893,6 +1893,8 @@ body.is-superadmin .ntab.admin-tab{display:flex}
       <div class="fg2">
         <div class="fg full"><label data-i18n="cfg.base">Endere&#xE7;o de partida</label><input type="text" id="cfg-base" placeholder="Ex: Rua Central, 100, S&#xE3;o Paulo"/></div>
         <div class="fg full"><label data-i18n="cfg.ret">Endere&#xE7;o de retorno</label><input type="text" id="cfg-retaddr" placeholder="Ex: Av. Brasil, 50, S&#xE3;o Paulo"/></div>
+        <div class="fg"><label>Cidade <span style="font-size:11px;color:var(--mu);font-weight:400">(para geocodificação correta)</span></label><input type="text" id="cfg-cidade" placeholder="Ex: São Paulo"/></div>
+        <div class="fg"><label>Estado (UF)</label><input type="text" id="cfg-uf" placeholder="Ex: SP" maxlength="2" style="text-transform:uppercase"/></div>
         <div class="fg"><label data-i18n="cfg.saida">Hor&#xE1;rio de sa&#xED;da</label><input type="time" id="cfg-saida" value="10:00"/></div>
         <div class="fg"><label data-i18n="cfg.retlim">Limite de retorno</label><input type="time" id="cfg-ret" value="17:00"/></div>
         <div class="fg"><label data-i18n="cfg.tempo">Tempo/parada (min)</label><input type="number" id="cfg-tempo" value="10" min="1" max="240"/></div>
@@ -2572,7 +2574,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.4.7';
+const APP_VERSION='v5.4.8';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -4058,12 +4060,13 @@ function toggleEye(fid,btn){
 
 function loadCfg(){
   cfg=safeJsonParse('rota_cfg',{});
-  ['saida','ret','tempo','base','retaddr','al1','al2','tkey','ttoken','akey','gkey'].forEach(k=>{if(cfg[k]&&g('cfg-'+k))g('cfg-'+k).value=cfg[k];});
+  ['saida','ret','tempo','base','retaddr','cidade','uf','al1','al2','tkey','ttoken','akey','gkey'].forEach(k=>{if(cfg[k]&&g('cfg-'+k))g('cfg-'+k).value=cfg[k];});
   // v4.6.2: routePriority config load removido
 }
 function saveCfg(){
   cfg={saida:v('cfg-saida'),ret:v('cfg-ret'),tempo:parseInt(v('cfg-tempo'))||10,
     base:v('cfg-base'),retaddr:v('cfg-retaddr'),
+    cidade:v('cfg-cidade').trim(),uf:v('cfg-uf').trim().toUpperCase().slice(0,2),
     // v4.6.2: routePriority removido das config
     al1:v('cfg-al1'),al2:v('cfg-al2'),
     tkey:v('cfg-tkey'),ttoken:v('cfg-ttoken'),
@@ -6637,7 +6640,7 @@ function initGoogleMaps(){
 function initLeafMap(){}
 // v4.9.1: Invalidar cache de geocoding quando versão muda (corrige endereços cacheados errados)
 (function(){
-  const GEO_CACHE_VER='4.9.1';
+  const GEO_CACHE_VER='5.4.8';
   if(localStorage.getItem('_geoCacheVer')!==GEO_CACHE_VER){
     let cleared=0;
     for(let i=localStorage.length-1;i>=0;i--){
@@ -6668,18 +6671,23 @@ async function _resolveGeoAnchor(){
   if(_geoAnchor)return _geoAnchor;
   const base=cfg.base;
   if(!base)return null;
+  // v5.4.8: Se cidade configurada explicitamente, usar como sufixo garantido
+  const cidadeExplicita=cfg.cidade?cfg.cidade.trim():'';
+  const ufExplicita=cfg.uf?cfg.uf.trim().toUpperCase():'';
+  const suffix=cidadeExplicita?(', '+cidadeExplicita+(ufExplicita?', '+ufExplicita:'')+', Brasil'):', Brasil';
   try{
     // v4.8.4: Timeout de 6s para resolver ancora
     const _acCtrl=new AbortController();const _acTid=setTimeout(()=>_acCtrl.abort(),6000);
-    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(base+', Brasil')+'&region=br&key='+GKEY,{signal:_acCtrl.signal}).then(r=>r.json());
+    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(base+suffix)+'&region=br&key='+GKEY,{signal:_acCtrl.signal}).then(r=>r.json());
     clearTimeout(_acTid);
     if(d.status==='OK'&&d.results[0]){
       const loc=d.results[0].geometry.location;
       const comps=d.results[0].address_components;
-      const state=(comps.find(c=>c.types.includes('administrative_area_level_1'))||{}).short_name||'';
-      const city=(comps.find(c=>c.types.includes('administrative_area_level_2'))||comps.find(c=>c.types.includes('locality'))||{}).long_name||'';
+      const state=ufExplicita||(comps.find(c=>c.types.includes('administrative_area_level_1'))||{}).short_name||'';
+      // v5.4.8: cidade explicita tem prioridade — evita Google retornar cidade errada
+      const city=cidadeExplicita||(comps.find(c=>c.types.includes('administrative_area_level_2'))||comps.find(c=>c.types.includes('locality'))||{}).long_name||'';
       _geoAnchor={lat:loc.lat,lng:loc.lng,state,city};
-      console.log('[GEO-ANCHOR] Base resolvida:',city+', '+state,'(',loc.lat.toFixed(4)+','+loc.lng.toFixed(4)+')');
+      console.log('[GEO-ANCHOR] Base resolvida:',city+', '+state,'(',loc.lat.toFixed(4)+','+loc.lng.toFixed(4)+')'+(cidadeExplicita?' [cidade configurada]':''));
       return _geoAnchor;
     }
   }catch(e){console.warn('[GEO-ANCHOR] Falha ao resolver base:',e);}

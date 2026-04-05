@@ -116,6 +116,13 @@
 
 ## Historico de Versoes
 
+### v5.4.8 — 05/04/2026
+- FIX: Geocodificacao classificava enderecos na cidade errada (ex: Uberlandia)
+  - Causa: _resolveGeoAnchor geocodificava cfg.base sem cidade, Google retornava 1a ocorrencia do Brasil
+  - Fix: novos campos "Cidade" e "Estado (UF)" nas configuracoes
+  - Quando preenchidos, sao usados diretamente na anchor — Google nao pode errar a cidade
+  - Bump GEO_CACHE_VER para 5.4.8: limpa todos os resultados de geocoding cacheados errados
+
 ### v5.4.7 — 05/04/2026
 - FIX: Cartoes voltavam apos limpar — abordagem definitiva via sessionStorage
   - clearAllClients seta sessionStorage rota_user_cleared=1
