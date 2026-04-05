@@ -3447,17 +3447,16 @@ function _initGoogleAuth(){
   const cid=localStorage.getItem('rota_google_client_id')||'251116670672-eulttck17vcso97daub1n7gbruiku2bn.apps.googleusercontent.com';
   if(!cid){_authShowError('auth-login-error','Google OAuth nao configurado. Use email/senha.');return;}
   if(!_googleInited){
-    google.accounts.id.initialize({client_id:cid,callback:_handleGoogleCred,auto_select:true,cancel_on_tap_outside:false,use_fedcm_for_prompt:false});
+    google.accounts.id.initialize({client_id:cid,callback:_handleGoogleCred,auto_select:false,cancel_on_tap_outside:true,use_fedcm_for_prompt:false});
     _googleInited=true;
   }
   /* Renderizar widget do Google como overlay invisível sobre nosso botão bonito.
-     O usuário vê nosso botão mas clica no widget do Google → popup abre direto. */
+     O usuário vê nosso botão mas clica no widget do Google → popup abre direto.
+     NÃO chamar google.accounts.id.prompt() — isso cria o One Tap popup embaixo da tela. */
   document.querySelectorAll('.g-signin-wrap').forEach(el=>{
     google.accounts.id.renderButton(el,{type:'standard',theme:'outline',size:'large',text:'signin_with',width:400,logo_alignment:'left'});
   });
   /* Nosso botão NUNCA é escondido — fica sempre bonito por baixo do overlay */
-  /* Tentar One Tap como fallback (funciona se o overlay não capturar o clique) */
-  try{google.accounts.id.prompt();}catch(e){}
 }
 async function _handleGoogleCred(r){
   if(!r.credential)return;
