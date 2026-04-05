@@ -117,9 +117,11 @@
 ## Historico de Versoes
 
 ### v5.5.3 — 05/04/2026
+- FIX: cfg-save-bar mobile sem faixa preta — removido background:var(--bg) e border-top do override mobile
+- FIX: botao centrado (left:50% + transform) no rodape fixo, sem container escuro
 - REFACTOR: SPA monolitico dividido em 3 arquivos para reduzir consumo de tokens
   - index.html: 8188 → 1223 linhas (estrutura HTML + scripts inline criticos)
-  - style.css: 972 linhas (todo o CSS extraido)
+  - style.css: 972 linhas (todo o CSS extraido, com fix cfg-save-bar aplicado)
   - app.js: 6053 linhas (todo o JS com 12 marcadores de secao)
 - Marcadores SECTION no app.js: i18n, UTILS, CEP/GEOCODING, CLOUD SYNC, AUTH, ADMIN PANEL,
   INIT/STARTUP, MULTI-IMPORT, TRELLO, OPTIMIZATION ENGINE, GOOGLE MAPS, HISTORY
