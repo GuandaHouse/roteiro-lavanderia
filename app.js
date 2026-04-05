@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.5.9';
+const APP_VERSION='v5.5.10';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -3157,11 +3157,13 @@ function buildTrelloNavBar(){
       +'<span class="mot-ico" style="opacity:.4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span> '
       +selBoard.name+' <span style="opacity:.4">&rsaquo;</span> '+selList.name
     +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center">'
+    +'<div style="display:flex;flex-direction:column;gap:8px">'
       +'<div style="cursor:pointer" onclick="this.querySelector(\'input\').showPicker()"><input type="date" id="td2" value="'+dv+'" style="padding:7px 10px;border:1.5px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:inherit;background:var(--sf);color:var(--tx);cursor:pointer;width:100%"/></div>'
-      +'<button class="btn bp bsm" onclick="trelloBuscarCartoes()" style="white-space:nowrap" title="Buscar cart\xF5es"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span> Buscar</button>'
-      +'<button class="btn bo bsm" onclick="resetTrello()" style="white-space:nowrap" title="Escolher lista">'+mi('refresh')+' Lista</button>'
-      +'<button class="btn bo bsm" onclick="resetTrelloFull()" style="white-space:nowrap" title="Escolher quadro">'+mi('building')+' Quadro</button>'
+      +'<div style="display:flex;gap:8px;align-items:center">'
+        +'<button class="btn bp bsm" onclick="trelloBuscarCartoes()" style="white-space:nowrap;flex:1" title="Buscar cart\xF5es"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span> Buscar</button>'
+        +'<button class="btn bo bsm" onclick="resetTrello()" style="white-space:nowrap" title="Escolher lista">'+mi('refresh')+' Lista</button>'
+        +'<button class="btn bo bsm" onclick="resetTrelloFull()" style="white-space:nowrap" title="Escolher quadro">'+mi('building')+' Quadro</button>'
+      +'</div>'
     +'</div>'
   +'</div>';
 }
