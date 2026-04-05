@@ -2,8 +2,7 @@
 // Endpoints: Auth + Admin Panel + Sync + Route KV + Proxy + ASSETS fallback
 //
 // KV BINDINGS:
-//   - ROTEIRO_KV (rotas em tempo real)
-//   - USERS (autenticação, perfis, sync, admin)
+//   - ROTEIRO_KV (rotas em tempo real + autenticação, perfis, sync, admin)
 //
 // SECRETS (wrangler secret put):
 //   - AUTH_SECRET — chave HMAC para JWT (min 32 chars)
@@ -130,11 +129,11 @@ async function makeToken(user, env) {
 }
 
 async function addToUserIndex(env, userId) {
-  const raw = await env.USERS.get('admin:users:index');
+  const raw = await env.ROTEIRO_KV.get('admin:users:index');
   const index = raw ? JSON.parse(raw) : [];
   if (!index.includes(userId)) {
     index.push(userId);
-    await env.USERS.put('admin:users:index', JSON.stringify(index));
+    await env.ROTEIRO_KV.put('admin:users:index', JSON.stringify(index));
   }
 }
 
@@ -157,7 +156,7 @@ async function handleRegister(request, env) {
   if (password.length < 8) return json({ ok: false, error: 'Senha deve ter no minimo 8 caracteres' }, 400);
   if (!email.includes('@')) return json({ ok: false, error: 'Email invalido' }, 400);
 
-  const existing = await env.USERS.get(`email:${email.toLowerCase()}`);
+  const existing = await env.ROTEIRO_KV.get(`email:${email.toLowerCase()}`);
   if (existing) return json({ ok: false, error: 'Este email ja esta cadastrado' }, 409);
 
   const userId = generateId();
@@ -177,8 +176,8 @@ async function handleRegister(request, env) {
     lastLogin: new Date().toISOString()
   };
 
-  await env.USERS.put(`user:${userId}`, JSON.stringify(user));
-  await env.USERS.put(`email:${email.toLowerCase()}`, userId);
+  await env.ROTEIRO_KV.put(`user:${userId}`, JSON.stringify(user));
+  await env.ROTEIRO_KV.put(`email:${email.toLowerCase()}`, userId);
   await addToUserIndex(env, userId);
 
   const token = await makeToken(user, env);
@@ -193,10 +192,10 @@ async function handleLogin(request, env) {
   const { email, password } = await request.json();
   if (!email || !password) return json({ ok: false, error: 'Email e senha obrigatorios' }, 400);
 
-  const userId = await env.USERS.get(`email:${email.toLowerCase()}`);
+  const userId = await env.ROTEIRO_KV.get(`email:${email.toLowerCase()}`);
   if (!userId) return json({ ok: false, error: 'Email ou senha incorretos' }, 401);
 
-  const userData = await env.USERS.get(`user:${userId}`);
+  const userData = await env.ROTEIRO_KV.get(`user:${userId}`);
   if (!userData) return json({ ok: false, error: 'Conta nao encontrada' }, 401);
 
   const user = JSON.parse(userData);
@@ -207,7 +206,7 @@ async function handleLogin(request, env) {
   if (!user.role) user.role = getUserRole(user.email);
   if (!user.plan) user.plan = 'free';
   if (!user.status) user.status = 'active';
-  await env.USERS.put(`user:${userId}`, JSON.stringify(user));
+  await env.ROTEIRO_KV.put(`user:${userId}`, JSON.stringify(user));
   await addToUserIndex(env, userId);
 
   const token = await makeToken(user, env);
@@ -239,21 +238,21 @@ async function handleGoogleAuth(request, env) {
   const name = gUser.name || gUser.given_name || email;
   const picture = gUser.picture || null;
 
-  let userId = await env.USERS.get(`google:${googleId}`);
+  let userId = await env.ROTEIRO_KV.get(`google:${googleId}`);
   let isNew = false;
 
   if (!userId) {
-    userId = await env.USERS.get(`email:${email}`);
+    userId = await env.ROTEIRO_KV.get(`email:${email}`);
     if (userId) {
-      await env.USERS.put(`google:${googleId}`, userId);
-      const userData = JSON.parse(await env.USERS.get(`user:${userId}`));
+      await env.ROTEIRO_KV.put(`google:${googleId}`, userId);
+      const userData = JSON.parse(await env.ROTEIRO_KV.get(`user:${userId}`));
       userData.googleId = googleId;
       userData.picture = picture;
       userData.provider = userData.provider === 'email' ? 'google' : userData.provider;
       if (!userData.role) userData.role = getUserRole(email);
       if (!userData.plan) userData.plan = 'free';
       if (!userData.status) userData.status = 'active';
-      await env.USERS.put(`user:${userId}`, JSON.stringify(userData));
+      await env.ROTEIRO_KV.put(`user:${userId}`, JSON.stringify(userData));
     } else {
       userId = generateId();
       isNew = true;
@@ -266,19 +265,19 @@ async function handleGoogleAuth(request, env) {
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString()
       };
-      await env.USERS.put(`user:${userId}`, JSON.stringify(user));
-      await env.USERS.put(`email:${email}`, userId);
-      await env.USERS.put(`google:${googleId}`, userId);
+      await env.ROTEIRO_KV.put(`user:${userId}`, JSON.stringify(user));
+      await env.ROTEIRO_KV.put(`email:${email}`, userId);
+      await env.ROTEIRO_KV.put(`google:${googleId}`, userId);
     }
   }
 
-  const userData = JSON.parse(await env.USERS.get(`user:${userId}`));
+  const userData = JSON.parse(await env.ROTEIRO_KV.get(`user:${userId}`));
   userData.lastLogin = new Date().toISOString();
   userData.picture = picture || userData.picture;
   if (!userData.role) userData.role = getUserRole(email);
   if (!userData.plan) userData.plan = 'free';
   if (!userData.status) userData.status = 'active';
-  await env.USERS.put(`user:${userId}`, JSON.stringify(userData));
+  await env.ROTEIRO_KV.put(`user:${userId}`, JSON.stringify(userData));
   await addToUserIndex(env, userId);
 
   const token = await makeToken(userData, env);
@@ -304,20 +303,20 @@ async function handleFacebookAuth(request, env) {
 
   if (!email) return json({ ok: false, error: 'Facebook nao retornou email. Verifique as permissoes.' }, 400);
 
-  let userId = await env.USERS.get(`facebook:${fbId}`);
+  let userId = await env.ROTEIRO_KV.get(`facebook:${fbId}`);
   let isNew = false;
 
   if (!userId) {
-    userId = await env.USERS.get(`email:${email}`);
+    userId = await env.ROTEIRO_KV.get(`email:${email}`);
     if (userId) {
-      await env.USERS.put(`facebook:${fbId}`, userId);
-      const userData = JSON.parse(await env.USERS.get(`user:${userId}`));
+      await env.ROTEIRO_KV.put(`facebook:${fbId}`, userId);
+      const userData = JSON.parse(await env.ROTEIRO_KV.get(`user:${userId}`));
       userData.facebookId = fbId;
       userData.picture = picture;
       if (!userData.role) userData.role = getUserRole(email);
       if (!userData.plan) userData.plan = 'free';
       if (!userData.status) userData.status = 'active';
-      await env.USERS.put(`user:${userId}`, JSON.stringify(userData));
+      await env.ROTEIRO_KV.put(`user:${userId}`, JSON.stringify(userData));
     } else {
       userId = generateId();
       isNew = true;
@@ -330,18 +329,18 @@ async function handleFacebookAuth(request, env) {
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString()
       };
-      await env.USERS.put(`user:${userId}`, JSON.stringify(user));
-      await env.USERS.put(`email:${email}`, userId);
-      await env.USERS.put(`facebook:${fbId}`, userId);
+      await env.ROTEIRO_KV.put(`user:${userId}`, JSON.stringify(user));
+      await env.ROTEIRO_KV.put(`email:${email}`, userId);
+      await env.ROTEIRO_KV.put(`facebook:${fbId}`, userId);
     }
   }
 
-  const userData = JSON.parse(await env.USERS.get(`user:${userId}`));
+  const userData = JSON.parse(await env.ROTEIRO_KV.get(`user:${userId}`));
   userData.lastLogin = new Date().toISOString();
   if (!userData.role) userData.role = getUserRole(email);
   if (!userData.plan) userData.plan = 'free';
   if (!userData.status) userData.status = 'active';
-  await env.USERS.put(`user:${userId}`, JSON.stringify(userData));
+  await env.ROTEIRO_KV.put(`user:${userId}`, JSON.stringify(userData));
   await addToUserIndex(env, userId);
 
   const token = await makeToken(userData, env);
@@ -365,7 +364,7 @@ async function authenticateRequest(request, env) {
 async function handleSyncGet(request, env) {
   const payload = await authenticateRequest(request, env);
   if (!payload) return json({ ok: false, error: 'Nao autenticado' }, 401);
-  const data = await env.USERS.get(`sync:${payload.sub}`);
+  const data = await env.ROTEIRO_KV.get(`sync:${payload.sub}`);
   return json({ ok: true, data: data ? JSON.parse(data) : null });
 }
 
@@ -377,7 +376,7 @@ async function handleSyncPost(request, env) {
   if (serialized.length > 2 * 1024 * 1024) {
     return json({ ok: false, error: 'Dados muito grandes. Reduza o historico.' }, 413);
   }
-  await env.USERS.put(`sync:${payload.sub}`, serialized);
+  await env.ROTEIRO_KV.put(`sync:${payload.sub}`, serialized);
   return json({ ok: true });
 }
 
@@ -389,7 +388,7 @@ async function handleAdminStats(request, env) {
   const admin = await requireAdmin(request, env);
   if (!admin) return err('Acesso negado', 403);
 
-  const raw = await env.USERS.get('admin:users:index');
+  const raw = await env.ROTEIRO_KV.get('admin:users:index');
   const index = raw ? JSON.parse(raw) : [];
 
   let totalUsers = index.length;
@@ -399,10 +398,10 @@ async function handleAdminStats(request, env) {
   const todayStr = now.toISOString().split('T')[0];
   const weekAgo = new Date(now - 7 * 86400000).toISOString();
 
-  const plans = JSON.parse(await env.USERS.get('admin:plans') || 'null') || DEFAULT_PLANS;
+  const plans = JSON.parse(await env.ROTEIRO_KV.get('admin:plans') || 'null') || DEFAULT_PLANS;
 
   for (const uid of index) {
-    const uRaw = await env.USERS.get(`user:${uid}`);
+    const uRaw = await env.ROTEIRO_KV.get(`user:${uid}`);
     if (!uRaw) continue;
     const u = JSON.parse(uRaw);
     const plan = u.plan || 'free';
@@ -434,12 +433,12 @@ async function handleAdminUsers(request, env) {
   const page = parseInt(url.searchParams.get('page') || '1');
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100);
 
-  const raw = await env.USERS.get('admin:users:index');
+  const raw = await env.ROTEIRO_KV.get('admin:users:index');
   const index = raw ? JSON.parse(raw) : [];
 
   let users = [];
   for (const uid of index) {
-    const uRaw = await env.USERS.get(`user:${uid}`);
+    const uRaw = await env.ROTEIRO_KV.get(`user:${uid}`);
     if (!uRaw) continue;
     const u = makeUserPublic(JSON.parse(uRaw));
     if (!u.plan) u.plan = 'free';
@@ -471,12 +470,12 @@ async function handleAdminUserDetail(request, env, userId) {
   const admin = await requireAdmin(request, env);
   if (!admin) return err('Acesso negado', 403);
 
-  const uRaw = await env.USERS.get(`user:${userId}`);
+  const uRaw = await env.ROTEIRO_KV.get(`user:${userId}`);
   if (!uRaw) return err('Usuario nao encontrado', 404);
   const u = makeUserPublic(JSON.parse(uRaw));
 
   // Sync summary
-  const syncRaw = await env.USERS.get(`sync:${userId}`);
+  const syncRaw = await env.ROTEIRO_KV.get(`sync:${userId}`);
   if (syncRaw) {
     const sync = JSON.parse(syncRaw);
     u.syncSummary = {
@@ -497,7 +496,7 @@ async function handleAdminUpdatePlan(request, env, userId) {
   const { plan } = await request.json();
   if (!plan) return err('Plano obrigatorio');
 
-  const uRaw = await env.USERS.get(`user:${userId}`);
+  const uRaw = await env.ROTEIRO_KV.get(`user:${userId}`);
   if (!uRaw) return err('Usuario nao encontrado', 404);
   const u = JSON.parse(uRaw);
 
@@ -506,7 +505,7 @@ async function handleAdminUpdatePlan(request, env, userId) {
   if (!u.planHistory) u.planHistory = [];
   u.planHistory.push({ from: oldPlan, to: plan, date: new Date().toISOString(), by: admin.email });
 
-  await env.USERS.put(`user:${userId}`, JSON.stringify(u));
+  await env.ROTEIRO_KV.put(`user:${userId}`, JSON.stringify(u));
   return json({ ok: true, plan });
 }
 
@@ -517,18 +516,18 @@ async function handleAdminUpdateStatus(request, env, userId) {
   const { status } = await request.json();
   if (!['active', 'inactive'].includes(status)) return err('Status invalido');
 
-  const uRaw = await env.USERS.get(`user:${userId}`);
+  const uRaw = await env.ROTEIRO_KV.get(`user:${userId}`);
   if (!uRaw) return err('Usuario nao encontrado', 404);
   const u = JSON.parse(uRaw);
   u.status = status;
-  await env.USERS.put(`user:${userId}`, JSON.stringify(u));
+  await env.ROTEIRO_KV.put(`user:${userId}`, JSON.stringify(u));
   return json({ ok: true, status });
 }
 
 async function handleAdminGetPlans(request, env) {
   const admin = await requireAdmin(request, env);
   if (!admin) return err('Acesso negado', 403);
-  const plans = JSON.parse(await env.USERS.get('admin:plans') || 'null') || DEFAULT_PLANS;
+  const plans = JSON.parse(await env.ROTEIRO_KV.get('admin:plans') || 'null') || DEFAULT_PLANS;
   return json(plans);
 }
 
@@ -541,7 +540,7 @@ async function handleAdminUpdatePlans(request, env) {
   for (const k of Object.keys(plans)) {
     if (merged[k]) merged[k] = { ...merged[k], ...plans[k] };
   }
-  await env.USERS.put('admin:plans', JSON.stringify(merged));
+  await env.ROTEIRO_KV.put('admin:plans', JSON.stringify(merged));
   return json({ ok: true });
 }
 
@@ -549,12 +548,12 @@ async function handleAdminExport(request, env) {
   const admin = await requireAdmin(request, env);
   if (!admin) return err('Acesso negado', 403);
 
-  const raw = await env.USERS.get('admin:users:index');
+  const raw = await env.ROTEIRO_KV.get('admin:users:index');
   const index = raw ? JSON.parse(raw) : [];
 
   let csv = 'ID,Nome,Email,Provedor,Plano,Status,Criado em,Ultimo Login\n';
   for (const uid of index) {
-    const uRaw = await env.USERS.get(`user:${uid}`);
+    const uRaw = await env.ROTEIRO_KV.get(`user:${uid}`);
     if (!uRaw) continue;
     const u = JSON.parse(uRaw);
     const esc = (s) => '"' + (s || '').replace(/"/g, '""') + '"';
@@ -585,6 +584,10 @@ export default {
 };
 
 async function handleRequest(request, env) {
+    if (!env.ROTEIRO_KV) {
+      return json({ error: 'Storage not available' }, 503);
+    }
+
     // CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
