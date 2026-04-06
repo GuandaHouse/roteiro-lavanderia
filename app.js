@@ -1767,8 +1767,8 @@ async function _admExportCSV(){
 // Sync
 let _syncTimer=null;
 function _authHeaders(){return _authToken?{'Authorization':'Bearer '+_authToken,'Content-Type':'application/json'}:{'Content-Type':'application/json'};}
-async function _syncPull(){if(!_authToken)return;try{const res=await fetch(WORKER_URL+'/api/user/sync',{headers:_authHeaders()});if(!res.ok)return;const data=await res.json();if(!data.ok||!data.data)return;const d=data.data;if(d.cfg){Object.keys(d.cfg).forEach(k=>{if(d.cfg[k]!==undefined)cfg[k]=d.cfg[k];});localStorage.setItem('rota_cfg',JSON.stringify(cfg));loadCfg();}if(d.tags&&Array.isArray(d.tags)){localStorage.setItem('rota_tags',JSON.stringify(d.tags));renderTagsConfig();updateTagSelects();}if(d.hist&&Array.isArray(d.hist)){const local=getHist();const cd=new Set(d.hist.map(h=>h.date));const merged=[...d.hist,...local.filter(h=>!cd.has(h.date))].sort((a,b)=>b.date.localeCompare(a.date));try{localStorage.setItem('rota_hist',JSON.stringify(merged.slice(0,90)));}catch(e){}renderHist();}console.log('[SYNC] Pull completo');}catch(e){console.warn('[SYNC] Pull falhou:',e.message);}}
-async function _syncPush(){if(!_authToken)return;try{await fetch(WORKER_URL+'/api/user/sync',{method:'POST',headers:_authHeaders(),body:JSON.stringify({cfg,tags:safeJsonParse('rota_tags',[]),hist:getHist().slice(0,30),lang:_lang||'pt',theme:localStorage.getItem('rota_theme')||'light'})});console.log('[SYNC] Push completo');}catch(e){console.warn('[SYNC] Push falhou:',e.message);}}
+async function _syncPull(){if(!_authToken)return;try{const res=await fetch(WORKER_URL+'/api/user/sync',{headers:_authHeaders()});if(!res.ok)return;const data=await res.json();if(!data.ok||!data.data)return;const d=data.data;if(d.cfg){Object.keys(d.cfg).forEach(k=>{if(d.cfg[k]!==undefined)cfg[k]=d.cfg[k];});localStorage.setItem('rota_cfg',JSON.stringify(cfg));loadCfg();}if(d.tags&&Array.isArray(d.tags)){_tags=d.tags;localStorage.setItem('rota_tags',JSON.stringify(d.tags));renderTagsConfig();updateTagSelects();renderC();}if(d.hist&&Array.isArray(d.hist)){const local=getHist();const allEntries=[...d.hist,...local];const byDate={};allEntries.forEach(h=>{if(!byDate[h.date]||h.savedAt>byDate[h.date].savedAt)byDate[h.date]=h;});const merged=Object.values(byDate).sort((a,b)=>b.date.localeCompare(a.date));try{localStorage.setItem('rota_hist',JSON.stringify(merged.slice(0,90)));}catch(e){}renderHist();}console.log('[SYNC] Pull completo');}catch(e){console.warn('[SYNC] Pull falhou:',e.message);}}
+async function _syncPush(){if(!_authToken)return;try{await fetch(WORKER_URL+'/api/user/sync',{method:'POST',headers:_authHeaders(),body:JSON.stringify({cfg,tags:safeJsonParse('rota_tags',[]),hist:getHist(),lang:_lang||'pt',theme:localStorage.getItem('rota_theme')||'light'})});console.log('[SYNC] Push completo');}catch(e){console.warn('[SYNC] Push falhou:',e.message);}}
 function _syncPushDebounced(){if(!_authToken)return;clearTimeout(_syncTimer);_syncTimer=setTimeout(_syncPush,5000);}
 
 
@@ -2057,7 +2057,7 @@ function goPage(p,el){if(_isMotoristaMode)return;window.scrollTo(0,0);window.scr
   // Permite o browser pintar a troca antes de executar render pesado
   if(p==='dash')requestAnimationFrame(()=>renderDash());
   if(p==='motor')requestAnimationFrame(()=>{renderMotor();if(!_isMotoristaMode&&_currentRouteId&&_cloudVersion>0)startGestorPolling();});
-  if(p==='hist')requestAnimationFrame(()=>renderHist());
+  if(p==='hist'){requestAnimationFrame(()=>renderHist());const _now=Date.now();if(!window._lastHistSync||_now-window._lastHistSync>60000){window._lastHistSync=_now;_syncPull().catch(()=>{});}}
   if(p==='adm')requestAnimationFrame(()=>_admInit());
 }
 /* v5.5.0: Botao voltar do mobile navega entre abas em vez de sair do app */
@@ -5105,6 +5105,7 @@ function saveHist(){
   const i=hist.findIndex(h=>h.date===today);
   if(i>=0)hist[i]=entry;else hist.unshift(entry);
   localStorage.setItem('rota_hist',JSON.stringify(hist.slice(0,90)));
+  _syncPushDebounced();
   // Auto-publish to cloud if route has been published
   if(_currentRouteId)cloudPublish();
 }
