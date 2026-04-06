@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.6.0';
+const APP_VERSION='v5.6.1';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -959,6 +959,7 @@ async function cloudPublish(){
       _cloudHash=data.hash;
       toast(t('t.published'),'ok');
       setCloudStatus('synced','Rota online e sincronizada em tempo real');
+      _syncPushDebounced();
     } else {
       toast(t('err.publish')+(data.error||t('err.unknown')),'err');
     }
@@ -1767,8 +1768,8 @@ async function _admExportCSV(){
 // Sync
 let _syncTimer=null;
 function _authHeaders(){return _authToken?{'Authorization':'Bearer '+_authToken,'Content-Type':'application/json'}:{'Content-Type':'application/json'};}
-async function _syncPull(){if(!_authToken)return;try{const res=await fetch(WORKER_URL+'/api/user/sync',{headers:_authHeaders()});if(!res.ok)return;const data=await res.json();if(!data.ok||!data.data)return;const d=data.data;if(d.cfg){Object.keys(d.cfg).forEach(k=>{if(d.cfg[k]!==undefined)cfg[k]=d.cfg[k];});localStorage.setItem('rota_cfg',JSON.stringify(cfg));loadCfg();}if(d.tags&&Array.isArray(d.tags)){_tags=d.tags;localStorage.setItem('rota_tags',JSON.stringify(d.tags));renderTagsConfig();updateTagSelects();renderC();}if(d.hist&&Array.isArray(d.hist)){const local=getHist();const allEntries=[...d.hist,...local];const byDate={};allEntries.forEach(h=>{if(!byDate[h.date]||h.savedAt>byDate[h.date].savedAt)byDate[h.date]=h;});const merged=Object.values(byDate).sort((a,b)=>b.date.localeCompare(a.date));try{localStorage.setItem('rota_hist',JSON.stringify(merged.slice(0,90)));}catch(e){}renderHist();}console.log('[SYNC] Pull completo');}catch(e){console.warn('[SYNC] Pull falhou:',e.message);}}
-async function _syncPush(){if(!_authToken)return;try{await fetch(WORKER_URL+'/api/user/sync',{method:'POST',headers:_authHeaders(),body:JSON.stringify({cfg,tags:safeJsonParse('rota_tags',[]),hist:getHist(),lang:_lang||'pt',theme:localStorage.getItem('rota_theme')||'light'})});console.log('[SYNC] Push completo');}catch(e){console.warn('[SYNC] Push falhou:',e.message);}}
+async function _syncPull(){if(!_authToken)return;try{const res=await fetch(WORKER_URL+'/api/user/sync',{headers:_authHeaders()});if(!res.ok)return;const data=await res.json();if(!data.ok||!data.data)return;const d=data.data;if(d.cfg){Object.keys(d.cfg).forEach(k=>{if(d.cfg[k]!==undefined)cfg[k]=d.cfg[k];});localStorage.setItem('rota_cfg',JSON.stringify(cfg));loadCfg();}if(d.tags&&Array.isArray(d.tags)){_tags=d.tags;localStorage.setItem('rota_tags',JSON.stringify(d.tags));renderTagsConfig();updateTagSelects();renderC();}if(d.hist&&Array.isArray(d.hist)){const local=getHist();const allEntries=[...d.hist,...local];const byDate={};allEntries.forEach(h=>{if(!byDate[h.date]||h.savedAt>byDate[h.date].savedAt)byDate[h.date]=h;});const merged=Object.values(byDate).sort((a,b)=>b.date.localeCompare(a.date));try{localStorage.setItem('rota_hist',JSON.stringify(merged.slice(0,90)));}catch(e){}renderHist();}if(d.routeId&&!clients.length){cloudLoad(d.routeId).then(route=>{if(route&&route.clients&&route.clients.length){clients=route.clients;order=route.order||clients.map((_,i)=>i);renderC();updStats();updBtns();_rebuildCachedMatrix();autoSaveRoute();toast('Rota carregada do outro dispositivo','ok');}}).catch(()=>{});}console.log('[SYNC] Pull completo');}catch(e){console.warn('[SYNC] Pull falhou:',e.message);}}
+async function _syncPush(){if(!_authToken)return;try{await fetch(WORKER_URL+'/api/user/sync',{method:'POST',headers:_authHeaders(),body:JSON.stringify({cfg,tags:safeJsonParse('rota_tags',[]),hist:getHist(),routeId:_currentRouteId||null,lang:_lang||'pt',theme:localStorage.getItem('rota_theme')||'light'})});console.log('[SYNC] Push completo');}catch(e){console.warn('[SYNC] Push falhou:',e.message);}}
 function _syncPushDebounced(){if(!_authToken)return;clearTimeout(_syncTimer);_syncTimer=setTimeout(_syncPush,5000);}
 
 
