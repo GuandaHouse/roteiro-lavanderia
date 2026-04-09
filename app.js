@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.16';
+const APP_VERSION='v5.8.17';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -574,55 +574,59 @@ function _geoLocAdd(baseAddr,newLocs){
   }catch(e){}
 }
 
-// v5.8.11: Busca EXAUSTIVA — 6 queries em paralelo cobrindo N/S/L/O + centro + neutro
-// Garante que TODOS os locais numa rua sejam descobertos de uma vez, não incrementalmente.
-// Cache em localStorage: uma vez pesquisado, não refaz as queries.
-async function _findAllGeoLocations(baseAddr){
+// v5.8.17: Busca via ViaCEP (Correios oficial) + 1 Google neutro
+// ViaCEP retorna TODOS os bairros com aquele nome de rua na cidade — muito mais preciso
+// que 12 queries Google biased que perdiam casos (ex: Colônia/Zona Sul).
+// clientCity: cidade do cliente (ex: "São Paulo") para buscar além da âncora se diferente.
+async function _findAllGeoLocations(baseAddr,clientCity){
   if(!baseAddr||!GKEY)return[];
-  // Verificar cache primeiro — se já conhecemos os locais, retornar imediatamente
   const cached=_geoLocGet(baseAddr);
   if(cached&&cached.length>0)return cached;
   await _resolveGeoAnchor();
   const ax=_geoAnchor?_geoAnchor.lat:-23.55;
   const ay=_geoAnchor?_geoAnchor.lng:-46.63;
-  const S=0.28; // raio curto ~31km
-  const L=0.58; // raio longo ~65km
-  const BOX=0.35;
-  // 11 viewpoints (4 cardeais ×2 raios + 4 diagonais + centro) + 1 neutro = 12 queries simultâneas
-  const viewpoints=[
-    [ax,ay],        // centro
-    [ax+S,ay],      // N curto
-    [ax-S,ay],      // S curto
-    [ax,ay+S],      // L curto
-    [ax,ay-S],      // O curto
-    [ax+L,ay],      // N longo
-    [ax-L,ay],      // S longo
-    [ax,ay+L],      // L longo
-    [ax,ay-L],      // O longo
-    [ax+S,ay+S],    // NL diagonal
-    [ax-S,ay-S],    // SO diagonal
-    null,           // neutro (sem bounds — resultado global do Google)
-  ];
-  const queries=viewpoints.map(vp=>{
-    const bounds=vp?'&bounds='+(vp[0]-BOX).toFixed(4)+','+(vp[1]-BOX).toFixed(4)+'|'+(vp[0]+BOX).toFixed(4)+','+(vp[1]+BOX).toFixed(4):'';
-    const url='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(baseAddr+', Brasil')+'&region=br&components=country:BR&key='+GKEY+bounds;
-    const ac=new AbortController();setTimeout(()=>ac.abort(),8000);
-    return fetch(url,{signal:ac.signal}).then(r=>r.json()).catch(()=>null);
+  const anchorCity=_geoAnchor?.city||'';
+  const anchorState=_geoAnchor?.state||'SP';
+  // Extrai só tipo+nome da rua, sem número (ViaCEP não aceita número)
+  const streetOnly=baseAddr.split(',')[0].trim();
+  // Cidades a buscar: âncora + cidade do cliente (se diferente)
+  const cities=[...new Set([anchorCity,clientCity].filter(c=>c&&c.length>1))];
+  // 1. ViaCEP — fonte oficial Correios, retorna todos os logradouros com esse nome
+  const viacepPromises=cities.map(city=>{
+    const url='https://viacep.com.br/ws/'+encodeURIComponent(anchorState)+'/'+encodeURIComponent(city)+'/'+encodeURIComponent(streetOnly)+'/json/';
+    const ac=new AbortController();setTimeout(()=>ac.abort(),7000);
+    return fetch(url,{signal:ac.signal}).then(r=>r.json()).catch(()=>[]);
   });
-  const responses=await Promise.all(queries);
+  // 2. Google neutro (1 query sem bounds) — captura casos cross-city/cross-state
+  const ac0=new AbortController();setTimeout(()=>ac0.abort(),7000);
+  const googlePromise=fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(baseAddr+', Brasil')+'&region=br&components=country:BR&key='+GKEY,{signal:ac0.signal}).then(r=>r.json()).catch(()=>null);
+  const[viacepArrays,googleData]=await Promise.all([Promise.all(viacepPromises),googlePromise]);
+  // Geocodifica cada resultado ViaCEP pelo CEP — muito mais preciso que geocoding por texto
+  const allVc=viacepArrays.flat().filter(r=>r&&!r.erro&&r.cep);
+  const uniqueCeps=[...new Set(allVc.map(r=>r.cep.replace('-','')))];
+  const cepGeoPromises=uniqueCeps.map(cep=>{
+    const ac=new AbortController();setTimeout(()=>ac.abort(),6000);
+    return fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(cep)+',+Brasil&region=br&key='+GKEY,{signal:ac.signal})
+      .then(r=>r.json()).catch(()=>null).then(d=>{
+        if(!d||d.status!=='OK'||!d.results.length)return null;
+        const loc=_extractGeoResult(d.results[0]);
+        const vc=allVc.find(r=>r.cep.replace('-','')==cep);
+        if(vc){loc.bairro=vc.bairro||loc.bairro;loc.cidade=vc.localidade||loc.cidade;}
+        return loc;
+      });
+  });
+  const cepGeos=await Promise.all(cepGeoPromises);
+  // Google neutro → 1 local adicional (cross-city)
+  const googleLoc=googleData?.status==='OK'&&googleData.results.length?_extractGeoResult(googleData.results[0]):null;
+  // Combina, filtra (≤100km da âncora) e deduplica (≥2km entre si)
   const found=[];
-  for(const d of responses){
-    if(!d||d.status!=='OK'||!d.results.length)continue;
-    const loc=_extractGeoResult(d.results[0]);
-    if(!loc.lat||!loc.lng)continue;
-    // Só inclui dentro de ~100km da âncora
+  for(const loc of[...cepGeos,googleLoc].filter(Boolean)){
+    if(!loc?.lat||!loc?.lng)continue;
     if(_geoAnchor&&_geoDistKm({lat:loc.lat,lng:loc.lng},{lat:ax,lng:ay})>100)continue;
-    // Deduplica: não adiciona se já existe resultado a <2km
     if(!found.some(f=>_geoDistKm(f,loc)<2))found.push(loc);
   }
-  // Persiste no registry para uso imediato em outros clientes com a mesma rua
   if(found.length)_geoLocAdd(baseAddr,found);
-  console.log('[GEO-FIND] '+baseAddr+' → '+found.length+' local(is): '+found.map(f=>f.cidade).join(', '));
+  console.log('[GEO-FIND] '+baseAddr+' (ViaCEP×'+cities.length+'+Google) → '+found.length+' local(is): '+found.map(f=>(f.cidade||'')+(f.bairro?'/'+f.bairro:'')).join(', '));
   return found;
 }
 
@@ -631,7 +635,7 @@ async function _findAllGeoLocations(baseAddr){
 async function _checkGeoAmbiguity(chosenLat,chosenLng,chosenBairro,chosenCidade,baseAddr){
   if(!baseAddr||!GKEY)return null;
   try{
-    const allLocs=await _findAllGeoLocations(baseAddr);
+    const allLocs=await _findAllGeoLocations(baseAddr,chosenCidade);
     if(!allLocs.length)return null;
     // Verifica se há pelo menos 1 local alternativo a >3km do escolhido
     const hasAlternative=allLocs.some(loc=>_geoDistKm({lat:chosenLat,lng:chosenLng},loc)>3);
@@ -2108,6 +2112,15 @@ function _initApp(){
     }
     if(changed){localStorage.setItem('rota_addr_choices',JSON.stringify(cleaned));console.log('[v5.8.16] Removidos choices sem type:alt do cache de endereços');}
   }catch(e){}
+  // v5.8.17: Limpar cache de locais geográficos (rota_geo_locs) — dados antigos via 12x Google
+  // podem estar incompletos (perdiam Colônia/Zona Sul etc). ViaCEP agora repopula automaticamente.
+  try{
+    if(!localStorage.getItem('rota_geo_locs_viacep_migrated')){
+      localStorage.removeItem('rota_geo_locs');
+      localStorage.setItem('rota_geo_locs_viacep_migrated','1');
+      console.log('[v5.8.17] Cache rota_geo_locs limpo — será repopulado via ViaCEP');
+    }
+  }catch(e){}
   // v5.8.9: Auditoria de ambiguidade geográfica — compara coords armazenadas vs geocode neutro
   setTimeout(()=>{_runStoredGeoAudit();},2500);
   // v5.0.1: Auto-limpeza da rota ao virar o dia
@@ -3573,11 +3586,11 @@ async function showAddrPicker(clientId){
     modal.classList.add('on');
     const baseAddr=_extractBaseAddr(c.endereco);
     if(baseAddr){
-      // v5.8.11: busca exaustiva — todos os locais para essa rua
-      const allLocs=await _findAllGeoLocations(baseAddr);
+      // v5.8.17: busca via ViaCEP — todos os locais para essa rua (passa cidade do cliente)
       const parts=c.endereco.split('\u2014').map(p=>p.trim()).filter(Boolean);
       const storedBairro=parts.length>=3?parts[parts.length-2]:(parts.length===2?'':'');
       const storedCidade=parts.length>=2?parts[parts.length-1]:(c._cidade||'');
+      const allLocs=await _findAllGeoLocations(baseAddr,storedCidade);
       if(c.lat&&c.lng){
         const chosen={lat:c.lat,lng:c.lng,bairro:storedBairro,cidade:storedCidade,isStored:true};
         const others=allLocs.filter(loc=>_geoDistKm(loc,{lat:c.lat,lng:c.lng})>2)
