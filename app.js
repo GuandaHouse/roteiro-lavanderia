@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.8';
+const APP_VERSION='v5.8.9';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -557,6 +557,81 @@ function _runMismatchMigration(){
   });
   if(changed){console.log('[MISMATCH] '+changed+' cliente(s) marcados para verificação');renderC();autoSaveRoute();}
   localStorage.setItem(KEY,'1');
+}
+// ────────────────────────────────────────────────────────────────────────────
+
+// v5.8.9: Extrai apenas rua + número do endereço (sem complemento, bairro ou cidade)
+// Ex: "Rua São Manoel, 57, Apto 104 — Cidade São Mateus — São Paulo" → "Rua São Manoel, 57"
+function _extractBaseAddr(addr){
+  if(!addr||addr.length<5)return null;
+  // Pega só a primeira parte (antes do primeiro —)
+  let base=addr.split('\u2014')[0].trim();
+  // Remove complemento embutido (Apto X, Bloco Y, etc.)
+  base=base.replace(/,?\s*\b(apto?\.?|ap\.?|apartamento|bl(?:oco?)?\.?|bloco|torre[\s\d]*|andar[\s\d]*|sala\s*[\d\w]*|sl\.?\s*[\d\w]*|conj\.?\s*[\d\w]*|kit|fundos|casa\s+\d|pav\.?\s*[\d\w]*|unid\.?\s*[\d\w]*)\b.*/i,'').trim();
+  // Garante que há pelo menos logradouro + número
+  const m=base.match(/^[^,]+,\s*\d+/);
+  if(!m)return null;
+  return m[0].trim();
+}
+
+// v5.8.9: Compara coords armazenadas contra geocode sem viés geográfico
+// Se o Google (sem bounds) retorna local >3km das coords armazenadas → ambiguidade real
+async function _checkStoredGeoAmbiguity(client){
+  if(!client.lat||!client.lng||client._addrPending)return null;
+  // Usuário já escolheu esse endereço explicitamente → não rever
+  if(_addrChoiceGet(client.endereco))return null;
+  const baseAddr=_extractBaseAddr(client.endereco);
+  if(!baseAddr)return null;
+  if(!GKEY)return null;
+  try{
+    const ac=new AbortController();const tid=setTimeout(()=>ac.abort(),8000);
+    const url='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(baseAddr+', Brasil')+'&region=br&components=country:BR&key='+GKEY;
+    const d=await fetch(url,{signal:ac.signal}).then(r=>r.json());
+    clearTimeout(tid);
+    if(d.status!=='OK'||!d.results.length)return null;
+    const altResult=d.results[0];
+    const altLat=altResult.geometry.location.lat;
+    const altLng=altResult.geometry.location.lng;
+    const distKm=_geoDistKm({lat:client.lat,lng:client.lng},{lat:altLat,lng:altLng});
+    if(distKm<3)return null; // Mesmo local — sem ambiguidade
+    const altExtracted=_extractGeoResult(altResult);
+    // Extrair rótulo do local armazenado a partir do texto do endereço
+    const parts=client.endereco.split('\u2014').map(p=>p.trim()).filter(Boolean);
+    const storedBairro=parts.length>=3?parts[parts.length-2]:(parts.length===2?'':'');
+    const storedCidade=parts.length>=2?parts[parts.length-1]:(client._cidade||'');
+    console.log('[GEO-AUDIT] '+client.nome+': armazenado em "'+storedCidade+'" | alternativa "'+altExtracted.cidade+'" a '+distKm.toFixed(1)+'km');
+    return {
+      stored:{lat:client.lat,lng:client.lng,bairro:storedBairro,cidade:storedCidade,display:client.endereco,isStored:true},
+      alt:altExtracted,
+      distKm
+    };
+  }catch(e){console.warn('[GEO-AUDIT]',e.message);return null;}
+}
+
+// v5.8.9: Auditoria em background — verifica ambiguidade em todos os clientes geocodificados
+// Roda 2.5s após o app iniciar, com 350ms de pausa entre chamadas (anti rate-limit)
+// Cache: rota_geo_audit_v589 salva IDs já verificados (não re-checa a cada abertura)
+async function _runStoredGeoAudit(){
+  if(!clients.length)return;
+  const AUDIT_KEY='rota_geo_audit_v589';
+  const audited=new Set(safeJsonParse(AUDIT_KEY,[]));
+  const toCheck=clients.filter(c=>c.lat&&c.lng&&!c._addrPending&&!audited.has(c.id));
+  if(!toCheck.length)return;
+  console.log('[GEO-AUDIT] Verificando '+toCheck.length+' cliente(s) com coords armazenadas...');
+  let anyFound=false;
+  for(const c of toCheck){
+    const result=await _checkStoredGeoAmbiguity(c);
+    audited.add(c.id);
+    if(result){
+      c._addrPending=true;
+      // results[0] = local atual (isStored:true), results[1] = alternativa do Google
+      c._addrResults=[result.stored,result.alt];
+      anyFound=true;
+    }
+    await new Promise(res=>setTimeout(res,350));
+  }
+  try{localStorage.setItem(AUDIT_KEY,JSON.stringify([...audited]));}catch(e){}
+  if(anyFound){console.log('[GEO-AUDIT] Ambiguidade(s) encontrada(s) — exibindo badge(s)');renderC();autoSaveRoute();}
 }
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -1980,6 +2055,8 @@ function _initApp(){
   setTimeout(()=>{_runAddrMigration();},500);
   // v5.8.8: Detectar divergência de cidade em clientes já geocodificados
   setTimeout(()=>{_runMismatchMigration();},1200);
+  // v5.8.9: Auditoria de ambiguidade geográfica — compara coords armazenadas vs geocode neutro
+  setTimeout(()=>{_runStoredGeoAudit();},2500);
   // v5.0.1: Auto-limpeza da rota ao virar o dia
   if(!_isMotoristaMode)_autoClearIfNewDay();
   const savedTab=localStorage.getItem('rota_active_tab');
@@ -3427,6 +3504,8 @@ function confirmAmb(){closeModal('amb-modal');ambRes=[];ambSel=-1;} // v4.6.3: d
 
 // v5.8.7: Modal de seleção para clientes com _addrPending (importados em lote)
 // v5.8.8: showAddrPicker suporta lazy loading — busca resultados sob demanda se _addrResults=null
+// v5.8.9: Fallback para _checkStoredGeoAmbiguity quando _ambiguityCheckNoBounds retorna nulo
+//         e cliente já tem coordenadas armazenadas. Exibe "Atual" vs "Alternativa" claramente.
 async function showAddrPicker(clientId){
   const c=clients.find(x=>x.id==clientId);if(!c||!c._addrPending)return;
   const modal=g('addr-picker-modal');if(!modal)return;
@@ -3435,9 +3514,18 @@ async function showAddrPicker(clientId){
   if(!c._addrResults||!c._addrResults.length){
     g('addr-picker-content').innerHTML='<div style="padding:24px;text-align:center;color:var(--mu);font-size:13px">Buscando locais com esse endere\xE7o...</div>';
     modal.classList.add('on');
-    const results=await _ambiguityCheckNoBounds(c.endereco);
+    // Tenta detecção por múltiplos resultados (importações novas)
+    let results=await _ambiguityCheckNoBounds(c.endereco);
     if(!results||!results.length){
-      // Nenhuma ambiguidade real — remover flag e fechar
+      // v5.8.9: Fallback — comparar coords armazenadas contra geocode sem viés
+      if(c.lat&&c.lng){
+        const auditResult=await _checkStoredGeoAmbiguity(c);
+        if(auditResult){
+          results=[auditResult.stored,auditResult.alt];
+        }
+      }
+    }
+    if(!results||!results.length){
       delete c._addrPending;delete c._addrResults;
       modal.classList.remove('on');
       renderC();
@@ -3446,12 +3534,21 @@ async function showAddrPicker(clientId){
     }
     c._addrResults=results;
   }
-  let html='<div style="padding:4px 0 16px;font-size:13px;color:var(--mu)">Encontramos <strong>'+c._addrResults.length+' locais</strong> com esse endere\xE7o para <strong>'+_stripEmoji(c.nome)+'</strong>. Selecione o correto e o sistema vai lembrar dessa escolha.</div>';
+  // v5.8.9: Verifica se results[0] é o local atual armazenado (isStored:true)
+  const hasStoredOption=c._addrResults[0]&&c._addrResults[0].isStored;
+  const baseDisplay=_extractBaseAddr(c.endereco)||c.endereco.split('\u2014')[0].trim();
+  let html='<div style="padding:4px 0 16px;font-size:13px;color:var(--mu)">'
+    +(hasStoredOption
+      ?'A rua <strong>'+baseDisplay+'</strong> existe em mais de um lugar. Confirme qual \xe9 o correto para <strong>'+_stripEmoji(c.nome)+'</strong>:'
+      :'Encontramos <strong>'+c._addrResults.length+' locais</strong> com esse endere\xE7o para <strong>'+_stripEmoji(c.nome)+'</strong>. Selecione o correto e o sistema vai lembrar dessa escolha.'
+    )+'</div>';
   c._addrResults.forEach((r,i)=>{
-    const loc=[r.bairro,r.cidade].filter(Boolean).join(' \u2014 ')||r.display;
-    html+='<div class="addr-pick-opt" onclick="pickAddr(\''+clientId+'\','+i+')">'
+    const loc=[r.bairro,r.cidade].filter(Boolean).join(' \u2014 ')||(r.display?r.display.split(',').slice(-2).join(',').trim():'Local desconhecido');
+    const isCurrentStored=r.isStored===true;
+    html+='<div class="addr-pick-opt'+(isCurrentStored?' addr-pick-opt-stored':'')+'" onclick="pickAddr(\''+clientId+'\','+i+')">'
+      +(isCurrentStored?'<div class="addr-pick-badge-stored">Localiza\xE7\xe3o atual</div>':'')
       +'<div class="addr-pick-loc">'+loc+'</div>'
-      +'<div class="addr-pick-full">'+r.display+'</div>'
+      +'<div class="addr-pick-full">'+(isCurrentStored?'Confirmar que est\xe1 correto':r.display||'')+'</div>'
       +'</div>';
   });
   g('addr-picker-content').innerHTML=html;
@@ -3460,10 +3557,16 @@ async function showAddrPicker(clientId){
 function pickAddr(clientId,i){
   const c=clients.find(x=>x.id==clientId);if(!c||!c._addrResults)return;
   const chosen=c._addrResults[i];
-  // Aplicar coordenadas e salvar na memória
-  c.lat=chosen.lat;c.lng=chosen.lng;if(chosen.cidade)c._cidade=chosen.cidade;
-  if(chosen.route)c.endereco=_fmtAddrFromGeo(chosen,c.endereco);
-  _addrChoiceSave(c.endereco,chosen);
+  // v5.8.9: Se usuário confirmou o local atual (isStored), não alterar coords/endereço
+  if(chosen.isStored){
+    // Apenas registrar na memória que essa é a escolha correta
+    _addrChoiceSave(c.endereco,{lat:c.lat,lng:c.lng,bairro:chosen.bairro,cidade:chosen.cidade});
+  } else {
+    // Aplicar coordenadas do local alternativo escolhido
+    c.lat=chosen.lat;c.lng=chosen.lng;if(chosen.cidade)c._cidade=chosen.cidade;
+    if(chosen.route)c.endereco=_fmtAddrFromGeo(chosen,c.endereco);
+    _addrChoiceSave(c.endereco,chosen);
+  }
   delete c._addrPending;delete c._addrResults;
   closeModal('addr-picker-modal');
   renderC();autoSaveRoute();
