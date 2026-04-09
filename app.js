@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.9';
+const APP_VERSION='v5.8.10';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -501,27 +501,10 @@ function _geoDistKm(a,b){const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng
 function _hasGeoAmbiguity(results){if(!results||results.length<2)return false;const f=results[0].geometry?results[0].geometry.location:results[0];return results.slice(1).some(r=>{const l=r.geometry?r.geometry.location:r;return _geoDistKm({lat:f.lat,lng:f.lng},{lat:l.lat,lng:l.lng})>0.5;});}
 
 // v5.8.8: Chamada sem bounds geográficos para detectar TODOS os locais com o mesmo nome
-async function _ambiguityCheckNoBounds(addr){
-  if(!addr||addr.length<5)return null;
-  try{
-    await _resolveGeoAnchor();
-    // Sufixo mínimo: cidade + país, sem bounds/components restritivos
-    const suffix=_geoAnchor&&_geoAnchor.city?', '+_geoAnchor.city+', Brasil':', Brasil';
-    const ac=new AbortController();const tid=setTimeout(()=>ac.abort(),7000);
-    const url='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+suffix)+'&region=br&components=country:BR&key='+GKEY;
-    const d=await fetch(url,{signal:ac.signal}).then(r=>r.json());
-    clearTimeout(tid);
-    if(d.status==='OK'&&d.results.length>1){
-      // Filtrar resultados em raio ampliado (~165km) ao redor da âncora
-      const nearby=_geoAnchor?d.results.filter(r=>{const l=r.geometry.location;return Math.abs(l.lat-_geoAnchor.lat)<=1.5&&Math.abs(l.lng-_geoAnchor.lng)<=1.5;}):d.results;
-      if(nearby.length>1&&_hasGeoAmbiguity(nearby)){
-        console.log('[AMB-NOBOUNDS] '+addr+' → '+nearby.length+' locais distintos na região');
-        return nearby.map(r=>_extractGeoResult(r));
-      }
-    }
-  }catch(e){console.warn('[AMB-NOBOUNDS]',e.message);}
-  return null;
-}
+// v5.8.10: SUBSTITUÍDO — _ambiguityCheckNoBounds era falho (Google retorna só 1 resultado)
+// Nova abordagem: _checkGeoAmbiguity() compara resultado escolhido vs resultado "neutro"
+// ─── mantido para compatibilidade com showAddrPicker (lazy load) ─────────────────────────
+async function _ambiguityCheckNoBounds(addr){return null;}
 
 // v5.8.8: Detecta divergência entre cidade mencionada no endereço vs cidade geocodificada
 function _detectCityMismatch(client){
@@ -560,78 +543,73 @@ function _runMismatchMigration(){
 }
 // ────────────────────────────────────────────────────────────────────────────
 
-// v5.8.9: Extrai apenas rua + número do endereço (sem complemento, bairro ou cidade)
-// Ex: "Rua São Manoel, 57, Apto 104 — Cidade São Mateus — São Paulo" → "Rua São Manoel, 57"
+// v5.8.10: Extrai rua + número do endereço (sem complemento, bairro ou cidade)
+// "Rua São Manoel, 57, Apto 104 — Cidade São Mateus — São Paulo" → "Rua São Manoel, 57"
 function _extractBaseAddr(addr){
   if(!addr||addr.length<5)return null;
-  // Pega só a primeira parte (antes do primeiro —)
   let base=addr.split('\u2014')[0].trim();
-  // Remove complemento embutido (Apto X, Bloco Y, etc.)
   base=base.replace(/,?\s*\b(apto?\.?|ap\.?|apartamento|bl(?:oco?)?\.?|bloco|torre[\s\d]*|andar[\s\d]*|sala\s*[\d\w]*|sl\.?\s*[\d\w]*|conj\.?\s*[\d\w]*|kit|fundos|casa\s+\d|pav\.?\s*[\d\w]*|unid\.?\s*[\d\w]*)\b.*/i,'').trim();
-  // Garante que há pelo menos logradouro + número
   const m=base.match(/^[^,]+,\s*\d+/);
   if(!m)return null;
   return m[0].trim();
 }
 
-// v5.8.9: Compara coords armazenadas contra geocode sem viés geográfico
-// Se o Google (sem bounds) retorna local >3km das coords armazenadas → ambiguidade real
-async function _checkStoredGeoAmbiguity(client){
-  if(!client.lat||!client.lng||client._addrPending)return null;
-  // Usuário já escolheu esse endereço explicitamente → não rever
-  if(_addrChoiceGet(client.endereco))return null;
-  const baseAddr=_extractBaseAddr(client.endereco);
-  if(!baseAddr)return null;
-  if(!GKEY)return null;
+// v5.8.10: LÓGICA CENTRAL — compara result geocodificado (bounded) vs resultado neutro (sem bounds)
+// Princípio: se o Google "natural" aponta pra cidade diferente → rua existe em múltiplos locais
+// Retorna: {chosen, neutral} se ambíguo | null se sem ambiguidade | undefined se erro de rede
+async function _checkGeoAmbiguity(chosenLat, chosenLng, chosenBairro, chosenCidade, baseAddr){
+  if(!baseAddr||!GKEY)return null;
   try{
     const ac=new AbortController();const tid=setTimeout(()=>ac.abort(),8000);
+    // Query neutra: só rua + número, sem contexto geográfico
     const url='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(baseAddr+', Brasil')+'&region=br&components=country:BR&key='+GKEY;
     const d=await fetch(url,{signal:ac.signal}).then(r=>r.json());
     clearTimeout(tid);
     if(d.status!=='OK'||!d.results.length)return null;
-    const altResult=d.results[0];
-    const altLat=altResult.geometry.location.lat;
-    const altLng=altResult.geometry.location.lng;
-    const distKm=_geoDistKm({lat:client.lat,lng:client.lng},{lat:altLat,lng:altLng});
-    if(distKm<3)return null; // Mesmo local — sem ambiguidade
-    const altExtracted=_extractGeoResult(altResult);
-    // Extrair rótulo do local armazenado a partir do texto do endereço
-    const parts=client.endereco.split('\u2014').map(p=>p.trim()).filter(Boolean);
-    const storedBairro=parts.length>=3?parts[parts.length-2]:(parts.length===2?'':'');
-    const storedCidade=parts.length>=2?parts[parts.length-1]:(client._cidade||'');
-    console.log('[GEO-AUDIT] '+client.nome+': armazenado em "'+storedCidade+'" | alternativa "'+altExtracted.cidade+'" a '+distKm.toFixed(1)+'km');
+    const neutralResult=_extractGeoResult(d.results[0]);
+    const dist=_geoDistKm({lat:chosenLat,lng:chosenLng},{lat:neutralResult.lat,lng:neutralResult.lng});
+    if(dist<3)return null; // Mesmo local — não é ambíguo
+    console.log('[GEO-AMB] '+baseAddr+': escolhido='+chosenCidade+'('+chosenBairro+') | neutro='+neutralResult.cidade+'('+neutralResult.bairro+') | dist='+dist.toFixed(1)+'km');
     return {
-      stored:{lat:client.lat,lng:client.lng,bairro:storedBairro,cidade:storedCidade,display:client.endereco,isStored:true},
-      alt:altExtracted,
-      distKm
+      chosen:{lat:chosenLat,lng:chosenLng,bairro:chosenBairro,cidade:chosenCidade,isStored:true},
+      neutral:neutralResult
     };
-  }catch(e){console.warn('[GEO-AUDIT]',e.message);return null;}
+  }catch(e){console.warn('[GEO-AMB]',e.message);return undefined;} // undefined = erro de rede, não cachear
 }
 
-// v5.8.9: Auditoria em background — verifica ambiguidade em todos os clientes geocodificados
-// Roda 2.5s após o app iniciar, com 350ms de pausa entre chamadas (anti rate-limit)
-// Cache: rota_geo_audit_v589 salva IDs já verificados (não re-checa a cada abertura)
+// v5.8.10: Auditoria de clientes já geocodificados — roda a cada sessão (sessionStorage, não localStorage)
+// Usa sessionStorage → verifica 1x por sessão de browser, não bloqueia uso repetido
 async function _runStoredGeoAudit(){
   if(!clients.length)return;
-  const AUDIT_KEY='rota_geo_audit_v589';
-  const audited=new Set(safeJsonParse(AUDIT_KEY,[]));
-  const toCheck=clients.filter(c=>c.lat&&c.lng&&!c._addrPending&&!audited.has(c.id));
+  const SESSION_KEY='rota_geo_audit_session';
+  let audited=new Set();
+  try{audited=new Set(JSON.parse(sessionStorage.getItem(SESSION_KEY)||'[]'));}catch(e){}
+  const toCheck=clients.filter(c=>c.lat&&c.lng&&!c._addrPending&&!audited.has(String(c.id))&&!_addrChoiceGet(c.endereco));
   if(!toCheck.length)return;
-  console.log('[GEO-AUDIT] Verificando '+toCheck.length+' cliente(s) com coords armazenadas...');
+  console.log('[GEO-AUDIT] Verificando '+toCheck.length+' cliente(s)...');
   let anyFound=false;
   for(const c of toCheck){
-    const result=await _checkStoredGeoAmbiguity(c);
-    audited.add(c.id);
-    if(result){
-      c._addrPending=true;
-      // results[0] = local atual (isStored:true), results[1] = alternativa do Google
-      c._addrResults=[result.stored,result.alt];
-      anyFound=true;
+    const baseAddr=_extractBaseAddr(c.endereco);
+    if(!baseAddr){audited.add(String(c.id));continue;} // sem base addr → marca e pula
+    const parts=c.endereco.split('\u2014').map(p=>p.trim()).filter(Boolean);
+    const storedBairro=parts.length>=3?parts[parts.length-2]:(parts.length===2?'':'');
+    const storedCidade=parts.length>=2?parts[parts.length-1]:(c._cidade||'');
+    const result=await _checkGeoAmbiguity(c.lat,c.lng,storedBairro,storedCidade,baseAddr);
+    if(result===undefined){
+      // Erro de rede — não cachear, tentará novamente na próxima sessão
+      console.warn('[GEO-AUDIT] Falha de rede para '+c.nome+' — tentará novamente');
+    } else {
+      audited.add(String(c.id)); // null ou resultado → marca como verificado
+      if(result){
+        c._addrPending=true;
+        c._addrResults=[result.chosen,result.neutral];
+        anyFound=true;
+      }
     }
     await new Promise(res=>setTimeout(res,350));
   }
-  try{localStorage.setItem(AUDIT_KEY,JSON.stringify([...audited]));}catch(e){}
-  if(anyFound){console.log('[GEO-AUDIT] Ambiguidade(s) encontrada(s) — exibindo badge(s)');renderC();autoSaveRoute();}
+  try{sessionStorage.setItem(SESSION_KEY,JSON.stringify([...audited]));}catch(e){}
+  if(anyFound){renderC();autoSaveRoute();}
 }
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -5063,17 +5041,8 @@ async function nominatim(addr,client){
   const mem=_addrChoiceGet(addr);
   if(mem){console.log('[GEO-MEM] '+addr+' → '+mem.cidade+' (memória)');_geoCache[addr]=mem;return mem;}
   await _resolveGeoAnchor();
-  // v5.8.8: Se client fornecido, verificar ambiguidade ANTES via chamada sem bounds
-  if(client){
-    const ambResults=await _ambiguityCheckNoBounds(addr);
-    if(ambResults){
-      // Ambiguidade real detectada → marcar para revisão, não geocodificar agora
-      console.log('[GEO-AMB] '+addr+' → '+ambResults.length+' locais distintos (sem bounds)');
-      client._addrPending=true;
-      client._addrResults=ambResults;
-      return null;
-    }
-  }
+  // v5.8.10: Removida verificação pré-geocode (_ambiguityCheckNoBounds era falha)
+  // Agora: geocodifica normalmente, depois verifica ambiguidade em background
   try{
     const suffix=_geoAnchor?(_geoAnchor.city?', '+_geoAnchor.city+', '+(_geoAnchor.state||'')+', Brasil':(_geoAnchor.state?', '+_geoAnchor.state+', Brasil':', Brasil')):', Brasil';
     const url='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+suffix)+'&region=br&key='+GKEY+_getAnchorBounds()+_getAnchorComponents();
@@ -5083,7 +5052,7 @@ async function nominatim(addr,client){
     if(d.status==='OK'&&d.results.length){
       const nearResults=d.results.filter(r=>_isNearAnchor(r.geometry.location.lat,r.geometry.location.lng));
       const best=(nearResults.length?nearResults:d.results)[0];
-      const result=_extractGeoResult(best);
+      let result=_extractGeoResult(best);
       if(!_isNearAnchor(result.lat,result.lng)&&_geoAnchor?.city){
         const url2='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+', '+_geoAnchor.city+', '+(_geoAnchor.state||'')+', Brasil')+'&region=br&key='+GKEY+_getAnchorBounds();
         const _gc2=new AbortController();const _gt2=setTimeout(()=>_gc2.abort(),6000);
@@ -5091,16 +5060,29 @@ async function nominatim(addr,client){
         clearTimeout(_gt2);
         if(d2.status==='OK'&&d2.results.length){
           const near2=d2.results.find(r=>_isNearAnchor(r.geometry.location.lat,r.geometry.location.lng));
-          if(near2){
-            const result2=_extractGeoResult(near2);
-            _geoCache[addr]=result2;try{localStorage.setItem('geo_'+addr,JSON.stringify(result2));}catch(e){}
-            console.log('[GEO] '+addr+' → '+result2.cidade+' (corrigido via âncora '+_geoAnchor.city+')');
-            return result2;
-          }
+          if(near2){result=_extractGeoResult(near2);console.log('[GEO] '+addr+' → '+result.cidade+' (corrigido via âncora '+_geoAnchor.city+')');}
         }
       }
       _geoCache[addr]=result;try{localStorage.setItem('geo_'+addr,JSON.stringify(result));}catch(e){}
       if(!_isNearAnchor(result.lat,result.lng))console.warn('[GEO] '+addr+' resolveu LONGE da âncora: '+result.display);
+      // v5.8.10: Verificação de ambiguidade em background (fire & forget)
+      // Não bloqueia o geocode — badge aparece segundos depois se ambíguo
+      if(client&&!_addrChoiceGet(addr)){
+        const baseAddr=_extractBaseAddr(addr);
+        if(baseAddr){
+          const _clientRef=client; // captura referência antes de qualquer async
+          const _chosenResult=result;
+          _checkGeoAmbiguity(_chosenResult.lat,_chosenResult.lng,_chosenResult.bairro,_chosenResult.cidade,baseAddr).then(ambig=>{
+            if(ambig&&!_clientRef._addrPending){
+              _clientRef._addrPending=true;
+              _clientRef._addrResults=[ambig.chosen,ambig.neutral];
+              // Marca também no sessionStorage para o audit não re-checar
+              try{const k='rota_geo_audit_session';const s=new Set(JSON.parse(sessionStorage.getItem(k)||'[]'));s.add(String(_clientRef.id));sessionStorage.setItem(k,JSON.stringify([...s]));}catch(e){}
+              renderC();autoSaveRoute();
+            }
+          }).catch(()=>{});
+        }
+      }
       return result;
     }
   }catch(e){console.warn('Geocoding falhou:',addr,e);}
