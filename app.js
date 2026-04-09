@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.7.3';
+const APP_VERSION='v5.7.4';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -772,7 +772,9 @@ const _TC_LOWER=new Set(['de','do','da','dos','das','e','em','no','na','nos','na
 function titleCase(str){
   return str.replace(/\S+/g,(word,idx)=>{
     if(idx>0&&_TC_LOWER.has(word.toLowerCase()))return word.toLowerCase();
-    return word.charAt(0).toUpperCase()+word.slice(1).toLowerCase();
+    const fi=word.search(/[a-zA-ZáàâãéèêíóôõúüçÁÀÂÃÉÈÊÍÓÔÕÚÜÇ]/);
+    if(fi<0)return word;
+    return word.slice(0,fi)+word.charAt(fi).toUpperCase()+word.slice(fi+1).toLowerCase();
   });
 }
 function onTitleCaseBlur(e){
