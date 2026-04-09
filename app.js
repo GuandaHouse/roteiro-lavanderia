@@ -6059,4 +6059,20 @@ function rerenderHeatmap(){
       });
     }
     hmHeatLayer=new google.maps.visualization.HeatmapLayer({data,radius:40,map:hmMap,
-      gradient:['rgba(0,0,0,0)','rgba(34,197,94,.3)','rgba(34,197,94,.6)','rgba(255,203,0,.7)','rgba(255,123,0,.8)','rgba(226,68,9
+      gradient:['rgba(0,0,0,0)','rgba(34,197,94,.3)','rgba(34,197,94,.6)','rgba(255,203,0,.7)','rgba(255,123,0,.8)','rgba(226,68,92,1)']});
+  } else {
+    // Normal concentration heatmap
+    if(_dashCache.loaded&&_dashCache.pts){
+      hmHeatLayer=new google.maps.visualization.HeatmapLayer({data:_dashCache.pts.map(pt=>new google.maps.LatLng(pt[0],pt[1])),radius:35,map:hmMap});
+    }
+  }
+}
+
+// v4.6.1: generateDayGroupings removido
+
+// ====== v4.5.1: WHATSAPP NOTIFICATION ======
+// v4.6.1: generateWppMessages, sendWppMessage, sendAllWpp removidos
+
+// v4.6.1: generatePostRouteReport, renderPostRouteReport removidos
+
+// v4.6.1: WhatsApp notifications + post-route report removidos da sidebar
