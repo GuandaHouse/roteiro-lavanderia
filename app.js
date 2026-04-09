@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.7';
+const APP_VERSION='v5.8.8';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -498,7 +498,66 @@ function _addrChoiceSave(addr,choice){try{const d=JSON.parse(localStorage.getIte
 function _addrChoiceDel(key){try{const d=JSON.parse(localStorage.getItem('rota_addr_choices')||'{}');delete d[key];localStorage.setItem('rota_addr_choices',JSON.stringify(d));}catch(e){}}
 function _addrChoiceGetAll(){try{return JSON.parse(localStorage.getItem('rota_addr_choices')||'{}')}catch(e){return {};}}
 function _geoDistKm(a,b){const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng-a.lng)*Math.PI/180;const aa=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;return R*2*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));}
-function _hasGeoAmbiguity(results){if(!results||results.length<2)return false;const f=results[0].geometry.location;return results.slice(1).some(r=>{const l=r.geometry.location;return _geoDistKm({lat:f.lat,lng:f.lng},{lat:l.lat,lng:l.lng})>0.5;});}
+function _hasGeoAmbiguity(results){if(!results||results.length<2)return false;const f=results[0].geometry?results[0].geometry.location:results[0];return results.slice(1).some(r=>{const l=r.geometry?r.geometry.location:r;return _geoDistKm({lat:f.lat,lng:f.lng},{lat:l.lat,lng:l.lng})>0.5;});}
+
+// v5.8.8: Chamada sem bounds geográficos para detectar TODOS os locais com o mesmo nome
+async function _ambiguityCheckNoBounds(addr){
+  if(!addr||addr.length<5)return null;
+  try{
+    await _resolveGeoAnchor();
+    // Sufixo mínimo: cidade + país, sem bounds/components restritivos
+    const suffix=_geoAnchor&&_geoAnchor.city?', '+_geoAnchor.city+', Brasil':', Brasil';
+    const ac=new AbortController();const tid=setTimeout(()=>ac.abort(),7000);
+    const url='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+suffix)+'&region=br&components=country:BR&key='+GKEY;
+    const d=await fetch(url,{signal:ac.signal}).then(r=>r.json());
+    clearTimeout(tid);
+    if(d.status==='OK'&&d.results.length>1){
+      // Filtrar resultados em raio ampliado (~165km) ao redor da âncora
+      const nearby=_geoAnchor?d.results.filter(r=>{const l=r.geometry.location;return Math.abs(l.lat-_geoAnchor.lat)<=1.5&&Math.abs(l.lng-_geoAnchor.lng)<=1.5;}):d.results;
+      if(nearby.length>1&&_hasGeoAmbiguity(nearby)){
+        console.log('[AMB-NOBOUNDS] '+addr+' → '+nearby.length+' locais distintos na região');
+        return nearby.map(r=>_extractGeoResult(r));
+      }
+    }
+  }catch(e){console.warn('[AMB-NOBOUNDS]',e.message);}
+  return null;
+}
+
+// v5.8.8: Detecta divergência entre cidade mencionada no endereço vs cidade geocodificada
+function _detectCityMismatch(client){
+  if(!client.endereco||!client._cidade||client._addrPending)return false;
+  const norm=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  const geocodedCity=norm(client._cidade);
+  const addrNorm=norm(client.endereco);
+  // Se a cidade geocodificada aparece no texto do endereço → sem mismatch
+  if(addrNorm.includes(geocodedCity))return false;
+  // Extrair provável cidade: última parte após o último —
+  const parts=client.endereco.split('\u2014').map(p=>p.trim()).filter(Boolean);
+  if(parts.length<2)return false;
+  const lastPart=norm(parts[parts.length-1]);
+  if(!lastPart||lastPart.length<3)return false;
+  // Se a última parte (cidade declarada) não bate com a cidade geocodificada → mismatch
+  const firstWordLast=lastPart.split(' ')[0];
+  return !lastPart.includes(geocodedCity)&&!geocodedCity.includes(firstWordLast);
+}
+
+// v5.8.8: Migração — marcar clientes com divergência de cidade para verificação
+function _runMismatchMigration(){
+  const KEY='rota_mismatch_v588';
+  if(localStorage.getItem(KEY))return;
+  let changed=0;
+  clients.forEach(c=>{
+    if(!c.lat||!c.lng||c._addrPending)return;
+    if(_detectCityMismatch(c)){
+      c._addrPending=true;
+      c._addrResults=null; // será carregado sob demanda ao abrir o picker
+      console.log('[MISMATCH] '+c.nome+': endereço diz "'+c.endereco.split('\u2014').pop().trim()+'" mas geocodificado em "'+c._cidade+'"');
+      changed++;
+    }
+  });
+  if(changed){console.log('[MISMATCH] '+changed+' cliente(s) marcados para verificação');renderC();autoSaveRoute();}
+  localStorage.setItem(KEY,'1');
+}
 // ────────────────────────────────────────────────────────────────────────────
 
 // v5.8.5: Extrai complemento embutido no endereço (Apto X, Bloco Y, etc.)
@@ -1919,6 +1978,8 @@ function _initApp(){
   if(clients.length===0&&!_isMotoristaMode)restoreActiveRoute();
   // v5.8.6: Migrar endereços antigos para formato padrão
   setTimeout(()=>{_runAddrMigration();},500);
+  // v5.8.8: Detectar divergência de cidade em clientes já geocodificados
+  setTimeout(()=>{_runMismatchMigration();},1200);
   // v5.0.1: Auto-limpeza da rota ao virar o dia
   if(!_isMotoristaMode)_autoClearIfNewDay();
   const savedTab=localStorage.getItem('rota_active_tab');
@@ -3365,10 +3426,26 @@ function selAmb(i){
 function confirmAmb(){closeModal('amb-modal');ambRes=[];ambSel=-1;} // v4.6.3: don't overwrite address
 
 // v5.8.7: Modal de seleção para clientes com _addrPending (importados em lote)
-function showAddrPicker(clientId){
-  const c=clients.find(x=>x.id==clientId);if(!c||!c._addrPending||!c._addrResults)return;
+// v5.8.8: showAddrPicker suporta lazy loading — busca resultados sob demanda se _addrResults=null
+async function showAddrPicker(clientId){
+  const c=clients.find(x=>x.id==clientId);if(!c||!c._addrPending)return;
   const modal=g('addr-picker-modal');if(!modal)return;
-  const SVG_WARN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+  g('addr-picker-title').textContent='Verificar endere\xE7o';
+  // Se resultados ainda não foram carregados, buscar agora (lazy)
+  if(!c._addrResults||!c._addrResults.length){
+    g('addr-picker-content').innerHTML='<div style="padding:24px;text-align:center;color:var(--mu);font-size:13px">Buscando locais com esse endere\xE7o...</div>';
+    modal.classList.add('on');
+    const results=await _ambiguityCheckNoBounds(c.endereco);
+    if(!results||!results.length){
+      // Nenhuma ambiguidade real — remover flag e fechar
+      delete c._addrPending;delete c._addrResults;
+      modal.classList.remove('on');
+      renderC();
+      toast('Endere\xE7o verificado \u2014 nenhuma ambiguidade encontrada','ok');
+      return;
+    }
+    c._addrResults=results;
+  }
   let html='<div style="padding:4px 0 16px;font-size:13px;color:var(--mu)">Encontramos <strong>'+c._addrResults.length+' locais</strong> com esse endere\xE7o para <strong>'+_stripEmoji(c.nome)+'</strong>. Selecione o correto e o sistema vai lembrar dessa escolha.</div>';
   c._addrResults.forEach((r,i)=>{
     const loc=[r.bairro,r.cidade].filter(Boolean).join(' \u2014 ')||r.display;
@@ -3378,7 +3455,6 @@ function showAddrPicker(clientId){
       +'</div>';
   });
   g('addr-picker-content').innerHTML=html;
-  g('addr-picker-title').textContent='Verificar endere\xE7o';
   modal.classList.add('on');
 }
 function pickAddr(clientId,i){
@@ -4875,15 +4951,26 @@ function _extractGeoResult(result){
   const cidade=(comps.find(c=>c.types.includes('administrative_area_level_2'))||comps.find(c=>c.types.includes('locality'))||{}).long_name||'';
   return {lat:loc.lat,lng:loc.lng,display:result.formatted_address,route,streetNum,bairro,cidade};
 }
-// v5.8.7: nominatim aceita client opcional — se ambíguo sem memória, marca _addrPending
+// v5.8.8: nominatim — verificação de ambiguidade via chamada sem bounds
 async function nominatim(addr,client){
   if(_geoCache[addr])return _geoCache[addr];
   const cached=localStorage.getItem('geo_'+addr);
   if(cached){const c=JSON.parse(cached);_geoCache[addr]=c;return c;}
-  // v5.8.7: Verificar memória de escolhas antes de geocodificar
+  // Verificar memória de escolhas antes de geocodificar
   const mem=_addrChoiceGet(addr);
   if(mem){console.log('[GEO-MEM] '+addr+' → '+mem.cidade+' (memória)');_geoCache[addr]=mem;return mem;}
   await _resolveGeoAnchor();
+  // v5.8.8: Se client fornecido, verificar ambiguidade ANTES via chamada sem bounds
+  if(client){
+    const ambResults=await _ambiguityCheckNoBounds(addr);
+    if(ambResults){
+      // Ambiguidade real detectada → marcar para revisão, não geocodificar agora
+      console.log('[GEO-AMB] '+addr+' → '+ambResults.length+' locais distintos (sem bounds)');
+      client._addrPending=true;
+      client._addrResults=ambResults;
+      return null;
+    }
+  }
   try{
     const suffix=_geoAnchor?(_geoAnchor.city?', '+_geoAnchor.city+', '+(_geoAnchor.state||'')+', Brasil':(_geoAnchor.state?', '+_geoAnchor.state+', Brasil':', Brasil')):', Brasil';
     const url='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+suffix)+'&region=br&key='+GKEY+_getAnchorBounds()+_getAnchorComponents();
@@ -4891,16 +4978,7 @@ async function nominatim(addr,client){
     const d=await fetch(url,{signal:_gc1.signal}).then(r=>r.json());
     clearTimeout(_gt1);
     if(d.status==='OK'&&d.results.length){
-      // v5.8.7: Detectar ambiguidade geográfica real (>500m entre resultados)
       const nearResults=d.results.filter(r=>_isNearAnchor(r.geometry.location.lat,r.geometry.location.lng));
-      const candidates=nearResults.length?nearResults:d.results;
-      if(client&&_hasGeoAmbiguity(candidates)){
-        // Sem memória + ambíguo + client fornecido → marcar para revisão
-        console.log('[GEO-AMB] '+addr+' — '+candidates.length+' locais distintos encontrados');
-        client._addrPending=true;
-        client._addrResults=candidates.map(r=>_extractGeoResult(r));
-        return null;
-      }
       const best=(nearResults.length?nearResults:d.results)[0];
       const result=_extractGeoResult(best);
       if(!_isNearAnchor(result.lat,result.lng)&&_geoAnchor?.city){
