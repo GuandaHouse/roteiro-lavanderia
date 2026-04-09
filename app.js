@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.13';
+const APP_VERSION='v5.8.14';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -3317,6 +3317,11 @@ function importTC(){
   toast(count+t('t.clients_imported'),'ok');
   g('trello-nav-bar').innerHTML=buildTrelloNavBar();
   g('trello-cards').innerHTML='<div class="ab ok"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> '+count+' cliente(s) importado(s)!</div>';
+  // v5.8.14: Auditoria pós-importação — detecta endereços ambíguos sem precisar de F5
+  // Delay de 700ms garante que todos os preGeocode (cache hits: sub-ms) já resolveram.
+  // Usa _runStoredGeoAudit() — o mesmo caminho provado que funciona após F5.
+  // Novos clientes têm IDs novos, logo não estão no cache de sessão e serão auditados.
+  setTimeout(()=>_runStoredGeoAudit(),700);
 }
 
 // v5.2.0: OAuth do Trello — server-side key via Worker
