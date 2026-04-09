@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.5';
+const APP_VERSION='v5.8.6';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -447,6 +447,42 @@ function _normalizeAddrString(raw){
   s=s.replace(/\u2014\s*\u2014/g,'\u2014');                 // duplo em-dash
   s=s.replace(/^[\s,\u2014]+/,'').replace(/[\s,\u2014]+$/,'');
   return s;
+}
+// v5.8.6: Migra endereços existentes — move complemento do final para depois do número
+function _migrateAddr(addr){
+  if(!addr||addr.length<5)return addr;
+  const COMP_RE=/^(apto?\.?|ap\.?|apartamento|bl(?:oco?)?\.?|bloco|torre\s*\d|torre$|andar\s*\d|pav\.?\s*\d|sala\s*\d|fundos|sl\.?\s*\d|conj\.?\s*\d|kit)/i;
+  // Normaliza separadores: duplo em-dash, " - " com espaços → em-dash
+  let s=addr.trim().replace(/\s{2,}/g,' ')
+    .replace(/\s*\u2014\s*\u2014+\s*/g,' \u2014 ')
+    .replace(/\s+-\s+/g,' \u2014 ')
+    .replace(/\s*\u2013\s*/g,' \u2014 ')
+    .replace(/\s*\u2014\s*/g,' \u2014 ');
+  // Split por em-dash
+  const parts=s.split(' \u2014 ').map(p=>p.trim()).filter(Boolean);
+  if(parts.length<2)return s;
+  // Verifica se o ÚLTIMO bloco é um complemento
+  const last=parts[parts.length-1];
+  if(!COMP_RE.test(last))return s;
+  // Move complemento para depois do logradouro+número
+  const comp=last;
+  const main=parts.slice(0,-1);
+  let result=main[0]+', '+comp;
+  const rest=main.slice(1).join(' \u2014 ');
+  if(rest)result+=' \u2014 '+rest;
+  return result;
+}
+function _runAddrMigration(){
+  const KEY='rota_addr_migrated_v586';
+  if(localStorage.getItem(KEY))return;
+  let changed=0;
+  clients.forEach(c=>{
+    if(!c.endereco)return;
+    const fixed=_migrateAddr(c.endereco);
+    if(fixed!==c.endereco){c.endereco=fixed;changed++;}
+  });
+  if(changed){console.log('[MIGR] '+changed+' endereços normalizados');renderC();autoSaveRoute();}
+  localStorage.setItem(KEY,'1');
 }
 // v5.8.5: Extrai complemento embutido no endereço (Apto X, Bloco Y, etc.)
 function _extractCompFromAddr(addr){
@@ -1850,6 +1886,8 @@ function _initApp(){
   document.getElementById('f-data').value=now.toISOString().split('T')[0];
   loadCfg();renderHist();loadTrelloSelection();
   if(clients.length===0&&!_isMotoristaMode)restoreActiveRoute();
+  // v5.8.6: Migrar endereços antigos para formato padrão
+  setTimeout(()=>{_runAddrMigration();},500);
   // v5.0.1: Auto-limpeza da rota ao virar o dia
   if(!_isMotoristaMode)_autoClearIfNewDay();
   const savedTab=localStorage.getItem('rota_active_tab');
