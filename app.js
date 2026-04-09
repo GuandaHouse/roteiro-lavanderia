@@ -36,7 +36,7 @@ pt:{
   // Client list
   'cl.title':'Clientes na rota','cl.empty':'Nenhum cliente ainda','cl.search':'Buscar por nome ou endere\xe7o...',
   // Summary
-  'sum.title':'Resumo do dia','sum.clients':'Clientes','sum.pickups':'Retiradas','sum.deliveries':'Entregas','sum.items':'paradas',
+  'sum.title':'Resumo do dia','sum.clients':'Clientes','sum.pickups':'Retiradas','sum.deliveries':'Entregas','sum.items':'itens',
   // Map
   'map.title':'Rota no mapa','map.hint':'Adicione clientes para ver a rota','map.expand':'Expandir mapa','map.reduce':'Reduzir mapa',
   'map.panel':'Painel da Rota','map.dist':'Dist\xe2ncia total','map.time':'Tempo estimado','map.done':'Conclu\xeddos','map.last':'Última parada','map.stops':'Paradas',
@@ -240,7 +240,7 @@ en:{
   'btn.change':'Change','btn.changefile':'Change file','btn.preview':'Preview data','btn.adjustcols':'Adjust columns',
   'btn.copylink':'Copy link','btn.connect.trello':'Connect with Trello','btn.disconnect':'Disconnect','btn.newtag':'New tag',
   'cl.title':'Clients in route','cl.empty':'No clients yet','cl.search':'Search by name or address...',
-  'sum.title':'Daily summary','sum.clients':'Clients','sum.pickups':'Pickups','sum.deliveries':'Deliveries','sum.items':'stops',
+  'sum.title':'Daily summary','sum.clients':'Clients','sum.pickups':'Pickups','sum.deliveries':'Deliveries','sum.items':'items',
   'map.title':'Route on map','map.hint':'Add clients to see the route','map.expand':'Expand map','map.reduce':'Reduce map',
   'map.panel':'Route Panel','map.dist':'Total distance','map.time':'Estimated time','map.done':'Completed','map.last':'Last stop','map.stops':'Stops',
   'map.arrival':'Arrival','map.departure':'Departure','map.return':'Return','map.remove':'Remove from route',
@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.2';
+const APP_VERSION='v5.8.3';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -4247,10 +4247,11 @@ function updStats(){
   g('s-cli').textContent=clients.length;
   // Contagem dinâmica por tag — respeita rótulos configurados pelo usuário
   const tagCounts={};clients.forEach(c=>{normalizeTipo(c.tipo).forEach(id=>{tagCounts[id]=(tagCounts[id]||0)+1;});});
-  const subParts=_tags.filter(tag=>tagCounts[tag.id]>0).slice(0,3).map(tag=>tagCounts[tag.id]+' '+(tag.label||tag.id));
+  function _pluralPT(word,n){if(n===1)return word;if(word.endsWith('ção'))return word.slice(0,-3)+'ções';if(word.endsWith('ão'))return word.slice(0,-2)+'ões';return word+'s';}
+  const subParts=_tags.filter(tag=>tagCounts[tag.id]>0).slice(0,3).map(tag=>tagCounts[tag.id]+' '+_pluralPT(tag.label||tag.id,tagCounts[tag.id]));
   g('s-sub').textContent=subParts.length?subParts.join(' · '):'';
-  g('s-ret').textContent=col.length;
-  g('s-ent').textContent=ent.length;
+  g('s-ret').textContent=col.reduce((s,c)=>s+(c.qtd||0),0);
+  g('s-ent').textContent=ent.reduce((s,c)=>s+(c.qtd||0),0);
 }
 function updBtns(){const has=clients.length>0;g('route-btn').disabled=!has;g('pdf-btn').disabled=!has;g('publish-btn').disabled=!has;g('insert-btn').disabled=!has;}
 
