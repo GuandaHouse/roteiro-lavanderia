@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.18';
+const APP_VERSION='v5.8.19';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -524,6 +524,39 @@ function _detectCityMismatch(client){
   return !lastPart.includes(geocodedCity)&&!geocodedCity.includes(firstWordLast);
 }
 
+// v5.8.19: Corrigir endereços que foram salvos pelo pickAddr antigo sem atualizar rua/bairro
+// Situação: usuário escolheu local alternativo, choice foi salvo (type:'alt'), mas endereço
+// permaneceu com bairro/cidade antigo pois _fmtAddrFromGeo falhava com route vazio.
+// Fix: detectar via _detectCityMismatch e aplicar a reconstrução correta de endereço.
+function _fixStaleAddrChoices(){
+  try{
+    const savedChoices=JSON.parse(localStorage.getItem('rota_addr_choices')||'{}');
+    let fixed=0;
+    clients.forEach(c=>{
+      if(!c.lat||!c.lng||c._addrPending)return;
+      if(!_detectCityMismatch(c))return; // endereço já está correto
+      const choiceKey=_addrChoiceKey(c.endereco);
+      const choice=savedChoices[choiceKey];
+      if(!choice||choice.type!=='alt')return; // sem choice antigo — não é o caso stale
+      // Aplicar mesma lógica do pickAddr v5.8.18: manter rua+número, trocar bairro/cidade
+      const origStreet=(c.endereco.split('\u2014')[0]||c.endereco).trim();
+      let newAddr=origStreet;
+      if(choice.bairro)newAddr+=' \u2014 '+titleCase(choice.bairro);
+      if(choice.cidade)newAddr+=' \u2014 '+titleCase(choice.cidade);
+      delete savedChoices[choiceKey]; // remove chave antiga
+      c.endereco=newAddr;
+      c._cidade=choice.cidade||'';
+      savedChoices[_addrChoiceKey(newAddr)]={...choice,rawAddr:newAddr};
+      fixed++;
+      console.log('[v5.8.19] Endereço corrigido:',c.nome,'→',newAddr);
+    });
+    if(fixed){
+      localStorage.setItem('rota_addr_choices',JSON.stringify(savedChoices));
+      autoSaveRoute();renderC();
+      console.log('[v5.8.19] '+fixed+' endereço(s) corrigido(s) automaticamente');
+    }
+  }catch(e){console.warn('[v5.8.19] Falha na migração de choices:',e);}
+}
 // v5.8.8: Migração — marcar clientes com divergência de cidade para verificação
 function _runMismatchMigration(){
   const KEY='rota_mismatch_v588';
@@ -2121,6 +2154,8 @@ function _initApp(){
       console.log('[v5.8.17] Cache rota_geo_locs limpo — será repopulado via ViaCEP');
     }
   }catch(e){}
+  // v5.8.19: Corrigir endereços stale (choice salvo com endereco não atualizado pelo pickAddr antigo)
+  setTimeout(()=>{_fixStaleAddrChoices();},800);
   // v5.8.9: Auditoria de ambiguidade geográfica — compara coords armazenadas vs geocode neutro
   setTimeout(()=>{_runStoredGeoAudit();},2500);
   // v5.0.1: Auto-limpeza da rota ao virar o dia
