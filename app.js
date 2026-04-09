@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.11';
+const APP_VERSION='v5.8.12';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -5025,16 +5025,41 @@ function initLeafMap(){}
 })();
 const _geoCache={};
 // v4.8.0: Pre-geocoding — geocodifica cliente em background assim que adicionado
+// v5.8.12: _preGeocodeAmbiguityCheck — verifica ambiguidade para um cliente já geocodificado
+// Usado quando preGeocode detecta que o cliente JÁ tem coords (cache hit) e não passou pelo
+// fire-and-forget do nominatim(). Sem isso, clientes re-importados nunca receberiam o badge.
+function _preGeocodeAmbiguityCheck(client){
+  if(!client.lat||!client.lng||client._addrPending||_addrChoiceGet(client.endereco))return;
+  const baseAddr=_extractBaseAddr(client.endereco);
+  if(!baseAddr)return;
+  const _cr=client;
+  const parts=_cr.endereco.split('\u2014').map(p=>p.trim()).filter(Boolean);
+  const sb=parts.length>=3?parts[parts.length-2]:(parts.length===2?'':'');
+  const sc=parts.length>=2?parts[parts.length-1]:(_cr._cidade||'');
+  _checkGeoAmbiguity(_cr.lat,_cr.lng,sb,sc,baseAddr).then(ambig=>{
+    if(ambig&&Array.isArray(ambig)&&!_cr._addrPending){
+      _cr._addrPending=true;_cr._addrResults=ambig;
+      // Marca no sessionStorage para o startup audit não duplicar
+      try{const k='rota_geo_audit_session';const s=new Set(JSON.parse(sessionStorage.getItem(k)||'[]'));s.add(String(_cr.id));sessionStorage.setItem(k,JSON.stringify([...s]));}catch(e){}
+      renderC();autoSaveRoute();
+    }
+  }).catch(()=>{});
+}
 function preGeocode(client){
-  if(!client||!client.endereco||(client.lat&&client.lng))return;
-  // v5.8.7: passa client para que nominatim possa marcar _addrPending se ambíguo
+  if(!client||!client.endereco)return;
+  // v5.8.12: Cliente já tem coords → geocoding veio do cache. Verificar ambiguidade diretamente,
+  // pois o cache hit bypassa o fire-and-forget do nominatim() e o badge nunca aparecia.
+  if(client.lat&&client.lng){
+    _preGeocodeAmbiguityCheck(client);
+    return;
+  }
+  // Cliente sem coords → geocodificar (nominatim dispara a verificação de ambiguidade internamente)
   nominatim(client.endereco,client).then(r=>{
     if(r){client.lat=r.lat;client.lng=r.lng;if(r.cidade)client._cidade=r.cidade;
       if(r.route){client.endereco=_fmtAddrFromGeo(r,client.endereco);}
       console.log('[PRE-GEO] '+client.nome+' geocodificado e endereço normalizado');
       autoSaveRoute();renderC();
     } else if(client._addrPending){
-      // Ambiguidade detectada — re-renderiza cards para mostrar badge
       renderC();autoSaveRoute();
     }
   }).catch(()=>{});
