@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.17';
+const APP_VERSION='v5.8.18';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -3644,8 +3644,16 @@ function pickAddr(clientId,i){
     // Apenas descartar o badge sem salvar escolha (endereço ainda é considerado ambíguo)
   } else {
     // Aplicar coordenadas do local alternativo escolhido e salvar permanentemente
-    c.lat=chosen.lat;c.lng=chosen.lng;if(chosen.cidade)c._cidade=chosen.cidade;
-    if(chosen.route)c.endereco=_fmtAddrFromGeo(chosen,c.endereco);
+    c.lat=chosen.lat;c.lng=chosen.lng;
+    // v5.8.18: Reconstruir endereço preservando rua+número+complemento do original,
+    // substituindo bairro/cidade pelos do local escolhido.
+    // _fmtAddrFromGeo era falha: geocode por CEP não retorna streetNum → perdia nº 57.
+    const origStreet=(c.endereco.split('\u2014')[0]||c.endereco).trim(); // "Rua São Manoel, 57, Apto 104"
+    let newAddr=origStreet;
+    if(chosen.bairro)newAddr+=' \u2014 '+titleCase(chosen.bairro);
+    if(chosen.cidade)newAddr+=' \u2014 '+titleCase(chosen.cidade);
+    c.endereco=newAddr;
+    c._cidade=chosen.cidade||''; // sincroniza _cidade com a cidade do local escolhido
     _addrChoiceSave(c.endereco,{...chosen,type:'alt'}); // v5.8.16: type:'alt' marca escolha de local diferente
   }
   delete c._addrPending;delete c._addrResults;
