@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.3';
+const APP_VERSION='v5.8.4';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -432,6 +432,8 @@ const DEFAULT_TAGS=[
   {id:'retirada',label:'Retirada',color:'#9B8EC4'}
 ];
 let _tags=safeJsonParse('rota_tags',null)||DEFAULT_TAGS.map(t=>({...t}));
+// v5.8.4: resolve ID real da tag por label — suporta tags com IDs customizados (ex: tag_XXXX do Trello)
+function _resolveTagId(idOrLabel){if(_tags.some(t=>t.id===idOrLabel))return idOrLabel;const low=(idOrLabel||'').toLowerCase();return(_tags.find(t=>(t.label||'').toLowerCase()===low)||{id:idOrLabel}).id;}
 function _saveTags(){localStorage.setItem('rota_tags',JSON.stringify(_tags));}
 // v5.4.3: Reavaliar tags em todos os cartões já na rota ao criar/renomear tag
 function _reapplyTagsToClients(){
@@ -1294,8 +1296,9 @@ function showCompletionSummary(){
   });
 
   // Quantidade de itens
-  const tapR=order.filter(i=>clients[i].tipo==='coleta').reduce((s,i)=>s+(clients[i].qtd||0),0);
-  const tapE=order.filter(i=>clients[i].tipo==='entrega').reduce((s,i)=>s+(clients[i].qtd||0),0);
+  const _cId=_resolveTagId('coleta'),_eId=_resolveTagId('entrega');
+  const tapR=order.filter(i=>normalizeTipo(clients[i].tipo).includes(_cId)).reduce((s,i)=>s+(clients[i].qtd||0),0);
+  const tapE=order.filter(i=>normalizeTipo(clients[i].tipo).includes(_eId)).reduce((s,i)=>s+(clients[i].qtd||0),0);
 
   const d=clients[0]?.data?new Date(clients[0].data+'T12:00').toLocaleDateString(_lang==='en'?'en-US':'pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
   document.getElementById('compl-sub').textContent=d+' — '+total+' '+t('comp.stops');
@@ -3382,20 +3385,20 @@ function renderC(){
   const clearBtn=g('clear-all-btn'); // v4.6.5
   if(!clients.length){el.innerHTML='<div class="empty"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span><p>'+t('cl.empty')+'</p></div>';g('cc-count').textContent='';g('cfl-banner').innerHTML='';if(clearBtn)clearBtn.style.display='none';return;}
   const cfls=clients.filter(c=>c.conflict);
-  const coletasRisco=cfls.filter(c=>{const tipos=normalizeTipo(c.tipo);return tipos.length&&tipos.includes('coleta');}).length;
+  const coletasRisco=cfls.filter(c=>{const tipos=normalizeTipo(c.tipo);return tipos.length&&tipos.includes(_resolveTagId('coleta'));}).length;
   g('cfl-banner').innerHTML=cfls.length?'<div class="ab w" style="margin-bottom:12px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <div><strong>'+t('card.conflict',{n:cfls.length})+'</strong> '+t('card.risk',{n:coletasRisco})+'</div></div>':'';
   el.innerHTML=order.map((idx,stop)=>{
     const c=clients[idx];
     const tipos=normalizeTipo(c.tipo);
     const primaryColor=tipos.length?_getTagColor(tipos[0]):'rgba(108,92,231,.18)';
     const tagColor=primaryColor;
-    const isCol=tipos.includes('coleta');
+    const isCol=tipos.includes(_resolveTagId('coleta'));
     const jl={livre:'',manha:t('card.until_noon'),tarde:t('card.after_noon'),custom:c.hi+'\u2013'+c.hf}[c.janela]||'';
     const vd=c.valTipo==='medir'?t('form.medir'):c.valTipo==='pago'?t('form.pago'):c.val?'R$ '+fmtBRL(c.val):'';
     // v4.3.5: Multi-tags — borda listrada lado a lado (3px por tag)
     const bw=tagBorderWidth(tipos);
     const tagChips=renderTagChips(tipos);
-    const typeClass=isCol?' col':tipos.includes('entrega')?' ent':'';
+    const typeClass=isCol?' col':tipos.includes(_resolveTagId('entrega'))?' ent':'';
     // 1 tag: border-left-color inline (CSS base tem border-left:3px solid). 2+ tags: div absoluto com faixas
     const cardStyle=tipos.length<=1?'border-left-color:'+tagColor:(tipos.length>1?'border-left:none;position:relative;padding-left:'+(13+bw)+'px;overflow:hidden':'');
     return '<div class="cc'+typeClass+(c.conflict&&isCol?' cfl':'')+(c.conflict&&!isCol?' cwn':'')+'" data-stop="'+stop+'" data-cid="'+c.id+'" style="'+cardStyle+'">'
@@ -4243,7 +4246,7 @@ async function recalcRouteFromOrder(){
 }
 
 function updStats(){
-  const col=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}),ent=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');});
+  const col=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes(_resolveTagId('coleta'));}),ent=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes(_resolveTagId('entrega'));});
   g('s-cli').textContent=clients.length;
   // Contagem dinâmica por tag — respeita rótulos configurados pelo usuário
   const tagCounts={};clients.forEach(c=>{normalizeTipo(c.tipo).forEach(id=>{tagCounts[id]=(tagCounts[id]||0)+1;});});
@@ -4752,7 +4755,7 @@ async function nominatimReverse(lat,lng){
 }
 function sortByWindow(){
   const sc=c=>{if(c.janela==='manha')return 0;if(c.janela==='custom'&&c.hi<'12:00')return 0.5;if(c.janela==='livre')return 1;if(c.janela==='custom')return 1.5;return 2;};
-  order.sort((a,b)=>{const ca=clients[a],cb=clients[b];const s=sc(ca)-sc(cb);if(s)return s;return normalizeTipo(ca.tipo).includes('coleta')?-1:1;});
+  order.sort((a,b)=>{const ca=clients[a],cb=clients[b];const s=sc(ca)-sc(cb);if(s)return s;return normalizeTipo(ca.tipo).includes(_resolveTagId('coleta'))?-1:1;});
 }
 
 // Calcula deadline em minutos desde meia-noite para um cliente com janela de horário
@@ -4985,7 +4988,7 @@ async function genImage(){
   if(!clients.length)return;
   const btn=g('pdf-btn');btn.disabled=true;btn.innerHTML='<span class="spin"></span> Gerando...';
   toast(t('msg.gen_image'),'');
-  const col=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}),ent=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');});
+  const col=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes(_resolveTagId('coleta'));}),ent=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes(_resolveTagId('entrega'));});
   const tapR=col.reduce((s,c)=>s+(c.qtd||0),0),tapE=ent.reduce((s,c)=>s+(c.qtd||0),0);
   const d=clients[0]?.data?new Date(clients[0].data+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   const wrap=document.createElement('div');
@@ -5050,7 +5053,7 @@ function genPDF_unused(){
   doc.text(d.charAt(0).toUpperCase()+d.slice(1),W-M,16,{align:'right'});
   y=36;
   // Summary bar
-  const col=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}),ent=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');});
+  const col=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes(_resolveTagId('coleta'));}),ent=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes(_resolveTagId('entrega'));});
   const tapR=col.reduce((s,c)=>s+(c.qtd||0),0),tapE=ent.reduce((s,c)=>s+(c.qtd||0),0);
   doc.setFillColor(246,247,251);doc.setDrawColor(226,228,240);doc.rect(M,y,CW,10,'FD');
   doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(107,111,142);
@@ -5066,7 +5069,7 @@ function genPDF_unused(){
     const hasExtra=c.tel||c.qtd||c.val||c.valTipo!=='normal'&&c.valTipo||c.estT;
     const h=10+(lines.length*4.5)+(hasExtra?5:0)+(c.obs?5:0)+(c.conflict?5:0)+4;
     // Card background
-    const tipos=normalizeTipo(c.tipo);const isCol=tipos.includes('coleta');
+    const tipos=normalizeTipo(c.tipo);const isCol=tipos.includes(_resolveTagId('coleta'));
     doc.setFillColor(isCol?230:230,isCol?251:245,isCol?243:255);
     doc.setDrawColor(isCol?200:200,isCol?235:230,isCol?220:245);
     doc.rect(M,y,CW,h,'FD');
@@ -5144,7 +5147,7 @@ function renderHist(){
   el.innerHTML='<div class="hist-filters" style="margin-bottom:14px"><input type="text" id="hist-search" placeholder="'+t('hist.search_ph')+'" oninput="filterHistList(this.value)"></div>';
   el.innerHTML+=hist.map((h,i)=>{
     const d=new Date(h.date+'T12:00').toLocaleDateString(_lang==='en'?'en-US':'pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
-    const col=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}).length,ent=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');}).length;
+    const col=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes(_resolveTagId('coleta'));}).length,ent=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes(_resolveTagId('entrega'));}).length;
     const clientNames=h.clients.map(c=>(c.nome||'').toLowerCase()).join('|');
     const clientTels=h.clients.map(c=>(c.tel||'')).join('|');
     return '<div class="hi" onclick="openHist('+i+')" data-clients="'+clientNames.replace(/"/g,'&quot;')+'" data-tels="'+clientTels.replace(/"/g,'&quot;')+'"><div style="width:42px;height:42px;background:var(--pul);border-radius:var(--rl2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0"><span class="mot-ico" style="width:20px;height:20px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span></div><div><div style="font-weight:700;font-size:14px">'+d.charAt(0).toUpperCase()+d.slice(1)+'</div><div class="hm">'+h.clients.length+' '+t('hist.clients')+' · '+t('misc.coletas',{n:col})+' / '+t('misc.entregas',{n:ent})+'</div></div></div>';
@@ -5166,7 +5169,7 @@ function openHist(i){
   histIdx=i;const h=getHist()[i];
   const d=new Date(h.date+'T12:00').toLocaleDateString(_lang==='en'?'en-US':'pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   g('hm-title').textContent=d.charAt(0).toUpperCase()+d.slice(1);
-  const col=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}),ent=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');});
+  const col=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes(_resolveTagId('coleta'));}),ent=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes(_resolveTagId('entrega'));});
   let html='<div class="ab ok">'+h.clients.length+' '+t('hist.clients')+' — '+t('misc.coletas',{n:col.length})+' / '+t('misc.entregas',{n:ent.length})+'</div>';
   // Gráficos donut no histórico (se houver dados de status/pagamento)
   const hasMotorData=h.order.some(idx=>{const c=h.clients[idx]||h.clients[0];return c&&(c._motStatus||c._motPay);});
@@ -5647,8 +5650,8 @@ function renderMotor(){
   const _gestorReadonly=!_isMotoristaMode&&_currentRouteId&&_cloudVersion>0;
   const d=clients[0]?.data?new Date(clients[0].data+'T12:00').toLocaleDateString(_lang==='en'?'en-US':'pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
   dateEl.textContent=d;
-  const tapR=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}).reduce((s,c)=>s+(c.qtd||0),0);
-  const tapE=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');}).reduce((s,c)=>s+(c.qtd||0),0);
+  const tapR=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes(_resolveTagId('coleta'));}).reduce((s,c)=>s+(c.qtd||0),0);
+  const tapE=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes(_resolveTagId('entrega'));}).reduce((s,c)=>s+(c.qtd||0),0);
   const doneCount=order.filter(i=>clients[i]._motDone).length;
   // Resumo
   let html='<div class="mot-summary">'
@@ -5676,7 +5679,7 @@ function renderMotor(){
     const c=clients[idx];
     const isDone=!!c._motDone;
     const isActive=!isDone&&stop===order.findIndex(i=>!clients[i]._motDone);
-    const tipos=normalizeTipo(c.tipo);const isCol=tipos.includes('coleta');
+    const tipos=normalizeTipo(c.tipo);const isCol=tipos.includes(_resolveTagId('coleta'));
     const statusLabel=isCol?t('mot.status_coletado'):t('mot.status_entregue');
     const statusClass=isCol?'s-coletado':'s-entregue';
     const navAddr=encodeURIComponent(c.endereco+', S\xe3o Paulo, SP');
@@ -5832,7 +5835,7 @@ function finishMotClient(idx){
   if(ta&&ta.value.trim()){c._motObs=ta.value.trim();cloudUpdateStatus(idx,'obs',c._motObs);}
   // v4.7.3: Se nenhum status foi marcado, assumir coletado/entregue automaticamente
   if(!c._motStatus){
-    const isCol=normalizeTipo(c.tipo).includes('coleta');
+    const isCol=normalizeTipo(c.tipo).includes(_resolveTagId('coleta'));
     c._motStatus=isCol?'coletado':'entregue';
     cloudUpdateStatus(idx,'status',c._motStatus);
   }
