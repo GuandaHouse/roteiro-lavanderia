@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.7.1';
+const APP_VERSION='v5.7.2';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -4514,8 +4514,8 @@ function focusMapMarker(stop){
 function openMarkerInfoWindow(mk,c,stop){
   if(_activeInfoWindow)_activeInfoWindow.close();
   // v4.3.4: Use tag colors and improved layout
-  const tagColor=_getTagColor(c.tipo);
-  const tagLabel=_getTagLabel(c.tipo);
+  const tagColor=_getTagColor(normalizeTipo(c.tipo)[0]);
+  const tagLabel=_getTagLabel(normalizeTipo(c.tipo)[0]);
   const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';
   let details=[];
   if(c.tel)details.push('\u260E '+c.tel);
@@ -4739,7 +4739,7 @@ async function nominatimReverse(lat,lng){
 }
 function sortByWindow(){
   const sc=c=>{if(c.janela==='manha')return 0;if(c.janela==='custom'&&c.hi<'12:00')return 0.5;if(c.janela==='livre')return 1;if(c.janela==='custom')return 1.5;return 2;};
-  order.sort((a,b)=>{const ca=clients[a],cb=clients[b];const s=sc(ca)-sc(cb);if(s)return s;return ca.tipo==='coleta'?-1:1;});
+  order.sort((a,b)=>{const ca=clients[a],cb=clients[b];const s=sc(ca)-sc(cb);if(s)return s;return normalizeTipo(ca.tipo).includes('coleta')?-1:1;});
 }
 
 // Calcula deadline em minutos desde meia-noite para um cliente com janela de horário
@@ -5819,7 +5819,7 @@ function finishMotClient(idx){
   if(ta&&ta.value.trim()){c._motObs=ta.value.trim();cloudUpdateStatus(idx,'obs',c._motObs);}
   // v4.7.3: Se nenhum status foi marcado, assumir coletado/entregue automaticamente
   if(!c._motStatus){
-    const isCol=c.tipo==='coleta'||c.tipo==='both';
+    const isCol=normalizeTipo(c.tipo).includes('coleta');
     c._motStatus=isCol?'coletado':'entregue';
     cloudUpdateStatus(idx,'status',c._motStatus);
   }
