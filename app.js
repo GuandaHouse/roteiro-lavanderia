@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.14';
+const APP_VERSION='v5.8.15';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -2095,6 +2095,22 @@ function _initApp(){
   setTimeout(()=>{_runAddrMigration();},500);
   // v5.8.8: Detectar divergência de cidade em clientes já geocodificados
   setTimeout(()=>{_runMismatchMigration();},1200);
+  // v5.8.15: Limpar escolhas salvas por "confirmar localização atual" (não devem ser permanentes)
+  // Compara {lat,lng} da escolha salva com o cache geocoding — se coincidir, é "confirmar atual"
+  try{
+    const choices=JSON.parse(localStorage.getItem('rota_addr_choices')||'{}');
+    const geoCache=Object.keys(localStorage).filter(k=>k.startsWith('geo_'));
+    let changed=false;
+    for(const key of Object.keys(choices)){
+      const ch=choices[key];
+      const rawAddr=ch.rawAddr||'';
+      const geo=localStorage.getItem('geo_'+rawAddr);
+      if(geo){
+        try{const g=JSON.parse(geo);if(Math.abs(g.lat-ch.lat)<0.001&&Math.abs(g.lng-ch.lng)<0.001){delete choices[key];changed=true;}}catch(e){}
+      }
+    }
+    if(changed){localStorage.setItem('rota_addr_choices',JSON.stringify(choices));console.log('[v5.8.15] Removidas escolhas "confirmar atual" do cache de endereços');}
+  }catch(e){}
   // v5.8.9: Auditoria de ambiguidade geográfica — compara coords armazenadas vs geocode neutro
   setTimeout(()=>{_runStoredGeoAudit();},2500);
   // v5.0.1: Auto-limpeza da rota ao virar o dia
@@ -3611,12 +3627,13 @@ async function showAddrPicker(clientId){
 function pickAddr(clientId,i){
   const c=clients.find(x=>x.id==clientId);if(!c||!c._addrResults)return;
   const chosen=c._addrResults[i];
-  // v5.8.9: Se usuário confirmou o local atual (isStored), não alterar coords/endereço
+  // v5.8.15: Se usuário confirmou o local atual (isStored), NÃO salvar escolha permanente.
+  // Salvar permanente só faz sentido quando o usuário troca para um local DIFERENTE.
+  // "Confirmar atual" apenas descarta o badge desta sessão — badge volta na próxima importação.
   if(chosen.isStored){
-    // Apenas registrar na memória que essa é a escolha correta
-    _addrChoiceSave(c.endereco,{lat:c.lat,lng:c.lng,bairro:chosen.bairro,cidade:chosen.cidade});
+    // Apenas descartar o badge sem salvar escolha (endereço ainda é considerado ambíguo)
   } else {
-    // Aplicar coordenadas do local alternativo escolhido
+    // Aplicar coordenadas do local alternativo escolhido e salvar permanentemente
     c.lat=chosen.lat;c.lng=chosen.lng;if(chosen.cidade)c._cidade=chosen.cidade;
     if(chosen.route)c.endereco=_fmtAddrFromGeo(chosen,c.endereco);
     _addrChoiceSave(c.endereco,chosen);
