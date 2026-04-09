@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.7.5';
+const APP_VERSION='v5.7.6';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -2949,13 +2949,13 @@ function importTC(){
     // "até Xh" / "antes das Xh"
     else if((function(){
       const m=ft.match(/(?:ate|antes\s+d[aeo]s?)\s+(?:as?\s+)?(\d{1,2})(?::(\d{2}))?\s*h?/);
-      if(m&&!ft.includes('meio')){janela='custom';hi='';hf=m[1].padStart(2,'0')+':'+(m[2]||'00');return true;}
+      if(m&&!ft.includes('meio')){janela='custom';hi='07:00';hf=m[1].padStart(2,'0')+':'+(m[2]||'00');return true;}
       return false;
     })()){/* matched */}
     // "após Xh" / "depois das Xh" / "a partir das Xh"
     else if((function(){
       const m=ft.match(/(?:apos|depois\s+d[aeo]s?|a\s+partir\s+d[aeo]s?)\s+(?:as?\s+)?(\d{1,2})(?::(\d{2}))?\s*h?/);
-      if(m){janela='custom';hi=m[1].padStart(2,'0')+':'+(m[2]||'00');hf='';return true;}
+      if(m){janela='custom';hi=m[1].padStart(2,'0')+':'+(m[2]||'00');hf='18:00';return true;}
       return false;
     })()){/* matched */}
     // "por volta das Xh" / "às Xh"
