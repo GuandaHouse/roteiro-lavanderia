@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.6';
+const APP_VERSION='v5.8.7';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -484,6 +484,23 @@ function _runAddrMigration(){
   if(changed){console.log('[MIGR] '+changed+' endereços normalizados');renderC();autoSaveRoute();}
   localStorage.setItem(KEY,'1');
 }
+// ── v5.8.7: ADDRESS CHOICE MEMORY ───────────────────────────────────────────
+function _addrChoiceKey(addr){
+  if(!addr)return '';
+  return addr.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/\b(apto?\.?|ap\.?|apartamento|bl(?:oco?)?\.?|bloco|torre[\s\d]*|andar[\s\d]*|sala[\s\d]*|fundos|sl\.?[\s\d]*|conj\.?[\s\d]*|kit)\b[\s\S]*/i,'')
+    .replace(/[^a-z0-9\s]/g,' ')
+    .replace(/\s+/g,' ').trim();
+}
+function _addrChoiceGet(addr){try{const d=JSON.parse(localStorage.getItem('rota_addr_choices')||'{}');return d[_addrChoiceKey(addr)]||null;}catch(e){return null;}}
+function _addrChoiceSave(addr,choice){try{const d=JSON.parse(localStorage.getItem('rota_addr_choices')||'{}');d[_addrChoiceKey(addr)]={...choice,rawAddr:addr,chosenAt:new Date().toISOString()};localStorage.setItem('rota_addr_choices',JSON.stringify(d));}catch(e){}}
+function _addrChoiceDel(key){try{const d=JSON.parse(localStorage.getItem('rota_addr_choices')||'{}');delete d[key];localStorage.setItem('rota_addr_choices',JSON.stringify(d));}catch(e){}}
+function _addrChoiceGetAll(){try{return JSON.parse(localStorage.getItem('rota_addr_choices')||'{}')}catch(e){return {};}}
+function _geoDistKm(a,b){const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng-a.lng)*Math.PI/180;const aa=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;return R*2*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));}
+function _hasGeoAmbiguity(results){if(!results||results.length<2)return false;const f=results[0].geometry.location;return results.slice(1).some(r=>{const l=r.geometry.location;return _geoDistKm({lat:f.lat,lng:f.lng},{lat:l.lat,lng:l.lng})>0.5;});}
+// ────────────────────────────────────────────────────────────────────────────
+
 // v5.8.5: Extrai complemento embutido no endereço (Apto X, Bloco Y, etc.)
 function _extractCompFromAddr(addr){
   if(!addr)return '';
@@ -964,13 +981,27 @@ async function checkAmbWithCep(){
           }
         }
       }
-      // Continuar lógica de ambiguidade original
-      if(d.results.length>1){
-        ambRes=d.results.map(r=>({lat:r.geometry.location.lat,lon:r.geometry.location.lng,display_name:r.formatted_address}));
-        const box=g('amb-box');
-        let html='<div class="ab w"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <strong>Endere\u00e7o amb\u00edguo</strong> \u2014 selecione o correto:</div>';
-        ambRes.forEach((r,i)=>{html+='<div class="ao" id="ao-'+i+'" onclick="selAmb('+i+')">'+r.display_name+'</div>';});
-        box.innerHTML=html;box.style.display='block';
+      // v5.8.7: Lógica de ambiguidade com memória
+      const addr2=v('f-end');
+      if(d.results.length>1&&_hasGeoAmbiguity(d.results)){
+        const mem=_addrChoiceGet(addr2);
+        if(mem){
+          // Memória encontrada — aplicar silenciosamente
+          ambRes=[{...mem,display_name:mem.rawAddr||addr2}];ambSel=0;
+          g('amb-box').style.display='none';
+          toast('\u2713 Endere\xE7o confirmado automaticamente ('+[mem.bairro,mem.cidade].filter(Boolean).join(', ')+')','ok');
+        } else {
+          // Sem memória — mostrar picker enriquecido (bairro + cidade)
+          ambRes=d.results.map(r=>_extractGeoResult(r));
+          const box=g('amb-box');
+          const SVG_WARN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+          let html='<div class="ab w"><span class="mot-ico">'+SVG_WARN+'</span> <strong>Endere\xE7o amb\xEDguo</strong> \u2014 '+d.results.length+' locais encontrados. Selecione o correto:</div>';
+          ambRes.forEach((r,i)=>{
+            const loc=[r.bairro,r.cidade].filter(Boolean).join(' \u2014 ')||r.display;
+            html+='<div class="ao" id="ao-'+i+'" onclick="selAmb('+i+')"><strong style="font-size:13px">'+loc+'</strong><div style="font-size:11px;color:var(--mu);margin-top:2px">'+r.display+'</div></div>';
+          });
+          box.innerHTML=html;box.style.display='block';
+        }
       } else {g('amb-box').style.display='none';}
     }
   }catch(e){g('amb-box').style.display='none';}
@@ -1893,7 +1924,7 @@ function _initApp(){
   const savedTab=localStorage.getItem('rota_active_tab');
   if(savedTab&&savedTab!=='rota'&&!_isMotoristaMode){const tm={hist:1,dash:2,motor:3,cfg:4};const ti=tm[savedTab];const nt=document.querySelectorAll('.ntab');if(ti!==undefined&&nt[ti])goPage(savedTab,nt[ti]);}
   setTimeout(()=>{preloadDashData();},2000);
-  renderTagsConfig();updateTagSelects();initPreferredTab();initCustomSelects();
+  renderTagsConfig();updateTagSelects();initPreferredTab();initCustomSelects();renderAddrChoices();
   applyI18n();updateLangBtns();
   if(!cfg.ttoken){const el=g('trello-nocred');if(el)el.style.display='block';const s1=g('trello-step1');if(s1)s1.style.display='none';}
   _authUpdateConfigUI();
@@ -3308,10 +3339,13 @@ async function checkAmb(){
   const box=g('amb-box');
   try{
     const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+_getAddrSuffix())+'&region=br&key='+GKEY+_getAnchorBounds()+_getAnchorComponents()).then(r=>r.json());
-    if(d.status==='OK'&&d.results.length>1){
-      ambRes=d.results.map(r=>({lat:r.geometry.location.lat,lon:r.geometry.location.lng,display_name:r.formatted_address}));
-      let html='<div class="ab w"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <strong>Endere\xE7o amb\xEDguo</strong> \u2014 selecione o correto:</div>';
-      ambRes.forEach((r,i)=>{html+='<div class="ao" id="ao-'+i+'" onclick="selAmb('+i+')">'+r.display_name+'</div>';});
+    if(d.status==='OK'&&d.results.length>1&&_hasGeoAmbiguity(d.results)){
+      const mem=_addrChoiceGet(addr);
+      if(mem){ambRes=[mem];ambSel=0;box.style.display='none';toast('\u2713 Endere\xE7o confirmado automaticamente ('+[mem.bairro,mem.cidade].filter(Boolean).join(', ')+')','ok');return;}
+      ambRes=d.results.map(r=>_extractGeoResult(r));
+      const SVG_WARN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+      let html='<div class="ab w"><span class="mot-ico">'+SVG_WARN+'</span> <strong>Endere\xE7o amb\xEDguo</strong> \u2014 '+d.results.length+' locais encontrados. Selecione o correto:</div>';
+      ambRes.forEach((r,i)=>{const loc=[r.bairro,r.cidade].filter(Boolean).join(' \u2014 ')||r.display;html+='<div class="ao" id="ao-'+i+'" onclick="selAmb('+i+')"><strong style="font-size:13px">'+loc+'</strong><div style="font-size:11px;color:var(--mu);margin-top:2px">'+r.display+'</div></div>';});
       box.innerHTML=html;box.style.display='block';
     } else {box.style.display='none';}
   }catch(e){box.style.display='none';}
@@ -3319,10 +3353,68 @@ async function checkAmb(){
 function selAmb(i){
   document.querySelectorAll('.ao').forEach(a=>a.classList.remove('sel'));
   g('ao-'+i)?.classList.add('sel');ambSel=i;
-  // v4.6.3: Preserve user's original address — only use Google result to resolve ambiguity (lat/lng/CEP), not to overwrite the address text
-  if(ambRes[i]){g('amb-box').style.display='none';toast(t('msg.addr_confirmed'),'ok');}
+  if(ambRes[i]){
+    // v5.8.7: Salvar escolha na memória para uso futuro
+    const addr=v('f-end');
+    if(addr)_addrChoiceSave(addr,ambRes[i]);
+    g('amb-box').style.display='none';
+    const loc=[ambRes[i].bairro,ambRes[i].cidade].filter(Boolean).join(', ');
+    toast(t('msg.addr_confirmed')+(loc?' ('+loc+')':''),'ok');
+  }
 }
 function confirmAmb(){closeModal('amb-modal');ambRes=[];ambSel=-1;} // v4.6.3: don't overwrite address
+
+// v5.8.7: Modal de seleção para clientes com _addrPending (importados em lote)
+function showAddrPicker(clientId){
+  const c=clients.find(x=>x.id==clientId);if(!c||!c._addrPending||!c._addrResults)return;
+  const modal=g('addr-picker-modal');if(!modal)return;
+  const SVG_WARN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+  let html='<div style="padding:4px 0 16px;font-size:13px;color:var(--mu)">Encontramos <strong>'+c._addrResults.length+' locais</strong> com esse endere\xE7o para <strong>'+_stripEmoji(c.nome)+'</strong>. Selecione o correto e o sistema vai lembrar dessa escolha.</div>';
+  c._addrResults.forEach((r,i)=>{
+    const loc=[r.bairro,r.cidade].filter(Boolean).join(' \u2014 ')||r.display;
+    html+='<div class="addr-pick-opt" onclick="pickAddr(\''+clientId+'\','+i+')">'
+      +'<div class="addr-pick-loc">'+loc+'</div>'
+      +'<div class="addr-pick-full">'+r.display+'</div>'
+      +'</div>';
+  });
+  g('addr-picker-content').innerHTML=html;
+  g('addr-picker-title').textContent='Verificar endere\xE7o';
+  modal.classList.add('on');
+}
+function pickAddr(clientId,i){
+  const c=clients.find(x=>x.id==clientId);if(!c||!c._addrResults)return;
+  const chosen=c._addrResults[i];
+  // Aplicar coordenadas e salvar na memória
+  c.lat=chosen.lat;c.lng=chosen.lng;if(chosen.cidade)c._cidade=chosen.cidade;
+  if(chosen.route)c.endereco=_fmtAddrFromGeo(chosen,c.endereco);
+  _addrChoiceSave(c.endereco,chosen);
+  delete c._addrPending;delete c._addrResults;
+  closeModal('addr-picker-modal');
+  renderC();autoSaveRoute();
+  const loc=[chosen.bairro,chosen.cidade].filter(Boolean).join(', ');
+  toast('\u2713 Endere\xE7o confirmado'+(loc?' ('+loc+')':''),'ok');
+  // Verificar se há mais pendentes — abrir próximo automaticamente
+  const next=clients.find(x=>x._addrPending);
+  if(next)setTimeout(()=>showAddrPicker(next.id),400);
+}
+function renderAddrChoices(){
+  const el=g('addr-choices-list');if(!el)return;
+  const data=_addrChoiceGetAll();
+  const keys=Object.keys(data);
+  if(!keys.length){el.innerHTML='<div style="color:var(--mu);font-size:13px;padding:12px 0">Nenhum endere\xE7o memorizado ainda.</div>';return;}
+  el.innerHTML=keys.map(k=>{
+    const v=data[k];
+    const loc=[v.bairro,v.cidade].filter(Boolean).join(' \u2014 ')||v.rawAddr||k;
+    const dt=v.chosenAt?new Date(v.chosenAt).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}):'';
+    return '<div class="addr-choice-row">'
+      +'<div class="addr-choice-info">'
+        +'<div class="addr-choice-loc">'+loc+'</div>'
+        +'<div class="addr-choice-raw">'+(v.rawAddr||k)+(dt?' \u2014 '+dt:'')+'</div>'
+      +'</div>'
+      +'<button class="bic" onclick="_addrChoiceDel(\''+k+'\');renderAddrChoices()" title="Remover" style="width:28px;height:28px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>'
+    +'</div>';
+  }).join('');
+}
 
 
 function showConfirm(title,msg,onOk,onCancel,okLabel){
@@ -3455,7 +3547,13 @@ function renderC(){
   if(!clients.length){el.innerHTML='<div class="empty"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span><p>'+t('cl.empty')+'</p></div>';g('cc-count').textContent='';g('cfl-banner').innerHTML='';if(clearBtn)clearBtn.style.display='none';return;}
   const cfls=clients.filter(c=>c.conflict);
   const coletasRisco=cfls.filter(c=>{const tipos=normalizeTipo(c.tipo);return tipos.length&&tipos.includes(_resolveTagId('coleta'));}).length;
-  g('cfl-banner').innerHTML=cfls.length?'<div class="ab w" style="margin-bottom:12px"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> <div><strong>'+t('card.conflict',{n:cfls.length})+'</strong> '+t('card.risk',{n:coletasRisco})+'</div></div>':'';
+  // v5.8.7: Banner de endereços pendentes de verificação
+  const pendentes=clients.filter(c=>c._addrPending);
+  const SVG_WARN_SM='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+  let bannerHtml='';
+  if(cfls.length)bannerHtml+='<div class="ab w" style="margin-bottom:12px"><span class="mot-ico">'+SVG_WARN_SM+'</span> <div><strong>'+t('card.conflict',{n:cfls.length})+'</strong> '+t('card.risk',{n:coletasRisco})+'</div></div>';
+  if(pendentes.length)bannerHtml+='<div class="ab" style="margin-bottom:12px;background:rgba(255,170,0,.08);border-color:rgba(255,170,0,.3);display:flex;align-items:center;gap:10px"><span class="mot-ico" style="color:#f59e0b">'+SVG_WARN_SM+'</span><div style="flex:1"><strong style="color:#92400e">'+pendentes.length+' endere\xE7o'+(pendentes.length>1?'s precisam':'precisa')+' de verifica\xE7\xE3o</strong><div style="font-size:12px;color:var(--mu);margin-top:2px">O sistema encontrou mais de 1 local com esse nome. Clique para escolher o correto.</div></div><button class="btn bp" style="flex-shrink:0;font-size:12px;padding:6px 12px" onclick="showAddrPicker(\''+pendentes[0].id+'\')">Revisar agora</button></div>';
+  g('cfl-banner').innerHTML=bannerHtml;
   el.innerHTML=order.map((idx,stop)=>{
     const c=clients[idx];
     const tipos=normalizeTipo(c.tipo);
@@ -3476,6 +3574,8 @@ function renderC(){
       +'<div class="ci">'
         +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
           +'<span class="cn">'+_stripEmoji(c.nome)+'</span>'
+          // v5.8.7: Badge de endereço pendente de verificação
+          +(c._addrPending?'<button class="addr-pending-badge" onclick="event.stopPropagation();showAddrPicker(\''+c.id+'\')" title="Endere\xE7o amb\xEDguo \u2014 clique para verificar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> verificar</button>':'')
           +(tagChips?'<div style="display:flex;gap:3px;flex-wrap:wrap;flex-shrink:0">'+tagChips+'</div>':'')
         +'</div>'
         +(c.endereco?'<div class="ca">'+fmtEnderecoComCidade(c)+'</div>':'')
@@ -4699,11 +4799,15 @@ const _geoCache={};
 // v4.8.0: Pre-geocoding — geocodifica cliente em background assim que adicionado
 function preGeocode(client){
   if(!client||!client.endereco||(client.lat&&client.lng))return;
-  // Fire-and-forget: não bloqueia a UI
-  nominatim(client.endereco).then(r=>{
+  // v5.8.7: passa client para que nominatim possa marcar _addrPending se ambíguo
+  nominatim(client.endereco,client).then(r=>{
     if(r){client.lat=r.lat;client.lng=r.lng;if(r.cidade)client._cidade=r.cidade;
-      if(r.route){client.endereco=_fmtAddrFromGeo(r,client.endereco);autoSaveRoute();}
+      if(r.route){client.endereco=_fmtAddrFromGeo(r,client.endereco);}
       console.log('[PRE-GEO] '+client.nome+' geocodificado e endereço normalizado');
+      autoSaveRoute();renderC();
+    } else if(client._addrPending){
+      // Ambiguidade detectada — re-renderiza cards para mostrar badge
+      renderC();autoSaveRoute();
     }
   }).catch(()=>{});
 }
@@ -4771,30 +4875,36 @@ function _extractGeoResult(result){
   const cidade=(comps.find(c=>c.types.includes('administrative_area_level_2'))||comps.find(c=>c.types.includes('locality'))||{}).long_name||'';
   return {lat:loc.lat,lng:loc.lng,display:result.formatted_address,route,streetNum,bairro,cidade};
 }
-async function nominatim(addr){
+// v5.8.7: nominatim aceita client opcional — se ambíguo sem memória, marca _addrPending
+async function nominatim(addr,client){
   if(_geoCache[addr])return _geoCache[addr];
   const cached=localStorage.getItem('geo_'+addr);
   if(cached){const c=JSON.parse(cached);_geoCache[addr]=c;return c;}
-  // Resolver âncora se ainda não tiver
+  // v5.8.7: Verificar memória de escolhas antes de geocodificar
+  const mem=_addrChoiceGet(addr);
+  if(mem){console.log('[GEO-MEM] '+addr+' → '+mem.cidade+' (memória)');_geoCache[addr]=mem;return mem;}
   await _resolveGeoAnchor();
   try{
-    // Montar sufixo de contexto geográfico baseado na âncora
-    // v4.9.1: Incluir CIDADE no sufixo (evita geocoding em cidade errada)
     const suffix=_geoAnchor?(_geoAnchor.city?', '+_geoAnchor.city+', '+(_geoAnchor.state||'')+', Brasil':(_geoAnchor.state?', '+_geoAnchor.state+', Brasil':', Brasil')):', Brasil';
     const url='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+suffix)+'&region=br&key='+GKEY+_getAnchorBounds()+_getAnchorComponents();
-    // v4.8.4: Timeout de 6s para Google Geocoding (evita pendura infinita)
     const _gc1=new AbortController();const _gt1=setTimeout(()=>_gc1.abort(),6000);
     const d=await fetch(url,{signal:_gc1.signal}).then(r=>r.json());
     clearTimeout(_gt1);
     if(d.status==='OK'&&d.results.length){
-      // Preferir resultado mais próximo da âncora
-      const nearResult=d.results.find(r=>_isNearAnchor(r.geometry.location.lat,r.geometry.location.lng));
-      const best=nearResult||d.results[0];
+      // v5.8.7: Detectar ambiguidade geográfica real (>500m entre resultados)
+      const nearResults=d.results.filter(r=>_isNearAnchor(r.geometry.location.lat,r.geometry.location.lng));
+      const candidates=nearResults.length?nearResults:d.results;
+      if(client&&_hasGeoAmbiguity(candidates)){
+        // Sem memória + ambíguo + client fornecido → marcar para revisão
+        console.log('[GEO-AMB] '+addr+' — '+candidates.length+' locais distintos encontrados');
+        client._addrPending=true;
+        client._addrResults=candidates.map(r=>_extractGeoResult(r));
+        return null;
+      }
+      const best=(nearResults.length?nearResults:d.results)[0];
       const result=_extractGeoResult(best);
-      // Se caiu longe da âncora, tentar com cidade da âncora explícita
       if(!_isNearAnchor(result.lat,result.lng)&&_geoAnchor?.city){
         const url2='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+', '+_geoAnchor.city+', '+(_geoAnchor.state||'')+', Brasil')+'&region=br&key='+GKEY+_getAnchorBounds();
-        // v4.8.4: Timeout de 6s para retry geocoding
         const _gc2=new AbortController();const _gt2=setTimeout(()=>_gc2.abort(),6000);
         const d2=await fetch(url2,{signal:_gc2.signal}).then(r=>r.json());
         clearTimeout(_gt2);
