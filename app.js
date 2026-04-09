@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.4';
+const APP_VERSION='v5.8.5';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -434,6 +434,37 @@ const DEFAULT_TAGS=[
 let _tags=safeJsonParse('rota_tags',null)||DEFAULT_TAGS.map(t=>({...t}));
 // v5.8.4: resolve ID real da tag por label — suporta tags com IDs customizados (ex: tag_XXXX do Trello)
 function _resolveTagId(idOrLabel){if(_tags.some(t=>t.id===idOrLabel))return idOrLabel;const low=(idOrLabel||'').toLowerCase();return(_tags.find(t=>(t.label||'').toLowerCase()===low)||{id:idOrLabel}).id;}
+// v5.8.5: Normaliza separadores de endereço — evita vírgulas/traços duplicados
+function _normalizeAddrString(raw){
+  if(!raw||raw.length<5)return raw;
+  let s=raw.trim().replace(/\s{2,}/g,' ');
+  s=s.replace(/\s*[-\u2013\u2014]{2,}\s*/g,' \u2014 ');  // múltiplos traços → em-dash
+  s=s.replace(/,\s*[-\u2013\u2014]\s*/g,' \u2014 ');      // , - → —
+  s=s.replace(/\s*[-\u2013\u2014]\s*,\s*/g,' \u2014 ');  // - , → —
+  s=s.replace(/(?<!^)\s+-\s+(?!\d)/g,' \u2014 ');          // ' - ' → ' — ' (exceto número negativo)
+  s=s.replace(/\s*\u2013\s*/g,' \u2014 ');                  // en-dash → em-dash
+  s=s.replace(/\s*\u2014\s*/g,' \u2014 ');                  // normaliza espaços ao redor
+  s=s.replace(/\u2014\s*\u2014/g,'\u2014');                 // duplo em-dash
+  s=s.replace(/^[\s,\u2014]+/,'').replace(/[\s,\u2014]+$/,'');
+  return s;
+}
+// v5.8.5: Extrai complemento embutido no endereço (Apto X, Bloco Y, etc.)
+function _extractCompFromAddr(addr){
+  if(!addr)return '';
+  const m=addr.match(/\b((?:apto?\.?|ap\.?|apartamento|bl(?:oco?)?\.?|bloco|casa\s+\d|sala\s*\d*|sl\.?|conj(?:unto)?\.?|loja|torre\s*\d*|andar|pav\.?|fundos|unid\.?)\s*[\w\d\/\-]*)\b/i);
+  return m?m[1].trim():'';
+}
+// v5.8.5: Remonta endereço a partir dos componentes do Google Geocoding
+function _fmtAddrFromGeo(geoResult,origAddr){
+  if(!geoResult||!geoResult.route)return origAddr;
+  const comp=_extractCompFromAddr(origAddr);
+  let s=titleCase(geoResult.route);
+  if(geoResult.streetNum)s+=', '+geoResult.streetNum;
+  if(comp)s+=', '+comp;
+  if(geoResult.bairro)s+=' \u2014 '+titleCase(geoResult.bairro);
+  if(geoResult.cidade)s+=' \u2014 '+titleCase(geoResult.cidade);
+  return s;
+}
 function _saveTags(){localStorage.setItem('rota_tags',JSON.stringify(_tags));}
 // v5.4.3: Reavaliar tags em todos os cartões já na rota ao criar/renomear tag
 function _reapplyTagsToClients(){
@@ -2906,11 +2937,11 @@ function importTC(){
 
     // Se _p.c contém complemento (capturado erroneamente como cidade), limpar — já está em complemento
     if(_p.c&&compRe.test(_p.c))_p.c='';
-    // Remontar: "Logradouro, N\u00famero \u2014 Bairro, Cidade \u2014 Complemento"
+    // v5.8.5: Logradouro, Número, Complemento — Bairro — Município
     let endFmt=titleCase(_p.l);
     if(_p.n)endFmt+=', '+_p.n;
-    if(_p.b){endFmt+=' \u2014 '+titleCase(_p.b);if(_p.c)endFmt+=', '+titleCase(_p.c);}
-    if(complemento)endFmt+=' \u2014 '+complemento;
+    if(complemento)endFmt+=', '+complemento;
+    if(_p.b){endFmt+=' \u2014 '+titleCase(_p.b);if(_p.c)endFmt+=' \u2014 '+titleCase(_p.c);}
     endereco=endFmt;
 
     // ── OBSERVA\u00c7\u00d5ES (v4.8.9: complemento NUNCA vai pro obs) ──
@@ -3284,7 +3315,7 @@ function addClient(){
     if(hi&&hf&&hi>=hf){toast(t('err.time_order'),'err');return;}
   }
   const cep=v('f-cep').replace(/\D/g,'');
-  const newClient={id:Date.now()+Math.random(),nome,endereco:end,cep,complemento:'',tel:v('f-tel'),tipo:tipos,qtd,val,valTipo,data:v('f-data')||new Date().toISOString().split('T')[0],janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null};
+  const newClient={id:Date.now()+Math.random(),nome,endereco:_normalizeAddrString(end),cep,complemento:'',tel:v('f-tel'),tipo:tipos,qtd,val,valTipo,data:v('f-data')||new Date().toISOString().split('T')[0],janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null};
   clients.push(newClient);
   preGeocode(newClient); // v4.8.0: geocodificar em background imediatamente
   order=clients.map((_,i)=>i);
@@ -3356,7 +3387,7 @@ function saveEditC(){
   const _emObs=g('em-obs').value.trim();
   c.nome=_emNome?titleCase(_emNome):c.nome;
   c.cep=g('em-cep').value.replace(/\D/g,'');
-  c.endereco=_emEnd?titleCase(_emEnd):c.endereco;
+  c.endereco=_emEnd?_normalizeAddrString(titleCase(_emEnd)):c.endereco;
   c.complemento='';
   c.tel=g('em-tel').value.trim();
   
@@ -4633,7 +4664,8 @@ function preGeocode(client){
   // Fire-and-forget: não bloqueia a UI
   nominatim(client.endereco).then(r=>{
     if(r){client.lat=r.lat;client.lng=r.lng;if(r.cidade)client._cidade=r.cidade;
-      console.log('[PRE-GEO] '+client.nome+' geocodificado em background');
+      if(r.route){client.endereco=_fmtAddrFromGeo(r,client.endereco);autoSaveRoute();}
+      console.log('[PRE-GEO] '+client.nome+' geocodificado e endereço normalizado');
     }
   }).catch(()=>{});
 }
@@ -4695,9 +4727,11 @@ function _waypointFor(c){
 function _extractGeoResult(result){
   const loc=result.geometry.location;
   const comps=result.address_components;
+  const route=(comps.find(c=>c.types.includes('route'))||{}).long_name||'';
+  const streetNum=(comps.find(c=>c.types.includes('street_number'))||{}).long_name||'';
   const bairro=(comps.find(c=>c.types.includes('sublocality_level_1'))||comps.find(c=>c.types.includes('sublocality'))||comps.find(c=>c.types.includes('neighborhood'))||{}).long_name||'';
   const cidade=(comps.find(c=>c.types.includes('administrative_area_level_2'))||comps.find(c=>c.types.includes('locality'))||{}).long_name||'';
-  return {lat:loc.lat,lng:loc.lng,display:result.formatted_address,bairro,cidade};
+  return {lat:loc.lat,lng:loc.lng,display:result.formatted_address,route,streetNum,bairro,cidade};
 }
 async function nominatim(addr){
   if(_geoCache[addr])return _geoCache[addr];
@@ -4802,7 +4836,7 @@ async function calcRoute(){
       const batch=needGeo.slice(b,b+GEO_BATCH);
       const results=await Promise.all(batch.map(c=>nominatim(c.endereco).catch(()=>null)));
       results.forEach((r,i)=>{
-        if(r){batch[i].lat=r.lat;batch[i].lng=r.lng;if(r.cidade)batch[i]._cidade=r.cidade;}
+        if(r){batch[i].lat=r.lat;batch[i].lng=r.lng;if(r.cidade)batch[i]._cidade=r.cidade;if(r.route)batch[i].endereco=_fmtAddrFromGeo(r,batch[i].endereco);}
         else notFound.push(batch[i].nome);
       });
       // Rate limit: 200ms pause between batches (not between each client)
