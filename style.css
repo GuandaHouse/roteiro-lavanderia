@@ -974,3 +974,18 @@ body.is-superadmin .ntab.admin-tab{display:flex}
 @media(max-width:480px){
   .adm-grid{grid-template-columns:1fr}
 }
+
+/* v5.8.7: Endereço ambíguo — badge, picker, memória */
+.addr-pending-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:20px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#92400e;font-size:10px;font-weight:600;cursor:pointer;line-height:1.2;text-transform:uppercase;letter-spacing:.4px;flex-shrink:0;transition:background .15s}
+.addr-pending-badge:hover{background:rgba(245,158,11,.22)}
+body.dark .addr-pending-badge{color:#fbbf24;background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.3)}
+.addr-pick-opt{padding:12px 14px;border:1px solid var(--bd);border-radius:10px;cursor:pointer;margin-bottom:8px;transition:border-color .15s,background .15s}
+.addr-pick-opt:hover{border-color:var(--pu);background:var(--pul)}
+.addr-pick-opt:last-child{margin-bottom:0}
+.addr-pick-loc{font-size:14px;font-weight:600;color:var(--tx)}
+.addr-pick-full{font-size:11px;color:var(--mu);margin-top:3px;line-height:1.4}
+.addr-choice-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)}
+.addr-choice-row:last-child{border-bottom:none}
+.addr-choice-info{flex:1;min-width:0}
+.addr-choice-loc{font-size:13px;font-weight:600;color:var(--tx)}
+.addr-choice-raw{font-size:11px;color:var(--mu);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
