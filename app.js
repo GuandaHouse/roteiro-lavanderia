@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.10';
+const APP_VERSION='v5.8.11';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -554,31 +554,98 @@ function _extractBaseAddr(addr){
   return m[0].trim();
 }
 
-// v5.8.10: LÓGICA CENTRAL — compara result geocodificado (bounded) vs resultado neutro (sem bounds)
-// Princípio: se o Google "natural" aponta pra cidade diferente → rua existe em múltiplos locais
-// Retorna: {chosen, neutral} se ambíguo | null se sem ambiguidade | undefined se erro de rede
-async function _checkGeoAmbiguity(chosenLat, chosenLng, chosenBairro, chosenCidade, baseAddr){
-  if(!baseAddr||!GKEY)return null;
+// ── v5.8.11: REGISTRO DE LOCAIS POR RUA ─────────────────────────────────────
+// Persiste em localStorage todos os locais descobertos para cada rua ambígua.
+// Chave: endereço base normalizado | Valor: array de {lat,lng,bairro,cidade,display}
+function _geoLocKey(baseAddr){
+  return(baseAddr||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+}
+function _geoLocGet(baseAddr){try{const d=JSON.parse(localStorage.getItem('rota_geo_locs')||'{}');return d[_geoLocKey(baseAddr)]||null;}catch(e){return null;}}
+function _geoLocAdd(baseAddr,newLocs){
+  if(!newLocs||!newLocs.length)return;
   try{
-    const ac=new AbortController();const tid=setTimeout(()=>ac.abort(),8000);
-    // Query neutra: só rua + número, sem contexto geográfico
-    const url='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(baseAddr+', Brasil')+'&region=br&components=country:BR&key='+GKEY;
-    const d=await fetch(url,{signal:ac.signal}).then(r=>r.json());
-    clearTimeout(tid);
-    if(d.status!=='OK'||!d.results.length)return null;
-    const neutralResult=_extractGeoResult(d.results[0]);
-    const dist=_geoDistKm({lat:chosenLat,lng:chosenLng},{lat:neutralResult.lat,lng:neutralResult.lng});
-    if(dist<3)return null; // Mesmo local — não é ambíguo
-    console.log('[GEO-AMB] '+baseAddr+': escolhido='+chosenCidade+'('+chosenBairro+') | neutro='+neutralResult.cidade+'('+neutralResult.bairro+') | dist='+dist.toFixed(1)+'km');
-    return {
-      chosen:{lat:chosenLat,lng:chosenLng,bairro:chosenBairro,cidade:chosenCidade,isStored:true},
-      neutral:neutralResult
-    };
-  }catch(e){console.warn('[GEO-AMB]',e.message);return undefined;} // undefined = erro de rede, não cachear
+    const d=JSON.parse(localStorage.getItem('rota_geo_locs')||'{}');
+    const key=_geoLocKey(baseAddr);const existing=d[key]||[];
+    for(const loc of newLocs){
+      if(!loc||!loc.lat||!loc.lng)continue;
+      if(!existing.some(e=>_geoDistKm(e,loc)<2))existing.push({lat:loc.lat,lng:loc.lng,bairro:loc.bairro||'',cidade:loc.cidade||'',display:loc.display||''});
+    }
+    d[key]=existing;localStorage.setItem('rota_geo_locs',JSON.stringify(d));
+  }catch(e){}
 }
 
-// v5.8.10: Auditoria de clientes já geocodificados — roda a cada sessão (sessionStorage, não localStorage)
-// Usa sessionStorage → verifica 1x por sessão de browser, não bloqueia uso repetido
+// v5.8.11: Busca EXAUSTIVA — 6 queries em paralelo cobrindo N/S/L/O + centro + neutro
+// Garante que TODOS os locais numa rua sejam descobertos de uma vez, não incrementalmente.
+// Cache em localStorage: uma vez pesquisado, não refaz as queries.
+async function _findAllGeoLocations(baseAddr){
+  if(!baseAddr||!GKEY)return[];
+  // Verificar cache primeiro — se já conhecemos os locais, retornar imediatamente
+  const cached=_geoLocGet(baseAddr);
+  if(cached&&cached.length>0)return cached;
+  await _resolveGeoAnchor();
+  const ax=_geoAnchor?_geoAnchor.lat:-23.55;
+  const ay=_geoAnchor?_geoAnchor.lng:-46.63;
+  const S=0.28; // raio curto ~31km
+  const L=0.58; // raio longo ~65km
+  const BOX=0.35;
+  // 11 viewpoints (4 cardeais ×2 raios + 4 diagonais + centro) + 1 neutro = 12 queries simultâneas
+  const viewpoints=[
+    [ax,ay],        // centro
+    [ax+S,ay],      // N curto
+    [ax-S,ay],      // S curto
+    [ax,ay+S],      // L curto
+    [ax,ay-S],      // O curto
+    [ax+L,ay],      // N longo
+    [ax-L,ay],      // S longo
+    [ax,ay+L],      // L longo
+    [ax,ay-L],      // O longo
+    [ax+S,ay+S],    // NL diagonal
+    [ax-S,ay-S],    // SO diagonal
+    null,           // neutro (sem bounds — resultado global do Google)
+  ];
+  const queries=viewpoints.map(vp=>{
+    const bounds=vp?'&bounds='+(vp[0]-BOX).toFixed(4)+','+(vp[1]-BOX).toFixed(4)+'|'+(vp[0]+BOX).toFixed(4)+','+(vp[1]+BOX).toFixed(4):'';
+    const url='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(baseAddr+', Brasil')+'&region=br&components=country:BR&key='+GKEY+bounds;
+    const ac=new AbortController();setTimeout(()=>ac.abort(),8000);
+    return fetch(url,{signal:ac.signal}).then(r=>r.json()).catch(()=>null);
+  });
+  const responses=await Promise.all(queries);
+  const found=[];
+  for(const d of responses){
+    if(!d||d.status!=='OK'||!d.results.length)continue;
+    const loc=_extractGeoResult(d.results[0]);
+    if(!loc.lat||!loc.lng)continue;
+    // Só inclui dentro de ~100km da âncora
+    if(_geoAnchor&&_geoDistKm({lat:loc.lat,lng:loc.lng},{lat:ax,lng:ay})>100)continue;
+    // Deduplica: não adiciona se já existe resultado a <2km
+    if(!found.some(f=>_geoDistKm(f,loc)<2))found.push(loc);
+  }
+  // Persiste no registry para uso imediato em outros clientes com a mesma rua
+  if(found.length)_geoLocAdd(baseAddr,found);
+  console.log('[GEO-FIND] '+baseAddr+' → '+found.length+' local(is): '+found.map(f=>f.cidade).join(', '));
+  return found;
+}
+
+// v5.8.11: Verifica ambiguidade usando busca exaustiva.
+// Retorna: array de opções para _addrResults (com isStored no chosen) | null sem ambiguidade | undefined erro
+async function _checkGeoAmbiguity(chosenLat,chosenLng,chosenBairro,chosenCidade,baseAddr){
+  if(!baseAddr||!GKEY)return null;
+  try{
+    const allLocs=await _findAllGeoLocations(baseAddr);
+    if(!allLocs.length)return null;
+    // Verifica se há pelo menos 1 local alternativo a >3km do escolhido
+    const hasAlternative=allLocs.some(loc=>_geoDistKm({lat:chosenLat,lng:chosenLng},loc)>3);
+    if(!hasAlternative)return null;
+    // Monta lista: chosen (isStored:true) primeiro, depois os outros ordenados por distância
+    const chosen={lat:chosenLat,lng:chosenLng,bairro:chosenBairro,cidade:chosenCidade,isStored:true};
+    const others=allLocs.filter(loc=>_geoDistKm({lat:chosenLat,lng:chosenLng},loc)>2)
+      .sort((a,b)=>_geoDistKm({lat:chosenLat,lng:chosenLng},a)-_geoDistKm({lat:chosenLat,lng:chosenLng},b));
+    console.log('[GEO-AMB] '+baseAddr+': '+chosenCidade+' vs ['+others.map(o=>o.cidade).join(', ')+']');
+    return[chosen,...others];
+  }catch(e){console.warn('[GEO-AMB]',e.message);return undefined;}
+}
+
+// v5.8.11: Auditoria de clientes já geocodificados — sessionStorage (1x por sessão de browser)
 async function _runStoredGeoAudit(){
   if(!clients.length)return;
   const SESSION_KEY='rota_geo_audit_session';
@@ -590,23 +657,18 @@ async function _runStoredGeoAudit(){
   let anyFound=false;
   for(const c of toCheck){
     const baseAddr=_extractBaseAddr(c.endereco);
-    if(!baseAddr){audited.add(String(c.id));continue;} // sem base addr → marca e pula
+    if(!baseAddr){audited.add(String(c.id));continue;}
     const parts=c.endereco.split('\u2014').map(p=>p.trim()).filter(Boolean);
     const storedBairro=parts.length>=3?parts[parts.length-2]:(parts.length===2?'':'');
     const storedCidade=parts.length>=2?parts[parts.length-1]:(c._cidade||'');
     const result=await _checkGeoAmbiguity(c.lat,c.lng,storedBairro,storedCidade,baseAddr);
     if(result===undefined){
-      // Erro de rede — não cachear, tentará novamente na próxima sessão
-      console.warn('[GEO-AUDIT] Falha de rede para '+c.nome+' — tentará novamente');
-    } else {
-      audited.add(String(c.id)); // null ou resultado → marca como verificado
-      if(result){
-        c._addrPending=true;
-        c._addrResults=[result.chosen,result.neutral];
-        anyFound=true;
-      }
+      console.warn('[GEO-AUDIT] Falha de rede para '+c.nome+' — tentará na próxima sessão');
+    }else{
+      audited.add(String(c.id));
+      if(result){c._addrPending=true;c._addrResults=result;anyFound=true;}
     }
-    await new Promise(res=>setTimeout(res,350));
+    // Sem delay extra — _findAllGeoLocations já usa cache após primeira busca
   }
   try{sessionStorage.setItem(SESSION_KEY,JSON.stringify([...audited]));}catch(e){}
   if(anyFound){renderC();autoSaveRoute();}
@@ -3481,36 +3543,45 @@ function selAmb(i){
 function confirmAmb(){closeModal('amb-modal');ambRes=[];ambSel=-1;} // v4.6.3: don't overwrite address
 
 // v5.8.7: Modal de seleção para clientes com _addrPending (importados em lote)
-// v5.8.8: showAddrPicker suporta lazy loading — busca resultados sob demanda se _addrResults=null
-// v5.8.9: Fallback para _checkStoredGeoAmbiguity quando _ambiguityCheckNoBounds retorna nulo
-//         e cliente já tem coordenadas armazenadas. Exibe "Atual" vs "Alternativa" claramente.
+// v5.8.11: showAddrPicker — lazy load usa _findAllGeoLocations (12 queries exaustivas)
+// Garante que TODOS os locais da rua sejam apresentados desde o primeiro clique
 async function showAddrPicker(clientId){
   const c=clients.find(x=>x.id==clientId);if(!c||!c._addrPending)return;
   const modal=g('addr-picker-modal');if(!modal)return;
   g('addr-picker-title').textContent='Verificar endere\xE7o';
   // Se resultados ainda não foram carregados, buscar agora (lazy)
   if(!c._addrResults||!c._addrResults.length){
-    g('addr-picker-content').innerHTML='<div style="padding:24px;text-align:center;color:var(--mu);font-size:13px">Buscando locais com esse endere\xE7o...</div>';
+    g('addr-picker-content').innerHTML='<div style="padding:24px;text-align:center;color:var(--mu);font-size:13px">Buscando todos os locais poss\xedveis...</div>';
     modal.classList.add('on');
-    // Tenta detecção por múltiplos resultados (importações novas)
-    let results=await _ambiguityCheckNoBounds(c.endereco);
-    if(!results||!results.length){
-      // v5.8.9: Fallback — comparar coords armazenadas contra geocode sem viés
+    const baseAddr=_extractBaseAddr(c.endereco);
+    if(baseAddr){
+      // v5.8.11: busca exaustiva — todos os locais para essa rua
+      const allLocs=await _findAllGeoLocations(baseAddr);
+      const parts=c.endereco.split('\u2014').map(p=>p.trim()).filter(Boolean);
+      const storedBairro=parts.length>=3?parts[parts.length-2]:(parts.length===2?'':'');
+      const storedCidade=parts.length>=2?parts[parts.length-1]:(c._cidade||'');
       if(c.lat&&c.lng){
-        const auditResult=await _checkStoredGeoAmbiguity(c);
-        if(auditResult){
-          results=[auditResult.stored,auditResult.alt];
+        const chosen={lat:c.lat,lng:c.lng,bairro:storedBairro,cidade:storedCidade,isStored:true};
+        const others=allLocs.filter(loc=>_geoDistKm(loc,{lat:c.lat,lng:c.lng})>2)
+          .sort((a,b)=>_geoDistKm({lat:c.lat,lng:c.lng},a)-_geoDistKm({lat:c.lat,lng:c.lng},b));
+        if(others.length>0){c._addrResults=[chosen,...others];}
+        else{
+          delete c._addrPending;delete c._addrResults;
+          modal.classList.remove('on');renderC();
+          toast('Endere\xE7o verificado \u2014 sem locais alternativos encontrados','ok');return;
         }
+      } else if(allLocs.length>1){
+        c._addrResults=allLocs;
+      } else {
+        delete c._addrPending;delete c._addrResults;
+        modal.classList.remove('on');renderC();
+        toast('Endere\xE7o verificado \u2014 sem locais alternativos encontrados','ok');return;
       }
-    }
-    if(!results||!results.length){
+    } else {
       delete c._addrPending;delete c._addrResults;
-      modal.classList.remove('on');
-      renderC();
-      toast('Endere\xE7o verificado \u2014 nenhuma ambiguidade encontrada','ok');
-      return;
+      modal.classList.remove('on');renderC();
+      toast('N\xe3o foi poss\xedvel verificar esse endere\xE7o','err');return;
     }
-    c._addrResults=results;
   }
   // v5.8.9: Verifica se results[0] é o local atual armazenado (isStored:true)
   const hasStoredOption=c._addrResults[0]&&c._addrResults[0].isStored;
@@ -5072,11 +5143,11 @@ async function nominatim(addr,client){
         if(baseAddr){
           const _clientRef=client; // captura referência antes de qualquer async
           const _chosenResult=result;
+          // v5.8.11: _checkGeoAmbiguity retorna array completo de opções (não mais {chosen,neutral})
           _checkGeoAmbiguity(_chosenResult.lat,_chosenResult.lng,_chosenResult.bairro,_chosenResult.cidade,baseAddr).then(ambig=>{
-            if(ambig&&!_clientRef._addrPending){
+            if(ambig&&Array.isArray(ambig)&&!_clientRef._addrPending){
               _clientRef._addrPending=true;
-              _clientRef._addrResults=[ambig.chosen,ambig.neutral];
-              // Marca também no sessionStorage para o audit não re-checar
+              _clientRef._addrResults=ambig;
               try{const k='rota_geo_audit_session';const s=new Set(JSON.parse(sessionStorage.getItem(k)||'[]'));s.add(String(_clientRef.id));sessionStorage.setItem(k,JSON.stringify([...s]));}catch(e){}
               renderC();autoSaveRoute();
             }
