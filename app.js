@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.12';
+const APP_VERSION='v5.8.13';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -5130,9 +5130,22 @@ function _extractGeoResult(result){
 }
 // v5.8.8: nominatim — verificação de ambiguidade via chamada sem bounds
 async function nominatim(addr,client){
-  if(_geoCache[addr])return _geoCache[addr];
+  // v5.8.13: helper para disparar ambiguidade em background em qualquer cache hit
+  function _fireAmbigCheck(result){
+    if(!client||_addrChoiceGet(addr))return;
+    const baseAddr=_extractBaseAddr(addr);if(!baseAddr)return;
+    const _cr=client,_res=result;
+    _checkGeoAmbiguity(_res.lat,_res.lng,_res.bairro,_res.cidade,baseAddr).then(ambig=>{
+      if(ambig&&Array.isArray(ambig)&&!_cr._addrPending){
+        _cr._addrPending=true;_cr._addrResults=ambig;
+        try{const k='rota_geo_audit_session';const s=new Set(JSON.parse(sessionStorage.getItem(k)||'[]'));s.add(String(_cr.id));sessionStorage.setItem(k,JSON.stringify([...s]));}catch(e){}
+        renderC();autoSaveRoute();
+      }
+    }).catch(()=>{});
+  }
+  if(_geoCache[addr]){_fireAmbigCheck(_geoCache[addr]);return _geoCache[addr];}
   const cached=localStorage.getItem('geo_'+addr);
-  if(cached){const c=JSON.parse(cached);_geoCache[addr]=c;return c;}
+  if(cached){const c=JSON.parse(cached);_geoCache[addr]=c;_fireAmbigCheck(c);return c;}
   // Verificar memória de escolhas antes de geocodificar
   const mem=_addrChoiceGet(addr);
   if(mem){console.log('[GEO-MEM] '+addr+' → '+mem.cidade+' (memória)');_geoCache[addr]=mem;return mem;}
