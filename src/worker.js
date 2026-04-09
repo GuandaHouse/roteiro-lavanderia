@@ -373,6 +373,24 @@ async function handleSyncPost(request, env) {
   const payload = await authenticateRequest(request, env);
   if (!payload) return json({ ok: false, error: 'Nao autenticado' }, 401);
   const body = await request.json();
+
+  // v5.8.1: Conflict resolution — proteger tags e cfg com timestamps
+  // Buscar dados existentes para comparar versões
+  const existingRaw = await env.USERS.get(`sync:${payload.sub}`);
+  if (existingRaw) {
+    const existing = JSON.parse(existingRaw);
+    // Tags: só sobrescreve se incoming é mais recente OU igual (mesmo dispositivo)
+    if (body.tags && (body.tagsUpdatedAt || 0) < (existing.tagsUpdatedAt || 0)) {
+      body.tags = existing.tags;
+      body.tagsUpdatedAt = existing.tagsUpdatedAt;
+    }
+    // Cfg: mesma lógica
+    if (body.cfg && (body.cfgUpdatedAt || 0) < (existing.cfgUpdatedAt || 0)) {
+      body.cfg = existing.cfg;
+      body.cfgUpdatedAt = existing.cfgUpdatedAt;
+    }
+  }
+
   const serialized = JSON.stringify(body);
   if (serialized.length > 2 * 1024 * 1024) {
     return json({ ok: false, error: 'Dados muito grandes. Reduza o historico.' }, 413);
