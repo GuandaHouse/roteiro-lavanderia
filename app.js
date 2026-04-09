@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.7.2';
+const APP_VERSION='v5.7.3';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -551,7 +551,7 @@ function selectInlineColor(id,color,el){
 }
 function confirmInlineTag(id){
   const nameInput=g(id+'-new-name');
-  const name=(nameInput?.value||'').trim();
+  const raw=(nameInput?.value||'').trim();const name=raw.charAt(0).toUpperCase()+raw.slice(1);
   if(!name){toast(t('tag.enter_name'),'warn');return;}
   if(_tags.length>=10){toast(t('tag.max_10'),'warn');return;}
   // Check duplicate
@@ -4236,7 +4236,10 @@ async function recalcRouteFromOrder(){
 function updStats(){
   const col=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('coleta');}),ent=clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes('entrega');});
   g('s-cli').textContent=clients.length;
-  g('s-sub').textContent=t(col.length===1?'stats.coleta':'stats.coletas',{n:col.length})+' \xb7 '+t(ent.length===1?'stats.entrega':'stats.entregas',{n:ent.length});
+  // Contagem dinâmica por tag — respeita rótulos configurados pelo usuário
+  const tagCounts={};clients.forEach(c=>{normalizeTipo(c.tipo).forEach(id=>{tagCounts[id]=(tagCounts[id]||0)+1;});});
+  const subParts=_tags.filter(tag=>tagCounts[tag.id]>0).slice(0,3).map(tag=>tagCounts[tag.id]+' '+(tag.label||tag.id));
+  g('s-sub').textContent=subParts.length?subParts.join(' · '):'';
   g('s-ret').textContent=col.reduce((s,c)=>s+(c.qtd||0),0);
   g('s-ent').textContent=ent.reduce((s,c)=>s+(c.qtd||0),0);
 }
@@ -4979,15 +4982,15 @@ async function genImage(){
   wrap.style.cssText='width:520px;background:#F6F7FB;padding:16px;font-family:Figtree,Arial,sans-serif;position:fixed;top:-99999px;left:-99999px;z-index:-1';
   const cards=order.map((idx,stop)=>{
     const c=clients[idx];
-    const tipos=normalizeTipo(c.tipo);const isCol=tipos.includes('coleta');
+    const tipos=normalizeTipo(c.tipo);const primaryTag=tipos[0]||'';const tagClr=_getTagColor(primaryTag)||'#6C5CE7';const tagLbl=_getTagLabel(primaryTag)||primaryTag;
     const vd=c.valTipo==='medir'?'Medir':c.valTipo==='pago'?'Pago':c.val?'R$ '+fmtBRL(c.val):'';
     const det=[c.tel?c.tel:'',c.qtd?c.qtd+' '+(cfg._itemLabel||'item')+(c.qtd>1?'s':''):'',vd].filter(Boolean).join(' · ');
-    return `<div style="background:#fff;border:1px solid #E2E4F0;border-left:3.5px solid ${isCol?'#00C875':'#0098F7'};border-radius:8px;padding:11px 12px;margin-bottom:7px;display:flex;gap:10px;align-items:flex-start">
-      <div style="width:20px;height:20px;min-width:20px;border-radius:50%;background:${isCol?'#E6FBF3':'#E6F5FF'};color:${isCol?'#00A65E':'#0098F7'};font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:2px">${stop+1}</div>
+    return `<div style="background:#fff;border:1px solid #E2E4F0;border-left:3.5px solid ${tagClr};border-radius:8px;padding:11px 12px;margin-bottom:7px;display:flex;gap:10px;align-items:flex-start">
+      <div style="width:20px;height:20px;min-width:20px;border-radius:50%;background:${tagClr}22;color:${tagClr};font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:2px">${stop+1}</div>
       <div style="flex:1;min-width:0">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
           <span style="font-weight:600;font-size:13px;color:#1C1F3B;line-height:1.4">${c.nome}</span>
-          <span style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:2px 8px;border-radius:20px;background:${isCol?'#E6FBF3':'#E6F5FF'};color:${isCol?'#00A65E':'#0098F7'};white-space:nowrap;margin-top:2px">${isCol?'Coleta':'Entrega'}</span>
+          <span style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:2px 8px;border-radius:20px;background:${tagClr}22;color:${tagClr};white-space:nowrap;margin-top:2px">${tagLbl}</span>
         </div>
         ${c.endereco?`<div style="font-size:12px;color:#6B6F8E;margin-top:3px">${c.endereco}${c.complemento?' — '+c.complemento:''}</div>`:''}
         ${det?`<div style="font-size:12px;color:#6B6F8E;margin-top:5px">${det}</div>`:''}
@@ -5001,8 +5004,8 @@ async function genImage(){
       <div style="color:#fff;font-weight:700;font-size:16px">Roteiro</div>
       <div style="color:#A0A5C8;font-size:12px;margin-top:4px">${d.charAt(0).toUpperCase()+d.slice(1)}</div>
       <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;justify-content:center">
-        <span style="background:rgba(0,200,117,.15);color:#00C875;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">${col.length} coleta${col.length!==1?'s':''} · ${tapR} ite${tapR!==1?'ns':'m'} a retirar</span>
-        <span style="background:rgba(0,152,247,.15);color:#4DB8FF;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">${ent.length} entrega${ent.length!==1?'s':''} · ${tapE} ite${tapE!==1?'ns':'m'} a entregar</span>
+        <span style="background:rgba(0,200,117,.15);color:#00C875;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">${col.length} ${_getTagLabel('coleta')||'coleta'}${col.length!==1?'s':''} · ${tapR} ite${tapR!==1?'ns':'m'} a retirar</span>
+        <span style="background:rgba(0,152,247,.15);color:#4DB8FF;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">${ent.length} ${_getTagLabel('entrega')||'entrega'}${ent.length!==1?'s':''} · ${tapE} ite${tapE!==1?'ns':'m'} a entregar</span>
       </div>
     </div>
     ${cards}
@@ -5681,7 +5684,7 @@ function renderMotor(){
       +'<div class="mc-top">'
         +'<div class="mc-top-left">'
           +'<div class="mc-num">'+(stop+1)+'</div>'
-          +'<span class="mc-tipo">'+(isCol?t('mot.coleta'):t('mot.entrega'))+'</span>'
+          +'<span class="mc-tipo">'+(_getTagLabel(tipos[0])||(isCol?t('mot.coleta'):t('mot.entrega')))+'</span>'
         +'</div>'
         +(c.estT?'<div class="mc-time">'+c.estT+'</div>':'')
       +'</div>'
