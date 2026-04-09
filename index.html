@@ -1004,6 +1004,17 @@ html:not(.auth-pending) #auth-screen{display:none;}
   <div id="cfg-logout-wrap" style="display:none;text-align:center;padding:16px 0 0">
     <button onclick="_authLogout()" style="background:none;border:1px solid var(--rd);color:var(--rd);padding:10px 24px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sair da conta</button>
   </div>
+  <!-- v5.8.7: Endereços Memorizados -->
+  <div class="card" style="margin-top:24px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--tx)">Endereços Memorizados</div>
+        <div style="font-size:12px;color:var(--mu);margin-top:2px">Quando você escolhe o endereço correto em casos ambíguos, o sistema lembra para a próxima vez.</div>
+      </div>
+    </div>
+    <div id="addr-choices-list"></div>
+  </div>
+
   <!-- v5.4.2: Version badge — preenchido via JS após DOMContentLoaded (APP_VERSION) -->
   <div id="app-version-badge" style="text-align:center;padding:16px 0 8px;font-size:11px;color:var(--mu);opacity:.6"></div>
   <!-- v4.3.4: Sticky save bar at bottom -->
@@ -1154,6 +1165,17 @@ html:not(.auth-pending) #auth-screen{display:none;}
 </div>
 
 <div class="mbg" id="confirm-modal"><div class="modal" style="max-width:380px"><h2 id="confirm-title">Confirmar</h2><p id="confirm-msg" style="font-size:14px;color:var(--mu);margin-bottom:4px"></p><div class="ma"><button class="btn bo" id="confirm-cancel" onclick="closeModal('confirm-modal')">Cancelar</button><button class="btn bp" id="confirm-ok" onclick="">Confirmar</button></div></div></div>
+
+<!-- v5.8.7: Modal de seleção de endereço ambíguo -->
+<div class="mbg" id="addr-picker-modal">
+  <div class="modal" style="max-width:500px">
+    <div class="mhd">
+      <h2 id="addr-picker-title" style="font-size:16px;margin:0">Verificar endereço</h2>
+      <button class="bic" onclick="closeModal('addr-picker-modal')" style="width:28px;height:28px;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div id="addr-picker-content"></div>
+  </div>
+</div>
 
 <!-- COMPLETION SUMMARY OVERLAY -->
 <div class="completion-overlay" id="completion-overlay">
