@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.15';
+const APP_VERSION='v5.8.16';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -651,7 +651,9 @@ async function _runStoredGeoAudit(){
   const SESSION_KEY='rota_geo_audit_session';
   let audited=new Set();
   try{audited=new Set(JSON.parse(sessionStorage.getItem(SESSION_KEY)||'[]'));}catch(e){}
-  const toCheck=clients.filter(c=>c.lat&&c.lng&&!c._addrPending&&!audited.has(String(c.id))&&!_addrChoiceGet(c.endereco));
+  // v5.8.16: só pula se o choice tem type:'alt' (usuário trocou para local diferente)
+  // "Confirmar atual" não salva mais choice → não bloqueia audit
+  const toCheck=clients.filter(c=>c.lat&&c.lng&&!c._addrPending&&!audited.has(String(c.id))&&!((_addrChoiceGet(c.endereco)||{}).type==='alt'));
   if(!toCheck.length)return;
   console.log('[GEO-AUDIT] Verificando '+toCheck.length+' cliente(s)...');
   let anyFound=false;
@@ -2095,21 +2097,16 @@ function _initApp(){
   setTimeout(()=>{_runAddrMigration();},500);
   // v5.8.8: Detectar divergência de cidade em clientes já geocodificados
   setTimeout(()=>{_runMismatchMigration();},1200);
-  // v5.8.15: Limpar escolhas salvas por "confirmar localização atual" (não devem ser permanentes)
-  // Compara {lat,lng} da escolha salva com o cache geocoding — se coincidir, é "confirmar atual"
+  // v5.8.16: Limpar todos os choices antigos que não têm type:'alt'
+  // Choices sem type:'alt' foram gerados por "confirmar localização atual" (comportamento antigo)
+  // e bloqueavam o audit. Agora só choices type:'alt' (local diferente) bloqueiam.
   try{
     const choices=JSON.parse(localStorage.getItem('rota_addr_choices')||'{}');
-    const geoCache=Object.keys(localStorage).filter(k=>k.startsWith('geo_'));
-    let changed=false;
-    for(const key of Object.keys(choices)){
-      const ch=choices[key];
-      const rawAddr=ch.rawAddr||'';
-      const geo=localStorage.getItem('geo_'+rawAddr);
-      if(geo){
-        try{const g=JSON.parse(geo);if(Math.abs(g.lat-ch.lat)<0.001&&Math.abs(g.lng-ch.lng)<0.001){delete choices[key];changed=true;}}catch(e){}
-      }
+    const cleaned={};let changed=false;
+    for(const[k,v]of Object.entries(choices)){
+      if(v&&v.type==='alt'){cleaned[k]=v;}else{changed=true;}
     }
-    if(changed){localStorage.setItem('rota_addr_choices',JSON.stringify(choices));console.log('[v5.8.15] Removidas escolhas "confirmar atual" do cache de endereços');}
+    if(changed){localStorage.setItem('rota_addr_choices',JSON.stringify(cleaned));console.log('[v5.8.16] Removidos choices sem type:alt do cache de endereços');}
   }catch(e){}
   // v5.8.9: Auditoria de ambiguidade geográfica — compara coords armazenadas vs geocode neutro
   setTimeout(()=>{_runStoredGeoAudit();},2500);
@@ -3636,7 +3633,7 @@ function pickAddr(clientId,i){
     // Aplicar coordenadas do local alternativo escolhido e salvar permanentemente
     c.lat=chosen.lat;c.lng=chosen.lng;if(chosen.cidade)c._cidade=chosen.cidade;
     if(chosen.route)c.endereco=_fmtAddrFromGeo(chosen,c.endereco);
-    _addrChoiceSave(c.endereco,chosen);
+    _addrChoiceSave(c.endereco,{...chosen,type:'alt'}); // v5.8.16: type:'alt' marca escolha de local diferente
   }
   delete c._addrPending;delete c._addrResults;
   closeModal('addr-picker-modal');
