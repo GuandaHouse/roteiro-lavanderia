@@ -265,7 +265,7 @@ body.dark .sync-indicator.ok{background:#14532d;color:#4ade80;border-color:#1665
 body.dark .sync-indicator.saving{background:#2e1065;color:#c4b5fd;border-color:#4c1d95}
 body.dark .sync-indicator.err{background:#450a0a;color:#fca5a5;border-color:#7f1d1d}
 /* v4.4.0: Delete confirmation toast */
-.confirm-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);z-index:500;background:var(--bg);border:1px solid var(--bd);border-radius:14px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.18);opacity:0;transition:all .3s cubic-bezier(.4,0,.2,1);pointer-events:none}
+.confirm-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);z-index:10100;/* v5.8.29: acima do map-fullscreen (9999) e nav (10003) */background:var(--bg);border:1px solid var(--bd);border-radius:14px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.18);opacity:0;transition:all .3s cubic-bezier(.4,0,.2,1);pointer-events:none}
 .confirm-toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
 .confirm-toast .ct-msg{font-size:13px;font-weight:600;color:var(--tx)}
 .confirm-toast .ct-actions{display:flex;gap:6px}
