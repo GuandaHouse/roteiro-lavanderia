@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.20';
+const APP_VERSION='v5.8.21';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -658,15 +658,14 @@ async function _findAllGeoLocations(baseAddr,clientCity){
   });
   // 2. Google neutro (1 query sem bounds) — captura casos cross-city/cross-state
   const ac0=new AbortController();setTimeout(()=>ac0.abort(),7000);
-  const googlePromise=fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(baseAddr+', Brasil')+'&region=br&components=country:BR&key='+GKEY,{signal:ac0.signal}).then(r=>r.json()).catch(()=>null);
+  const googlePromise=_geocodeProxy('address='+encodeURIComponent(baseAddr+', Brasil')+'&region=br&components=country:BR',ac0.signal).catch(()=>null);
   const[viacepArrays,googleData]=await Promise.all([Promise.all(viacepPromises),googlePromise]);
   // Geocodifica cada resultado ViaCEP pelo CEP — muito mais preciso que geocoding por texto
   const allVc=viacepArrays.flat().filter(r=>r&&!r.erro&&r.cep);
   const uniqueCeps=[...new Set(allVc.map(r=>r.cep.replace('-','')))];
   const cepGeoPromises=uniqueCeps.map(cep=>{
     const ac=new AbortController();setTimeout(()=>ac.abort(),6000);
-    return fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(cep)+',+Brasil&region=br&key='+GKEY,{signal:ac.signal})
-      .then(r=>r.json()).catch(()=>null).then(d=>{
+    return _geocodeProxy('address='+encodeURIComponent(cep)+',+Brasil&region=br',ac.signal).catch(()=>null).then(d=>{
         if(!d||d.status!=='OK'||!d.results.length)return null;
         const loc=_extractGeoResult(d.results[0]);
         const vc=allVc.find(r=>r.cep.replace('-','')==cep);
@@ -1037,8 +1036,8 @@ async function geocodeCepForPrefix(prefix){
     const suffix=_getAddrSuffix?_getAddrSuffix():'';
     const bounds=_getAnchorBounds?_getAnchorBounds():'';
     const comps=_getAnchorComponents?_getAnchorComponents():'';
-    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+suffix)+'&region=br&key='+GKEY+bounds+comps).then(r=>r.json());
-    if(d.status==='OK'&&d.results.length){
+    const d=await _geocodeProxy('address='+encodeURIComponent(addr+suffix)+'&region=br'+bounds+comps);
+    if(d&&d.status==='OK'&&d.results.length){
       const pc=d.results[0].address_components?.find(c=>c.types.includes('postal_code'));
       if(pc){
         const cepEl=document.getElementById(prefix+'-cep');
@@ -1190,8 +1189,8 @@ const _origCheckAmb=typeof checkAmb==='function'?checkAmb:null;
 async function checkAmbWithCep(){
   const addr=v('f-end');if(addr.length<8)return;
   try{
-    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+_getAddrSuffix())+'&region=br&key='+GKEY+_getAnchorBounds()+_getAnchorComponents()).then(r=>r.json());
-    if(d.status==='OK'&&d.results.length){
+    const d=await _geocodeProxy('address='+encodeURIComponent(addr+_getAddrSuffix())+'&region=br'+_getAnchorBounds()+_getAnchorComponents());
+    if(d&&d.status==='OK'&&d.results.length){
       // Extrair CEP do resultado
       const comps=d.results[0].address_components||[];
       const pcComp=comps.find(c=>c.types.includes('postal_code'));
@@ -1256,6 +1255,16 @@ async function checkAmbWithCep(){
    CLOUD SYNC — Cloudflare Worker + KV
    ══════════════════════════════════════════════════════════════ */
 const WORKER_URL='https://roteiro-lavanderia.nigel-guandalini.workers.dev';
+// v5.8.21: Plano B — Geocoding Proxy via Worker (cache KV compartilhado, chave server-side)
+// Substitui todas as chamadas diretas à Google Geocoding API no cliente.
+// queryStr: params sem key= (ex: 'address=Rua+X&region=br')
+async function _geocodeProxy(queryStr,signal){
+  const opts={};if(signal)opts.signal=signal;
+  try{
+    const r=await fetch(WORKER_URL+'/api/geocode?'+queryStr,opts);
+    return r.json();
+  }catch(e){return{status:'ERROR',results:[]};}
+}
 let _currentRouteId=null;
 let _cloudVersion=0;
 let _cloudHash='';
@@ -3603,8 +3612,8 @@ async function checkAmb(){
   const addr=v('f-end');if(addr.length<8)return;
   const box=g('amb-box');
   try{
-    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+_getAddrSuffix())+'&region=br&key='+GKEY+_getAnchorBounds()+_getAnchorComponents()).then(r=>r.json());
-    if(d.status==='OK'&&d.results.length>1&&_hasGeoAmbiguity(d.results)){
+    const d=await _geocodeProxy('address='+encodeURIComponent(addr+_getAddrSuffix())+'&region=br'+_getAnchorBounds()+_getAnchorComponents());
+    if(d&&d.status==='OK'&&d.results.length>1&&_hasGeoAmbiguity(d.results)){
       const mem=_addrChoiceGet(addr);
       if(mem){ambRes=[mem];ambSel=0;box.style.display='none';toast('\u2713 Endere\xE7o confirmado automaticamente ('+[mem.bairro,mem.cidade].filter(Boolean).join(', ')+')','ok');return;}
       ambRes=d.results.map(r=>_extractGeoResult(r));
@@ -4241,15 +4250,15 @@ async function _rebuildCachedMatrix(){
     if(!baseAddr)return;
     // v4.8.4: Timeout 6s para geocoding em rebuild background
     const _rbC1=new AbortController();const _rbT1=setTimeout(()=>_rbC1.abort(),6000);
-    const geoResp=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(baseAddr+', Brasil')+'&region=br&key='+GKEY,{signal:_rbC1.signal}).then(r=>r.json());
+    const geoResp=await _geocodeProxy('address='+encodeURIComponent(baseAddr+', Brasil')+'&region=br',_rbC1.signal);
     clearTimeout(_rbT1);
-    if(geoResp.status!=='OK'||!geoResp.results[0]?.geometry?.location)return; // v4.7.0: null-safe
+    if(!geoResp||geoResp.status!=='OK'||!geoResp.results[0]?.geometry?.location)return;
     const baseLoc=geoResp.results[0].geometry.location;
     const baseCoords={lat:baseLoc.lat,lng:baseLoc.lng};
     let retCoords=baseCoords;
     if(cfg.retaddr&&cfg.retaddr!==baseAddr){
       const _rbC2=new AbortController();const _rbT2=setTimeout(()=>_rbC2.abort(),6000);
-      const retResp=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(cfg.retaddr+', Brasil')+'&region=br&key='+GKEY,{signal:_rbC2.signal}).then(r=>r.json());
+      const retResp=await _geocodeProxy('address='+encodeURIComponent(cfg.retaddr+', Brasil')+'&region=br',_rbC2.signal);
       clearTimeout(_rbT2);
       if(retResp.status==='OK'&&retResp.results[0]){const rl=retResp.results[0].geometry.location;retCoords={lat:rl.lat,lng:rl.lng};}
     }
@@ -5176,9 +5185,9 @@ async function _resolveGeoAnchor(){
   try{
     // v4.8.4: Timeout de 6s para resolver ancora
     const _acCtrl=new AbortController();const _acTid=setTimeout(()=>_acCtrl.abort(),6000);
-    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(base+suffix)+'&region=br&key='+GKEY,{signal:_acCtrl.signal}).then(r=>r.json());
+    const d=await _geocodeProxy('address='+encodeURIComponent(base+suffix)+'&region=br',_acCtrl.signal);
     clearTimeout(_acTid);
-    if(d.status==='OK'&&d.results[0]){
+    if(d&&d.status==='OK'&&d.results[0]){
       const loc=d.results[0].geometry.location;
       const comps=d.results[0].address_components;
       const state=ufExplicita||(comps.find(c=>c.types.includes('administrative_area_level_1'))||{}).short_name||'';
@@ -5250,18 +5259,16 @@ async function nominatim(addr,client){
   // Agora: geocodifica normalmente, depois verifica ambiguidade em background
   try{
     const suffix=_geoAnchor?(_geoAnchor.city?', '+_geoAnchor.city+', '+(_geoAnchor.state||'')+', Brasil':(_geoAnchor.state?', '+_geoAnchor.state+', Brasil':', Brasil')):', Brasil';
-    const url='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+suffix)+'&region=br&key='+GKEY+_getAnchorBounds()+_getAnchorComponents();
     const _gc1=new AbortController();const _gt1=setTimeout(()=>_gc1.abort(),6000);
-    const d=await fetch(url,{signal:_gc1.signal}).then(r=>r.json());
+    const d=await _geocodeProxy('address='+encodeURIComponent(addr+suffix)+'&region=br'+_getAnchorBounds()+_getAnchorComponents(),_gc1.signal);
     clearTimeout(_gt1);
-    if(d.status==='OK'&&d.results.length){
+    if(d&&d.status==='OK'&&d.results.length){
       const nearResults=d.results.filter(r=>_isNearAnchor(r.geometry.location.lat,r.geometry.location.lng));
       const best=(nearResults.length?nearResults:d.results)[0];
       let result=_extractGeoResult(best);
       if(!_isNearAnchor(result.lat,result.lng)&&_geoAnchor?.city){
-        const url2='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(addr+', '+_geoAnchor.city+', '+(_geoAnchor.state||'')+', Brasil')+'&region=br&key='+GKEY+_getAnchorBounds();
         const _gc2=new AbortController();const _gt2=setTimeout(()=>_gc2.abort(),6000);
-        const d2=await fetch(url2,{signal:_gc2.signal}).then(r=>r.json());
+        const d2=await _geocodeProxy('address='+encodeURIComponent(addr+', '+_geoAnchor.city+', '+(_geoAnchor.state||'')+', Brasil')+'&region=br'+_getAnchorBounds(),_gc2.signal);
         clearTimeout(_gt2);
         if(d2.status==='OK'&&d2.results.length){
           const near2=d2.results.find(r=>_isNearAnchor(r.geometry.location.lat,r.geometry.location.lng));
@@ -5295,7 +5302,7 @@ async function nominatim(addr,client){
 }
 async function nominatimReverse(lat,lng){
   try{
-    const d=await fetch('https://maps.googleapis.com/maps/api/geocode/json?latlng='+lat+','+lng+'&key='+GKEY+'&language=pt-BR').then(r=>r.json());
+    const d=await _geocodeProxy('latlng='+lat+','+lng+'&language=pt-BR');
     if(d.status==='OK'&&d.results[0]){
       const comps=d.results[0].address_components;
       return {address:{suburb:(comps.find(c=>c.types.includes('sublocality_level_1'))||comps.find(c=>c.types.includes('sublocality'))||{}).long_name||''}};
