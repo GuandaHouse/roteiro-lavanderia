@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.44';
+const APP_VERSION='v5.8.45';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -495,10 +495,14 @@ function _addrChoiceKey(addr,clientName){
     .replace(/[^a-z0-9\s]/g,' ')
     .replace(/\s+/g,' ').trim();
   // v5.8.35: strip sufixo bairro/cidade (— Bairro — Cidade) antes de normalizar
-  // garante que "Rua X, 10" e "Rua X, 10 — Bairro — SP" gerem a mesma chave
   const addrBase=(addr.split('\u2014')[0]||addr).trim();
   const addrKey=addrBase.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    // v5.8.45: strip tipo de logradouro e títulos honoríficos para que
+    // "Ulisses 407" == "Rua Doutor Ulisses 407" == "Dr. Ulisses 407"
+    .replace(/^(rua|r\.?|av(?:enida)?\.?|avenida|alameda|al\.?|travessa|trav\.?|praca|largo|beco|estrada|viela|rodovia)\s+/i,'')
+    .replace(/\b(doutor[ae]?|dra?\.?|dr\.?|professor[ae]?|prof\.?|engenheiro[ae]?|eng\.?|padre|pe\.?|santa?\.?|sto?\.?)\s+/gi,'')
+    // strip complemento
     .replace(/\b(apto?\.?|ap\.?|apartamento|bl(?:oco?)?\.?|bloco|torre[\s\d]*|andar[\s\d]*|sala[\s\d]*|fundos|sl\.?[\s\d]*|conj\.?[\s\d]*|kit)\b[\s\S]*/i,'')
     .replace(/[^a-z0-9\s]/g,' ')
     .replace(/\s+/g,' ').trim();
@@ -1193,7 +1197,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   },500);
 });
 
-// [8] VALIDAÇÃO VISUAL — borda vermelha + shake + mensagem inline (v5.8.44)
+// [8] VALIDAÇÃO VISUAL — borda vermelha + shake + mensagem inline (v5.8.45)
 function shakeField(id,msg){
   const el=document.getElementById(id);if(!el)return;
   el.classList.add('field-error');
@@ -1391,10 +1395,10 @@ async function cloudPublish(){
       toast(t('t.published'),'ok');
       setCloudStatus('synced','Rota online e sincronizada em tempo real');
       _syncPushDebounced();
-      return true; // v5.8.44: sinaliza sucesso para o hook
+      return true; // v5.8.45: sinaliza sucesso para o hook
     } else {
       // v5.8.38: BUG-05 — KV write limit → mensagem específica + fallback local
-      // v5.8.44: res.status===500 também indica KV limit (HTTP level)
+      // v5.8.45: res.status===500 também indica KV limit (HTTP level)
       const isKvLimit=!res.ok||(data.error&&(data.error.includes('KV')||data.error.includes('limit')||data.error.includes('quota')));
       if(isKvLimit){
         toast('Limite do serviço cloud atingido. Rota salva localmente — link do motorista indisponível agora.','warn');
@@ -1403,11 +1407,11 @@ async function cloudPublish(){
       } else {
         toast(t('err.publish')+(data.error||t('err.unknown')),'err');
       }
-      return false; // v5.8.44: sinaliza falha para o hook
+      return false; // v5.8.45: sinaliza falha para o hook
     }
   }catch(e){
     toast(t('err.connection')+': '+e.message,'err');
-    return false; // v5.8.44: sinaliza falha para o hook
+    return false; // v5.8.45: sinaliza falha para o hook
   }finally{
     if(btn)btn.disabled=false;
   }
@@ -2361,6 +2365,13 @@ function restoreActiveRoute(){
     // v4.9.2: AUTO-RESTORE SILENCIOSO — sem modal, sem perguntar
     // Decisão do Philip: refresh preserva tudo automaticamente. Limpar = botão "Limpar todos".
     clients=data.clients;order=data.order||clients.map((_,i)=>i);
+    // v5.8.45: migração de endereços — remove qualificadores entre parênteses do bairro
+    // ex: 'Jardim Ipanema(zona Oeste)' → 'Jardim Ipanema'
+    clients.forEach(c=>{
+      if(c.endereco&&/\([^)]+\)/.test(c.endereco)){
+        c.endereco=c.endereco.replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s{2,}/g,' ').replace(/\s+—/g,' —').replace(/—\s+/g,'— ').trim();
+      }
+    });
     // v4.9.2: Restaurar estado cloud (routeId, version, hash) — permite polling retomar
     if(data.routeId){_currentRouteId=data.routeId;_cloudVersion=data.cloudVersion||0;_cloudHash=data.cloudHash||null;startGestorPolling();setCloudStatus('synced','Rota online e sincronizada em tempo real');console.log('[RESTORE] Cloud state restaurado: route='+_currentRouteId+' v'+_cloudVersion);}
     renderC();updStats();updBtns();
@@ -3244,7 +3255,7 @@ function importTC(){
 
     // ── ENDEREÇO + COMPLEMENTO (v4.8.9: reescrita completa) ──
     const _abrevs=[
-      [/\bAv\.\s?/gi,'Avenida '],[/\bAv[:\s]\s*/gi,'Avenida '], // v5.8.44: Av: com dois-pontos
+      [/\bAv\.\s?/gi,'Avenida '],[/\bAv[:\s]\s*/gi,'Avenida '], // v5.8.45: Av: com dois-pontos
       [/\bR\.\s?/gi,'Rua '],[/\bAl\.\s?/gi,'Alameda '],
       [/\bDr\.\s?/gi,'Doutor '],[/\bDr\s/gi,'Doutor '],
       [/\bProf\.\s?/gi,'Professor '],[/\bProf\s/gi,'Professor '],
@@ -3284,9 +3295,9 @@ function importTC(){
         }
       }
       // Endere\u00e7o? (logradouro ou CEP ou n\u00famero)
-      // v5.8.44: Ignorar linhas que são APENAS o rótulo "CEP: XXXXX-XXX" — sem logradouro
+      // v5.8.45: Ignorar linhas que são APENAS o rótulo "CEP: XXXXX-XXX" — sem logradouro
       if(/^cep\s*:?\s*\d{5}-?\d{3}\s*$/i.test(line)){lineRoles[li]='unknown';continue;}
-      // v5.8.44: Adicionar "av:" (com dois-pontos) ao detector de logradouro
+      // v5.8.45: Adicionar "av:" (com dois-pontos) ao detector de logradouro
       if(!endereco&&/(?:^(?:rua|r\.|av[.:\s]|avenida|alameda|al\.|travessa|trav\.|pra[c\u00e7]a|estrada|rod|viela|largo|beco)\b|\d{5}-?\d{3}|\b\d{1,5}\s*[-,])/i.test(line)){
         lineRoles[li]='addr';
         endereco=line;
@@ -3351,7 +3362,7 @@ function importTC(){
 
     // Extrair CEP do endere\u00e7o
     const cepM=endereco.match(/\b(\d{5}-?\d{3})\b/);
-    if(cepM){endereco=endereco.replace(cepM[0],'').replace(/[\s,\-\u2014:]+$/,'').replace(/^[\s,\-\u2014:]+/,'').trim();if(/^cep$/i.test(endereco))endereco='';} // v5.8.44: limpa rótulo 'CEP' quando sobra
+    if(cepM){endereco=endereco.replace(cepM[0],'').replace(/[\s,\-\u2014:]+$/,'').replace(/^[\s,\-\u2014:]+/,'').trim();if(/^cep$/i.test(endereco))endereco='';} // v5.8.45: limpa rótulo 'CEP' quando sobra
 
     // Expandir abreviações
     for(const [re,rep] of _abrevs)endereco=endereco.replace(re,rep);
@@ -3384,7 +3395,7 @@ function importTC(){
 
     // Se _p.c contém complemento (capturado erroneamente como cidade), limpar — já está em complemento
     if(_p.c&&compRe.test(_p.c))_p.c='';
-    // v5.8.44: Limpar qualificadores entre parênteses do bairro: 'Jardim Ipanema(zona Oeste)' → 'Jardim Ipanema'
+    // v5.8.45: Limpar qualificadores entre parênteses do bairro: 'Jardim Ipanema(zona Oeste)' → 'Jardim Ipanema'
     if(_p.b)_p.b=_p.b.replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s{2,}/g,' ').trim();
     if(_p.c)_p.c=_p.c.replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s{2,}/g,' ').trim();
     // v5.8.5: Logradouro, Número, Complemento — Bairro — Município
@@ -4089,7 +4100,7 @@ function renderC(){
           // v5.8.7: Badge de endereço pendente de verificação
           +(c._addrPending?'<button class="addr-pending-badge" onclick="event.stopPropagation();showAddrPicker(\''+c.id+'\')" title="Endere\xE7o amb\xEDguo \u2014 clique para verificar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> verificar</button>':'')
           // v5.8.38: Badge vermelho para clientes sem coordenadas (não serão roteados corretamente)
-          // v5.8.44: badge clicável "sem localização" → retenta geocoding ao clicar
+          // v5.8.45: badge clicável "sem localização" → retenta geocoding ao clicar
           +((!c.lat&&!c.lng&&!c._addrPending)?'<button class="addr-pending-badge" onclick="event.stopPropagation();_retryGeocode('+c.id+')" style="background:rgba(220,38,38,.1);color:#dc2626;border-color:rgba(220,38,38,.25)" title="Clique para tentar localizar novamente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="12"/><line x1="11" y1="16" x2="11.01" y2="16"/></svg> sem localiza\xE7\xE3o</button>':'')
           +(tagChips?'<div style="display:flex;gap:3px;flex-wrap:wrap;flex-shrink:0">'+tagChips+'</div>':'')
         +'</div>'
@@ -5536,7 +5547,7 @@ async function nominatim(addr,client){
   const cached=localStorage.getItem('geo_'+addr);
   if(cached){const c=JSON.parse(cached);_geoCache[addr]=c;_fireAmbigCheck(c);return c;}
   await _resolveGeoAnchor();
-  // v5.8.44: GEOCODING MULTI-ESTRATÉGIA para endereços incompletos
+  // v5.8.45: GEOCODING MULTI-ESTRATÉGIA para endereços incompletos
   // Problema: "Ulisses Guimarães" (incompleto, deveria ser "Rua Doutor Ulisses Guimarães")
   // "—" no meio da query confunde o Google → normalizar substituindo por ","
   // Estratégia: 3 tentativas em cascata, parar na primeira que retornar OK
@@ -5619,7 +5630,7 @@ async function nominatim(addr,client){
   _geoFailInc(addr);
   return null;
 }
-// v5.8.44: Retenta geocoding para cliente específico — limpa cache e tenta novamente
+// v5.8.45: Retenta geocoding para cliente específico — limpa cache e tenta novamente
 async function _retryGeocode(clientId){
   const c=clients.find(x=>x.id===clientId);if(!c)return;
   // Limpa cache de memória e localStorage
