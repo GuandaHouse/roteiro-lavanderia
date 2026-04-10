@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.36';
+const APP_VERSION='v5.8.37';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -2215,16 +2215,16 @@ function _initApp(){
   setTimeout(()=>{_runAddrMigration();},500);
   // v5.8.8: Detectar divergência de cidade em clientes já geocodificados
   setTimeout(()=>{_runMismatchMigration();},1200);
-  // v5.8.16: Limpar todos os choices antigos que não têm type:'alt'
-  // Choices sem type:'alt' foram gerados por "confirmar localização atual" (comportamento antigo)
-  // e bloqueavam o audit. Agora só choices type:'alt' (local diferente) bloqueiam.
+  // v5.8.16: Limpar choices antigos sem type definido
+  // v5.8.37: Preservar type:'alt' (local diferente) E type:'confirmed' (confirmou atual)
+  // Choices sem type foram gerados pelo comportamento antigo e bloqueavam o audit.
   try{
     const choices=JSON.parse(localStorage.getItem('rota_addr_choices')||'{}');
     const cleaned={};let changed=false;
     for(const[k,v]of Object.entries(choices)){
-      if(v&&v.type==='alt'){cleaned[k]=v;}else{changed=true;}
+      if(v&&(v.type==='alt'||v.type==='confirmed')){cleaned[k]=v;}else{changed=true;}
     }
-    if(changed){localStorage.setItem('rota_addr_choices',JSON.stringify(cleaned));console.log('[v5.8.16] Removidos choices sem type:alt do cache de endereços');}
+    if(changed){localStorage.setItem('rota_addr_choices',JSON.stringify(cleaned));console.log('[v5.8.37] Removidos choices sem type definido do cache de endereços');}
   }catch(e){}
   // v5.8.17: Migration de limpeza do rota_geo_locs foi REMOVIDA em v5.8.20
   // Motivo: limpar o cache causaria spike de chamadas à API Google. O cache é cumulativo
