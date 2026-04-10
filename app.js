@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.34';
+const APP_VERSION='v5.8.35';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -494,7 +494,10 @@ function _addrChoiceKey(addr,clientName){
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
     .replace(/[^a-z0-9\s]/g,' ')
     .replace(/\s+/g,' ').trim();
-  const addrKey=addr.toLowerCase()
+  // v5.8.35: strip sufixo bairro/cidade (— Bairro — Cidade) antes de normalizar
+  // garante que "Rua X, 10" e "Rua X, 10 — Bairro — SP" gerem a mesma chave
+  const addrBase=(addr.split('\u2014')[0]||addr).trim();
+  const addrKey=addrBase.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
     .replace(/\b(apto?\.?|ap\.?|apartamento|bl(?:oco?)?\.?|bloco|torre[\s\d]*|andar[\s\d]*|sala[\s\d]*|fundos|sl\.?[\s\d]*|conj\.?[\s\d]*|kit)\b[\s\S]*/i,'')
     .replace(/[^a-z0-9\s]/g,' ')
@@ -2470,6 +2473,8 @@ function goPage(p,el){if(_isMotoristaMode)return;window.scrollTo(0,0);window.scr
   if(!_goPageFromPop){history.pushState({page:p},'',null);}
   // v4.3.7: Botão salvar só visível na aba Configurações
   const saveBar=g('cfg-save-bar');if(saveBar)saveBar.style.display=p==='cfg'?'flex':'none';
+  // v5.8.35: Atualizar lista de endereços memorizados ao abrir Configurações
+  if(p==='cfg')renderAddrChoices();
   // v4.5.1: Ao retornar para aba Rota, re-trigger resize + fitBounds no minimap
   if(p==='rota'&&gMap){
     setTimeout(()=>{
@@ -3919,10 +3924,11 @@ function saveEditC(){
   c.nome=_emNome?titleCase(_emNome):c.nome;
   const newCep=g('em-cep').value.replace(/\D/g,'');
   const newEnd=_emEnd?_normalizeAddrString(titleCase(_emEnd)):c.endereco;
-  // v5.8.25: detectar mudança de endereço → limpar geo e reagendar geocodificação
-  const addrChanged=newEnd&&newEnd!==c.endereco;
+  // v5.8.35: comparar só a base (sem sufixo — Bairro — Cidade) para não limpar geo ao editar outros campos
+  const origBase=_normalizeAddrString(titleCase((c.endereco.split('\u2014')[0]||c.endereco).trim()));
+  const addrChanged=!!newEnd&&newEnd!==origBase;
   const oldEndereco=c.endereco; // v5.8.26: guardar endereço antigo ANTES de sobrescrever
-  c.endereco=newEnd;
+  c.endereco=addrChanged?newEnd:c.endereco; // v5.8.35: preservar sufixo se endereço não mudou
   c.complemento='';
   c.tel=g('em-tel').value.trim();
   if(addrChanged){
