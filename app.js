@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.23';
+const APP_VERSION='v5.8.24';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -5163,6 +5163,11 @@ function preGeocode(client){
   nominatim(client.endereco,client).then(r=>{
     if(r){client.lat=r.lat;client.lng=r.lng;if(r.cidade)client._cidade=r.cidade;
       if(r.route){client.endereco=_fmtAddrFromGeo(r,client.endereco);}
+      else if(r.bairro||r.cidade){// v5.8.24: resultado de memória — atualizar texto com bairro/cidade corretos
+        const base=(client.endereco.split('\u2014')[0]||client.endereco).trim();
+        let nAddr=base;if(r.bairro)nAddr+=' \u2014 '+titleCase(r.bairro);if(r.cidade)nAddr+=' \u2014 '+titleCase(r.cidade);
+        if(nAddr!==client.endereco)client.endereco=nAddr;
+      }
       console.log('[PRE-GEO] '+client.nome+' geocodificado e endereço normalizado');
       autoSaveRoute();renderC();
     } else if(client._addrPending){
@@ -5249,12 +5254,18 @@ async function nominatim(addr,client){
       }
     }).catch(()=>{});
   }
+  // v5.8.24: Memória explícita do usuário tem PRIORIDADE sobre qualquer cache
+  const mem=_addrChoiceGet(addr);
+  if(mem){
+    console.log('[GEO-MEM] '+addr+' → '+[mem.bairro,mem.cidade].filter(Boolean).join(', ')+' (memória)');
+    // Evictar cache obsoleto que possa ter as coordenadas erradas
+    localStorage.removeItem('geo_'+addr);
+    delete _geoCache[addr];
+    _geoCache[addr]=mem;return mem;
+  }
   if(_geoCache[addr]){_fireAmbigCheck(_geoCache[addr]);return _geoCache[addr];}
   const cached=localStorage.getItem('geo_'+addr);
   if(cached){const c=JSON.parse(cached);_geoCache[addr]=c;_fireAmbigCheck(c);return c;}
-  // Verificar memória de escolhas antes de geocodificar
-  const mem=_addrChoiceGet(addr);
-  if(mem){console.log('[GEO-MEM] '+addr+' → '+mem.cidade+' (memória)');_geoCache[addr]=mem;return mem;}
   await _resolveGeoAnchor();
   // v5.8.10: Removida verificação pré-geocode (_ambiguityCheckNoBounds era falha)
   // Agora: geocodifica normalmente, depois verifica ambiguidade em background
@@ -5360,7 +5371,13 @@ async function calcRoute(){
       const batch=needGeo.slice(b,b+GEO_BATCH);
       const results=await Promise.all(batch.map(c=>nominatim(c.endereco).catch(()=>null)));
       results.forEach((r,i)=>{
-        if(r){batch[i].lat=r.lat;batch[i].lng=r.lng;if(r.cidade)batch[i]._cidade=r.cidade;if(r.route)batch[i].endereco=_fmtAddrFromGeo(r,batch[i].endereco);}
+        if(r){batch[i].lat=r.lat;batch[i].lng=r.lng;if(r.cidade)batch[i]._cidade=r.cidade;
+          if(r.route){batch[i].endereco=_fmtAddrFromGeo(r,batch[i].endereco);}
+          else if(r.bairro||r.cidade){// v5.8.24: resultado de memória — atualizar texto do endereço com bairro/cidade corretos
+            const base=(batch[i].endereco.split('\u2014')[0]||batch[i].endereco).trim();
+            let nAddr=base;if(r.bairro)nAddr+=' \u2014 '+titleCase(r.bairro);if(r.cidade)nAddr+=' \u2014 '+titleCase(r.cidade);
+            if(nAddr!==batch[i].endereco)batch[i].endereco=nAddr;
+          }}
         else notFound.push(batch[i].nome);
       });
       // Rate limit: 200ms pause between batches (not between each client)
