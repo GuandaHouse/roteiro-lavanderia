@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.21';
+const APP_VERSION='v5.8.22';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -4672,7 +4672,7 @@ function applyRouteResult(result){
   _routeTotalMin=result.totalMin;
   // Re-estimate times
   if(result.legs){
-    const legsDur=result.legs.map(l=>({duration:l.duration.value}));
+    const legsDur=result.legs.map(l=>({duration:(l.duration_in_traffic||l.duration).value})); // v5.8.22
     estimateTimesOSRM(legsDur);
   }
   renderC();updStats();updateMapSidebar();
@@ -4708,7 +4708,8 @@ async function recalcRouteFromOrder(){
     const waypoints=geocoded.map(c=>_waypointFor(c));
     const dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({
       origin:baseAddr,destination:retAddr,waypoints,
-      travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR'
+      travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR',
+      drivingOptions:{departureTime:new Date(),trafficModel:'pessimistic'} // v5.8.22: trânsito em tempo real
     },(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
     // v4.6.9: Se outra chamada já disparou, descartar este resultado stale
     if(gen!==_recalcGen){console.log('[ROTA] Descartando resultado stale (gen '+gen+' vs '+_recalcGen+')');return;}
@@ -4738,10 +4739,10 @@ async function recalcRouteFromOrder(){
     // v4.3.4: Fechar InfoWindow ao clicar fora
     if(!_mapClickListenerSet){gMap.addListener('click',()=>{if(_activeInfoWindow){_activeInfoWindow.close();_activeInfoWindow=null;}});_mapClickListenerSet=true;}
     const bnds=new google.maps.LatLngBounds();geocoded.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds,{top:40,bottom:40,left:40,right:40});google.maps.event.addListenerOnce(gMap,'idle',()=>{if(gMap.getZoom()>16)gMap.setZoom(16);if(gMap.getZoom()<10)gMap.setZoom(10);});if(geocoded.length===1)gMap.setZoom(15);
-    const legsDur=legs.map(l=>({duration:l.duration.value}));
+    const legsDur=legs.map(l=>({duration:(l.duration_in_traffic||l.duration).value})); // v5.8.22
     estimateTimesOSRM(legsDur);
     _routeTotalKm=legs.reduce((s,l)=>s+l.distance.value,0)/1000;
-    _routeTotalMin=legs.reduce((s,l)=>s+l.duration.value,0)/60;
+    _routeTotalMin=legs.reduce((s,l)=>s+(l.duration_in_traffic||l.duration).value,0)/60; // v5.8.22
     console.log('[ROTA MANUAL] Rota recalculada: '+_routeTotalKm.toFixed(1)+'km | '+_routeTotalMin.toFixed(0)+'min');
     renderC();updStats();
   }catch(e){console.error('[ROTA MANUAL] Erro ao recalcular:',e);}
@@ -5410,7 +5411,7 @@ async function calcRoute(){
       _perf.dirStart=performance.now();
       // v4.8.4: Timeout de 10s para Google Directions (evita pendura infinita)
       dirResult=await Promise.race([
-        new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR'},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status)))),
+        new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR',drivingOptions:{departureTime:new Date(),trafficModel:'pessimistic'}},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status)))), // v5.8.22: trânsito em tempo real
         new Promise((_,rErr)=>setTimeout(()=>rErr(new Error('TIMEOUT_10s')),10000))
       ]);
       _perf.dirEnd=performance.now();
@@ -5427,7 +5428,7 @@ async function calcRoute(){
     // Renderizar mapa com resultado do Google
     const legs=dirResult.routes[0].legs;
     const totalDistKm=legs.reduce((s,l)=>s+l.distance.value,0)/1000;
-    const totalDurMin=legs.reduce((s,l)=>s+l.duration.value,0)/60;
+    const totalDurMin=legs.reduce((s,l)=>s+(l.duration_in_traffic||l.duration).value,0)/60; // v5.8.22
     console.log('[ROTA v2] Dist\xe2ncia:',totalDistKm.toFixed(1)+'km | Dura\xe7\xe3o:',totalDurMin.toFixed(0)+'min | Viola\xe7\xf5es SA:',optV2.eval.violations);
     if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>{if(m.map)m.map=null;});gMarkers=[];gBaseMarkers.forEach(m=>{if(m.map)m.map=null;});gBaseMarkers=[];
     gRoute=new google.maps.DirectionsRenderer({map:gMap,directions:dirResult,suppressMarkers:true,polylineOptions:{strokeColor:'#6C5CE7',strokeWeight:4,strokeOpacity:0.8}});
@@ -5459,8 +5460,8 @@ async function calcRoute(){
     }
     gMap.addListener('click',()=>{if(_activeInfoWindow){_activeInfoWindow.close();_activeInfoWindow=null;}});
     const bnds=new google.maps.LatLngBounds();orderedGeo.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds,{top:40,bottom:40,left:40,right:40});google.maps.event.addListenerOnce(gMap,'idle',()=>{if(gMap.getZoom()>16)gMap.setZoom(16);if(gMap.getZoom()<10)gMap.setZoom(10);});if(orderedGeo.length===1)gMap.setZoom(15);
-    // ETAs via Google Directions (precisos)
-    const legsDur=legs.map(l=>({duration:l.duration.value}));
+    // ETAs via Google Directions (precisos, com trânsito em tempo real v5.8.22)
+    const legsDur=legs.map(l=>({duration:(l.duration_in_traffic||l.duration).value}));
     estimateTimesOSRM(legsDur);
     const urgCount=geocoded.filter(c=>clientDeadlineMin(c)<24*60).length;
     const urgMsg=urgCount?' ('+urgCount+' com janela de hor\xe1rio priorit\xe1ria)':'';
