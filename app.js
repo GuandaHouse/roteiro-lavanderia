@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.33';
+const APP_VERSION='v5.8.34';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -725,9 +725,8 @@ async function _runStoredGeoAudit(){
   const SESSION_KEY='rota_geo_audit_session';
   let audited=new Set();
   try{audited=new Set(JSON.parse(sessionStorage.getItem(SESSION_KEY)||'[]'));}catch(e){}
-  // v5.8.16: só pula se o choice tem type:'alt' (usuário trocou para local diferente)
-  // "Confirmar atual" não salva mais choice → não bloqueia audit
-  const toCheck=clients.filter(c=>c.lat&&c.lng&&!c._addrPending&&!audited.has(String(c.id))&&!((_addrChoiceGet(c.endereco,c.nome)||{}).type==='alt'));
+  // v5.8.34: pula se type:'alt' (escolheu local diferente) OU type:'confirmed' (confirmou atual)
+  const toCheck=clients.filter(c=>c.lat&&c.lng&&!c._addrPending&&!audited.has(String(c.id))&&!['alt','confirmed'].includes((_addrChoiceGet(c.endereco,c.nome)||{}).type));
   if(!toCheck.length)return;
   console.log('[GEO-AUDIT] Verificando '+toCheck.length+' cliente(s)...');
   let anyFound=false;
@@ -3751,11 +3750,9 @@ async function showAddrPicker(clientId){
 function pickAddr(clientId,i){
   const c=clients.find(x=>x.id==clientId);if(!c||!c._addrResults)return;
   const chosen=c._addrResults[i];
-  // v5.8.15: Se usuário confirmou o local atual (isStored), NÃO salvar escolha permanente.
-  // Salvar permanente só faz sentido quando o usuário troca para um local DIFERENTE.
-  // "Confirmar atual" apenas descarta o badge desta sessão — badge volta na próxima importação.
+  // v5.8.34: Confirmar atual agora salva com type:'confirmed' → badge não volta em imports futuros
   if(chosen.isStored){
-    // Apenas descartar o badge sem salvar escolha (endereço ainda é considerado ambíguo)
+    _addrChoiceSave(c.endereco,{...chosen,type:'confirmed'},c.nome);
   } else {
     // Aplicar coordenadas do local alternativo escolhido e salvar permanentemente
     c.lat=chosen.lat;c.lng=chosen.lng;
