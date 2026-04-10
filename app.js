@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.31';
+const APP_VERSION='v5.8.32';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -665,7 +665,7 @@ async function _findAllGeoLocations(baseAddr,clientCity){
   const[viacepArrays,googleData]=await Promise.all([Promise.all(viacepPromises),googlePromise]);
   // Geocodifica cada resultado ViaCEP pelo CEP — muito mais preciso que geocoding por texto
   const allVc=viacepArrays.flat().filter(r=>r&&!r.erro&&r.cep);
-  const uniqueCeps=[...new Set(allVc.map(r=>r.cep.replace('-','')))];
+  const uniqueCeps=[...new Set(allVc.map(r=>r.cep.replace('-','')))].slice(0,5); // v5.8.32: máx 5 CEPs paralelos
   const cepGeoPromises=uniqueCeps.map(cep=>{
     const ac=new AbortController();setTimeout(()=>ac.abort(),6000);
     return _geocodeProxy('address='+encodeURIComponent(cep)+',+Brasil&region=br',ac.signal).catch(()=>null).then(d=>{
@@ -1043,12 +1043,15 @@ function onEndInput(prefix){
   if(prefix==='f'){schedGeo();}
   else if(val.length>=10){
     clearTimeout(window['_geoT_'+prefix]);
-    window['_geoT_'+prefix]=setTimeout(()=>geocodeCepForPrefix(prefix),1400);
+    window['_geoT_'+prefix]=setTimeout(()=>geocodeCepForPrefix(prefix),2500); // v5.8.32: 1400→2500ms
   }
 }
 // v4.4.0: Geocode address to extract CEP for edit modal and smart insert
+const _geoCepLastAddr={}; // v5.8.32: evita re-geocodificar mesmo endereço
 async function geocodeCepForPrefix(prefix){
   const addr=buildFullAddr(prefix);if(!addr||addr.length<8)return;
+  if(_geoCepLastAddr[prefix]===addr)return; // v5.8.32: mesmo endereço, skip
+  _geoCepLastAddr[prefix]=addr;
   try{
     const suffix=_getAddrSuffix?_getAddrSuffix():'';
     const bounds=_getAnchorBounds?_getAnchorBounds():'';
@@ -1273,10 +1276,20 @@ async function checkAmbWithCep(){
    CLOUD SYNC — Cloudflare Worker + KV
    ══════════════════════════════════════════════════════════════ */
 const WORKER_URL='https://roteiro-lavanderia.nigel-guandalini.workers.dev';
+// v5.8.32: Rate limiter global — máximo 15 chamadas Geocoding por 60s
+const _GEO_RATE_MAX=15;
+let _geoRateLog=[];
+function _geoRateOk(){
+  const now=Date.now();
+  _geoRateLog=_geoRateLog.filter(t=>now-t<60000);
+  if(_geoRateLog.length>=_GEO_RATE_MAX){console.warn('[GEO] Rate limit atingido ('+_GEO_RATE_MAX+'/min) — chamada bloqueada');return false;}
+  _geoRateLog.push(now);return true;
+}
 // v5.8.21: Plano B — Geocoding Proxy via Worker (cache KV compartilhado, chave server-side)
 // Substitui todas as chamadas diretas à Google Geocoding API no cliente.
 // queryStr: params sem key= (ex: 'address=Rua+X&region=br')
 async function _geocodeProxy(queryStr,signal){
+  if(!_geoRateOk())return{status:'RATE_LIMITED',results:[]}; // v5.8.32: rate limit
   const opts={};if(signal)opts.signal=signal;
   try{
     const r=await fetch(WORKER_URL+'/api/geocode?'+queryStr,opts);
@@ -3635,7 +3648,7 @@ function resetTrello(){
 }
 
 // GEO AMBIGUITY
-function schedGeo(){clearTimeout(geoT);geoT=setTimeout(typeof checkAmbWithCep==='function'?checkAmbWithCep:checkAmb,1400);}
+function schedGeo(){clearTimeout(geoT);geoT=setTimeout(typeof checkAmbWithCep==='function'?checkAmbWithCep:checkAmb,2500);} // v5.8.32: 1400→2500ms
 async function checkAmb(){
   const addr=v('f-end');if(addr.length<8)return;
   const box=g('amb-box');
@@ -3882,10 +3895,11 @@ function editC(id){
   toggleEmJanela();
   g('edit-modal').classList.add('on');
   // v5.8.31: Auto-fill CEP — tenta extrair de c.obs (IA às vezes coloca lá), depois geocoda
+  // v5.8.32: delay 3s para não disparar em aberturas rápidas do modal
   if(!c.cep){
     const obsMatch=(c.obs||'').match(/\b(\d{5})-?(\d{3})\b/);
     if(obsMatch){g('em-cep').value=fmtCep(obsMatch[1]+obsMatch[2]);}
-    if(c.endereco&&c.endereco.length>=8){geocodeCepForPrefix('em');}
+    else if(c.endereco&&c.endereco.length>=8){setTimeout(()=>geocodeCepForPrefix('em'),3000);}
   }
 }
 function saveEditC(){
