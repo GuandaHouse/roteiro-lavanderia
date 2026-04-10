@@ -419,9 +419,10 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.27';
+const APP_VERSION='v5.8.28';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
-const ETA_BUFFER=20*60; // segundos
+// v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
+function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -2351,14 +2352,14 @@ function toggleEye(fid,btn){
 
 function loadCfg(){
   cfg=safeJsonParse('rota_cfg',{});
-  ['saida','ret','tempo','base','retaddr','cidade','uf','al1','al2','tkey','ttoken','akey','gkey'].forEach(k=>{if(cfg[k]&&g('cfg-'+k))g('cfg-'+k).value=cfg[k];});
+  ['saida','ret','tempo','base','retaddr','cidade','uf','al1','al2','tkey','ttoken','akey','gkey','etaBuffer'].forEach(k=>{if(cfg[k]!==undefined&&g('cfg-'+k))g('cfg-'+k).value=cfg[k];});
   // v4.6.2: routePriority config load removido
 }
 function saveCfg(){
   cfg={saida:v('cfg-saida'),ret:v('cfg-ret'),tempo:parseInt(v('cfg-tempo'))||10,
     base:v('cfg-base'),retaddr:v('cfg-retaddr'),
     cidade:v('cfg-cidade').trim(),uf:v('cfg-uf').trim().toUpperCase().slice(0,2),
-    // v4.6.2: routePriority removido das config
+    etaBuffer:Math.min(60,Math.max(0,parseInt(v('cfg-etaBuffer'))||20)), // v5.8.28: margem configurável
     al1:v('cfg-al1'),al2:v('cfg-al2'),
     tkey:v('cfg-tkey'),ttoken:v('cfg-ttoken'),
     akey:v('cfg-akey'),gkey:v('cfg-gkey')};
@@ -4433,10 +4434,9 @@ function _haversineKm(lat1,lon1,lat2,lon2){
 
 // Etapa 2: Funções de avaliação
 function _clientDeadlineSec(c){
-  // v4.6.7: Margem de segurança de 30min — OSRM subestima tempos em SP vs Google Directions
-  const MARGEM=30*60; // 30 minutos
-  if(c.janela==='manha')return 12*3600-MARGEM;
-  if(c.janela==='custom'&&c.hf)return ts(c.hf)-MARGEM;
+  // v5.8.28: sem margem hardcoded — o ETA_BUFFER dinâmico em _evalOrder já aplica a margem por leg
+  if(c.janela==='manha')return 12*3600;
+  if(c.janela==='custom'&&c.hf)return ts(c.hf);
   if(c.janela==='tarde')return 24*3600;
   return 24*3600;
 }
@@ -4450,6 +4450,7 @@ let _evalCache=null;
 function _buildEvalCache(){
   const saidaSec=ts(cfg.saida||'10:00');
   const tempoSec=(cfg.tempo||10)*60;
+  const etaBufferSec=_getEtaBufferSec(); // v5.8.28: buffer dinâmico por leg
   const al1Sec=cfg.al1?ts(cfg.al1):0;
   const al2Sec=cfg.al2?ts(cfg.al2):0;
   const hasAlmoco=!!(cfg.al1&&cfg.al2);
@@ -4460,7 +4461,7 @@ function _buildEvalCache(){
     deadlines[i]=_clientDeadlineSec(clients[i]);
     starts[i]=_clientStartSec(clients[i]);
   }
-  _evalCache={saidaSec,tempoSec,al1Sec,al2Sec,hasAlmoco,deadlines,starts};
+  _evalCache={saidaSec,tempoSec,etaBufferSec,al1Sec,al2Sec,hasAlmoco,deadlines,starts};
 }
 function _evalOrder(order,matrix,alpha,gcIdx){
   const ec=_evalCache;
@@ -4471,7 +4472,8 @@ function _evalOrder(order,matrix,alpha,gcIdx){
     const fromNode=i===0?0:gcIdx[order[i-1]];
     const toNode=gcIdx[order[i]];
     const travel=durs[fromNode][toNode];
-    cur+=travel;totalTravel+=travel;
+    cur+=travel+ec.etaBufferSec; // v5.8.28: buffer por leg — otimizador opera com mesmos ETAs do display
+    totalTravel+=travel;
     // Pausa almoço
     if(ec.hasAlmoco&&cur>=ec.al1Sec&&cur<ec.al2Sec)cur=ec.al2Sec;
     arrivals.push({idx:order[i],arrival:cur});
@@ -4497,13 +4499,14 @@ function _nnDeadline(matrix,gcIdx){
   const N=clients.length;
   const visited=new Set();const order=[];
   const saidaSec=ts(cfg.saida||'10:00');
-  // v4.6.7: Separar urgentes críticos (deadline ≤ 12h) dos demais urgentes
+  // v5.8.28: Todos os clientes com deadline real (<24h) são críticos — ordenados por prazo
+  // Fix: antes só deadline≤12h era crítico; clientes custom (ex: 07:00-14:00) iam para urgentes (geo)
   const criticos=[],urgentes=[];
   for(let i=0;i<N;i++){
     if(clients[i].janela==='livre')continue;
     const dl=_clientDeadlineSec(clients[i]);
-    if(dl<=12*3600)criticos.push({idx:i,dl});
-    else urgentes.push(i);
+    if(dl<24*3600)criticos.push({idx:i,dl}); // inclui manhã E custom (qualquer deadline real)
+    else urgentes.push(i); // tarde (dl=24h) → nearest neighbor
   }
   // Críticos: ordenar por deadline (mais apertado primeiro), depois nearest entre empates
   criticos.sort((a,b)=>a.dl-b.dl);
@@ -4715,7 +4718,7 @@ function recalcETAsFromCache(){
       continue;
     }
     cur+=travel;
-    cur+=ETA_BUFFER; // v5.8.26: buffer por leg
+    cur+=_getEtaBufferSec(); // v5.8.28: buffer configurável por leg
     if(al1&&al2){const s1=ts(al1),s2=ts(al2);if(cur>=s1&&cur<s2)cur=s2;}
     c.estT=st2(cur);c.conflict=false;c.cmsg='';
     if(c.janela==='manha'&&cur>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
@@ -5585,7 +5588,7 @@ function estimateTimesOSRM(legs){
     // Soma deslocamento: leg[legIdx] = trecho anterior até este cliente
     if(legIdx<legs.length)cur+=legs[legIdx].duration;
     legIdx++;
-    cur+=ETA_BUFFER; // v5.8.26: buffer por leg — propaga entre paradas (ex: saída C1 + viagem + buffer = chegada C2)
+    cur+=_getEtaBufferSec(); // v5.8.28: buffer configurável por leg — propaga entre paradas (ex: saída C1 + viagem + buffer = chegada C2)
     // Verifica pausa de almoço
     if(al1&&al2){const s=ts(al1),e=ts(al2);if(cur>=s&&cur<e)cur=e;}
     c.estT=st2(cur);c.conflict=false;c.cmsg='';
@@ -5608,7 +5611,7 @@ function recalcDynamicETAs(){
     if(c._motDone){return;} // Pula concluídos
     if(!first){cur+=tempo;} // Tempo de deslocamento + parada (estimativa simples)
     first=false;
-    cur+=ETA_BUFFER; // v5.8.26: buffer por leg
+    cur+=_getEtaBufferSec(); // v5.8.28: buffer configurável por leg
     // Verifica pausa de almoço
     if(al1&&al2){const s=ts(al1),e=ts(al2);if(cur>=s&&cur<e)cur=e;}
     c.estT=st2(cur);c.conflict=false;c.cmsg='';
@@ -5627,7 +5630,7 @@ function estimateTimesSimple(){
     const c=clients[idx];
     // Sem dados de rota real, estima tempo de parada para cada cliente seguinte
     if(stop>0)cur+=tempo;
-    cur+=ETA_BUFFER; // v5.8.26: buffer por leg
+    cur+=_getEtaBufferSec(); // v5.8.28: buffer configurável por leg
     if(al1&&al2){const s=ts(al1),e=ts(al2);if(cur>=s&&cur<e)cur=e;}
     c.estT=st2(cur);c.conflict=cur>retS;c.cmsg=c.conflict?'Al\xE9m do limite de retorno':'';
   });
