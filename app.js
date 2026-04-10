@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.39';
+const APP_VERSION='v5.8.40';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -5266,6 +5266,52 @@ function createBaseMarker({position,map,title,type}){
   const mk=new google.maps.marker.AdvancedMarkerElement({position,map,content:el});
   return mk;
 }
+// v5.8.40: Substitui google.maps.visualization.HeatmapLayer (depreciado mai/2025, remoção mai/2026)
+// Implementação canvas pura via OverlayView — sem dependência da biblioteca visualization
+let _HeatmapCls=null;
+function _makeHeatmap(opts){
+  if(!_HeatmapCls){
+    _HeatmapCls=class extends google.maps.OverlayView{
+      constructor(o){super();this._data=o.data||[];this._radius=o.radius||35;this._gradient=o.gradient||null;this._cvs=null;this._lis=[];if(o.map)this.setMap(o.map);}
+      onAdd(){
+        const c=document.createElement('canvas');
+        c.style.cssText='position:absolute;top:0;left:0;pointer-events:none';
+        this.getPanes().overlayLayer.appendChild(c);this._cvs=c;
+        const redraw=()=>this._draw();
+        const m=this.getMap();
+        this._lis=[google.maps.event.addListener(m,'bounds_changed',redraw),google.maps.event.addListener(m,'zoom_changed',redraw)];
+      }
+      draw(){this._draw();}
+      _draw(){
+        if(!this._cvs)return;const proj=this.getProjection();if(!proj)return;
+        const m=this.getMap();const div=m.getDiv();
+        const w=div.offsetWidth,h=div.offsetHeight;
+        this._cvs.width=w;this._cvs.height=h;
+        this._cvs.style.width=w+'px';this._cvs.style.height=h+'px';
+        const ctx=this._cvs.getContext('2d');ctx.clearRect(0,0,w,h);
+        const stops=this._gradient||['rgba(108,92,231,0)','rgba(108,92,231,.25)','rgba(108,92,231,.55)','rgba(108,92,231,.9)'];
+        this._data.forEach(pt=>{
+          let lat,lng,wt=1;
+          if(pt instanceof google.maps.LatLng){lat=pt.lat();lng=pt.lng();}
+          else if(pt&&pt.location){lat=typeof pt.location.lat==='function'?pt.location.lat():pt.location.lat;lng=typeof pt.location.lng==='function'?pt.location.lng():pt.location.lng;wt=pt.weight||1;}
+          else{lat=pt[0];lng=pt[1];}
+          const px=proj.fromLatLngToDivPixel(new google.maps.LatLng(lat,lng));if(!px)return;
+          const r=this._radius*(0.5+Math.min(1.5,wt*0.8));
+          const g=ctx.createRadialGradient(px.x,px.y,0,px.x,px.y,r);
+          stops.forEach((s,i)=>{
+            const pos=i/(stops.length-1);
+            const mo=s.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+            if(mo){const a=parseFloat(mo[4]||1)*Math.min(1,.2+wt*.5);g.addColorStop(pos,'rgba('+mo[1]+','+mo[2]+','+mo[3]+','+a.toFixed(2)+')');}
+            else g.addColorStop(pos,s);
+          });
+          ctx.beginPath();ctx.arc(px.x,px.y,r,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+        });
+      }
+      onRemove(){this._lis.forEach(l=>google.maps.event.removeListener(l));this._lis=[];if(this._cvs){this._cvs.parentNode?.removeChild(this._cvs);this._cvs=null;}}
+    };
+  }
+  return new _HeatmapCls(opts);
+}
 function initGoogleMaps(){
   const mapEl=document.getElementById('map');
   if(mapEl){mapEl.style.display='block';document.getElementById('mph').style.display='none';
@@ -5439,7 +5485,15 @@ async function nominatim(addr,client){
   // v5.8.10: Removida verificação pré-geocode (_ambiguityCheckNoBounds era falha)
   // Agora: geocodifica normalmente, depois verifica ambiguidade em background
   try{
-    const suffix=_geoAnchor?(_geoAnchor.city?', '+_geoAnchor.city+', '+(_geoAnchor.state||'')+', Brasil':(_geoAnchor.state?', '+_geoAnchor.state+', Brasil':', Brasil')):', Brasil';
+    // v5.8.40: quando endereço já contém cidade via "—" (ex: "Av. X, 100 — Aciban Mauá"),
+    // usar APENAS o estado como sufixo — evita conflito entre a cidade no endereço e a cidade-âncora
+    const _addrHasCityHint=addr.includes('\u2014')&&addr.split('\u2014').length>1;
+    const suffix=_geoAnchor
+      ?(_addrHasCityHint
+        ?(_geoAnchor.state?', '+_geoAnchor.state+', Brasil':', Brasil')
+        :(_geoAnchor.city?', '+_geoAnchor.city+', '+(_geoAnchor.state||'')+', Brasil'
+          :(_geoAnchor.state?', '+_geoAnchor.state+', Brasil':', Brasil')))
+      :', Brasil';
     const _gc1=new AbortController();const _gt1=setTimeout(()=>_gc1.abort(),6000);
     const d=await _geocodeProxy('address='+encodeURIComponent(addr+suffix)+'&region=br'+_getAnchorBounds()+_getAnchorComponents(),_gc1.signal);
     clearTimeout(_gt1);
@@ -6209,7 +6263,7 @@ function renderDashStats(br,pts){
   }
   if(!hmMap){hmMap=new google.maps.Map(document.getElementById('heatmap'),{center:{lat:-23.55,lng:-46.63},zoom:11,mapId:GMAP_ID,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,rotateControl:false,scaleControl:false,keyboardShortcuts:false,gestureHandling:'greedy'});}
   if(hmHeatLayer)hmHeatLayer.setMap(null);
-  hmHeatLayer=new google.maps.visualization.HeatmapLayer({data:pts.map(pt=>new google.maps.LatLng(pt[0],pt[1])),radius:35,map:hmMap});
+  hmHeatLayer=_makeHeatmap({data:pts.map(pt=>new google.maps.LatLng(pt[0],pt[1])),radius:35,map:hmMap}); // v5.8.40: canvas heatmap
   const hmBnds=new google.maps.LatLngBounds();pts.forEach(pt=>hmBnds.extend({lat:pt[0],lng:pt[1]}));hmMap.fitBounds(hmBnds);
   // v4.4.0: Enforce minimum zoom level to prevent extreme zoom out
   google.maps.event.addListenerOnce(hmMap,'idle',()=>{if(hmMap.getZoom()>15)hmMap.setZoom(15);if(hmMap.getZoom()<10)hmMap.setZoom(10);});
@@ -6859,12 +6913,12 @@ function rerenderHeatmap(){
         }
       });
     }
-    hmHeatLayer=new google.maps.visualization.HeatmapLayer({data,radius:40,map:hmMap,
+    hmHeatLayer=_makeHeatmap({data,radius:40,map:hmMap, // v5.8.40: canvas heatmap
       gradient:['rgba(0,0,0,0)','rgba(34,197,94,.3)','rgba(34,197,94,.6)','rgba(255,203,0,.7)','rgba(255,123,0,.8)','rgba(226,68,92,1)']});
   } else {
     // Normal concentration heatmap
     if(_dashCache.loaded&&_dashCache.pts){
-      hmHeatLayer=new google.maps.visualization.HeatmapLayer({data:_dashCache.pts.map(pt=>new google.maps.LatLng(pt[0],pt[1])),radius:35,map:hmMap});
+      hmHeatLayer=_makeHeatmap({data:_dashCache.pts.map(pt=>new google.maps.LatLng(pt[0],pt[1])),radius:35,map:hmMap}); // v5.8.40: canvas heatmap
     }
   }
 }
