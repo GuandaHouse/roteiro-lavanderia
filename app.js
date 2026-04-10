@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.32';
+const APP_VERSION='v5.8.33';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -488,16 +488,22 @@ function _runAddrMigration(){
   localStorage.setItem(KEY,'1');
 }
 // ── v5.8.7: ADDRESS CHOICE MEMORY ───────────────────────────────────────────
-function _addrChoiceKey(addr){
+function _addrChoiceKey(addr,clientName){
   if(!addr)return '';
-  return addr.toLowerCase()
+  const norm=s=>(s||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9\s]/g,' ')
+    .replace(/\s+/g,' ').trim();
+  const addrKey=addr.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
     .replace(/\b(apto?\.?|ap\.?|apartamento|bl(?:oco?)?\.?|bloco|torre[\s\d]*|andar[\s\d]*|sala[\s\d]*|fundos|sl\.?[\s\d]*|conj\.?[\s\d]*|kit)\b[\s\S]*/i,'')
     .replace(/[^a-z0-9\s]/g,' ')
     .replace(/\s+/g,' ').trim();
+  return clientName?norm(clientName)+'|'+addrKey:addrKey;
 }
-function _addrChoiceGet(addr){try{const d=JSON.parse(localStorage.getItem('rota_addr_choices')||'{}');return d[_addrChoiceKey(addr)]||null;}catch(e){return null;}}
-function _addrChoiceSave(addr,choice){try{const d=JSON.parse(localStorage.getItem('rota_addr_choices')||'{}');d[_addrChoiceKey(addr)]={...choice,rawAddr:addr,chosenAt:new Date().toISOString()};localStorage.setItem('rota_addr_choices',JSON.stringify(d));}catch(e){}}
+// v5.8.33: clientName opcional — tenta chave nome+endereço primeiro, fallback endereço só
+function _addrChoiceGet(addr,clientName){try{const d=JSON.parse(localStorage.getItem('rota_addr_choices')||'{}');if(clientName){const r=d[_addrChoiceKey(addr,clientName)];if(r)return r;}return d[_addrChoiceKey(addr)]||null;}catch(e){return null;}}
+function _addrChoiceSave(addr,choice,clientName){try{const d=JSON.parse(localStorage.getItem('rota_addr_choices')||'{}');d[_addrChoiceKey(addr,clientName)]={...choice,rawAddr:addr,chosenAt:new Date().toISOString()};localStorage.setItem('rota_addr_choices',JSON.stringify(d));}catch(e){}}
 function _addrChoiceDel(key){try{const d=JSON.parse(localStorage.getItem('rota_addr_choices')||'{}');delete d[key];localStorage.setItem('rota_addr_choices',JSON.stringify(d));}catch(e){}}
 function _addrChoiceGetAll(){try{return JSON.parse(localStorage.getItem('rota_addr_choices')||'{}')}catch(e){return {};}}
 function _geoDistKm(a,b){const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng-a.lng)*Math.PI/180;const aa=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;return R*2*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));}
@@ -538,8 +544,9 @@ function _fixStaleAddrChoices(){
     clients.forEach(c=>{
       if(!c.lat||!c.lng||c._addrPending)return;
       if(!_detectCityMismatch(c))return; // endereço já está correto
-      const choiceKey=_addrChoiceKey(c.endereco);
-      const choice=savedChoices[choiceKey];
+      const choiceKey=_addrChoiceKey(c.endereco,c.nome);
+      const choiceKeyLegacy=_addrChoiceKey(c.endereco); // fallback chave legada (sem nome)
+      const choice=savedChoices[choiceKey]||savedChoices[choiceKeyLegacy];
       if(!choice||choice.type!=='alt')return; // sem choice antigo — não é o caso stale
       // Aplicar mesma lógica do pickAddr v5.8.18: manter rua+número, trocar bairro/cidade
       const origStreet=(c.endereco.split('\u2014')[0]||c.endereco).trim();
@@ -547,9 +554,10 @@ function _fixStaleAddrChoices(){
       if(choice.bairro)newAddr+=' \u2014 '+titleCase(choice.bairro);
       if(choice.cidade)newAddr+=' \u2014 '+titleCase(choice.cidade);
       delete savedChoices[choiceKey]; // remove chave antiga
+      delete savedChoices[choiceKeyLegacy]; // remove chave legada se existir
       c.endereco=newAddr;
       c._cidade=choice.cidade||'';
-      savedChoices[_addrChoiceKey(newAddr)]={...choice,rawAddr:newAddr};
+      savedChoices[_addrChoiceKey(newAddr,c.nome)]={...choice,rawAddr:newAddr};
       fixed++;
       console.log('[v5.8.19] Endereço corrigido:',c.nome,'→',newAddr);
     });
@@ -719,7 +727,7 @@ async function _runStoredGeoAudit(){
   try{audited=new Set(JSON.parse(sessionStorage.getItem(SESSION_KEY)||'[]'));}catch(e){}
   // v5.8.16: só pula se o choice tem type:'alt' (usuário trocou para local diferente)
   // "Confirmar atual" não salva mais choice → não bloqueia audit
-  const toCheck=clients.filter(c=>c.lat&&c.lng&&!c._addrPending&&!audited.has(String(c.id))&&!((_addrChoiceGet(c.endereco)||{}).type==='alt'));
+  const toCheck=clients.filter(c=>c.lat&&c.lng&&!c._addrPending&&!audited.has(String(c.id))&&!((_addrChoiceGet(c.endereco,c.nome)||{}).type==='alt'));
   if(!toCheck.length)return;
   console.log('[GEO-AUDIT] Verificando '+toCheck.length+' cliente(s)...');
   let anyFound=false;
@@ -3760,7 +3768,7 @@ function pickAddr(clientId,i){
     if(chosen.cidade)newAddr+=' \u2014 '+titleCase(chosen.cidade);
     c.endereco=newAddr;
     c._cidade=chosen.cidade||''; // sincroniza _cidade com a cidade do local escolhido
-    _addrChoiceSave(c.endereco,{...chosen,type:'alt'}); // v5.8.16: type:'alt' marca escolha de local diferente
+    _addrChoiceSave(c.endereco,{...chosen,type:'alt'},c.nome); // v5.8.16: type:'alt' / v5.8.33: clientName key
   }
   delete c._addrPending;delete c._addrResults;
   closeModal('addr-picker-modal');
@@ -5237,7 +5245,7 @@ const _geoCache={};
 // Usado quando preGeocode detecta que o cliente JÁ tem coords (cache hit) e não passou pelo
 // fire-and-forget do nominatim(). Sem isso, clientes re-importados nunca receberiam o badge.
 function _preGeocodeAmbiguityCheck(client){
-  if(!client.lat||!client.lng||client._addrPending||_addrChoiceGet(client.endereco))return;
+  if(!client.lat||!client.lng||client._addrPending||_addrChoiceGet(client.endereco,client.nome))return;
   const baseAddr=_extractBaseAddr(client.endereco);
   if(!baseAddr)return;
   const _cr=client;
@@ -5345,7 +5353,7 @@ function _extractGeoResult(result){
 async function nominatim(addr,client){
   // v5.8.13: helper para disparar ambiguidade em background em qualquer cache hit
   function _fireAmbigCheck(result){
-    if(!client||_addrChoiceGet(addr))return;
+    if(!client||_addrChoiceGet(addr,client.nome))return;
     const baseAddr=_extractBaseAddr(addr);if(!baseAddr)return;
     const _cr=client,_res=result;
     _checkGeoAmbiguity(_res.lat,_res.lng,_res.bairro,_res.cidade,baseAddr).then(ambig=>{
@@ -5357,7 +5365,7 @@ async function nominatim(addr,client){
     }).catch(()=>{});
   }
   // v5.8.24: Memória explícita do usuário tem PRIORIDADE sobre qualquer cache
-  const mem=_addrChoiceGet(addr);
+  const mem=_addrChoiceGet(addr,client?.nome);
   if(mem){
     console.log('[GEO-MEM] '+addr+' → '+[mem.bairro,mem.cidade].filter(Boolean).join(', ')+' (memória)');
     // Evictar cache obsoleto que possa ter as coordenadas erradas
@@ -5393,7 +5401,7 @@ async function nominatim(addr,client){
       if(!_isNearAnchor(result.lat,result.lng))console.warn('[GEO] '+addr+' resolveu LONGE da âncora: '+result.display);
       // v5.8.10: Verificação de ambiguidade em background (fire & forget)
       // Não bloqueia o geocode — badge aparece segundos depois se ambíguo
-      if(client&&!_addrChoiceGet(addr)){
+      if(client&&!_addrChoiceGet(addr,client.nome)){
         const baseAddr=_extractBaseAddr(addr);
         if(baseAddr){
           const _clientRef=client; // captura referência antes de qualquer async
@@ -5522,6 +5530,11 @@ async function calcRoute(){
     const noCoords=[];
     for(let i=0;i<clients.length;i++){if(!clients[i].lat||!clients[i].lng)noCoords.push(i);}
     order=optV2.order.concat(noCoords);
+    // v5.8.33: Avisar sobre clientes sem geocoding excluídos do mapa
+    if(noCoords.length){
+      const names=noCoords.map(i=>clients[i].nome).filter(Boolean).join(', ');
+      setTimeout(()=>toast(noCoords.length+' cliente(s) sem endere\xE7o encontrado no mapa: '+names+'. Verifique o endere\xE7o deles.','warn'),800);
+    }
     // Chamar Google Directions UMA VEZ com a ordem já otimizada (só pra renderizar mapa + ETAs exatos)
     const orderedGeo=order.filter(i=>clients[i].lat&&clients[i].lng).map(i=>clients[i]);
     const waypoints=orderedGeo.map(c=>_waypointFor(c));
