@@ -697,6 +697,31 @@ async function handleRequest(request, env) {
     }
 
     // ═══════════════════════════════════════════
+    // OSRM PROXY (matrix calculation)
+    // ═══════════════════════════════════════════
+
+    // GET /osrm-proxy?coords=lng1,lat1;lng2,lat2;...
+    // Proxies to public OSRM table API to avoid CORS issues from the browser
+    if (path === '/osrm-proxy' && method === 'GET') {
+      const coords = url.searchParams.get('coords');
+      if (!coords) return err('Missing coords parameter');
+      try {
+        const osrmUrl = `https://router.project-osrm.org/table/v1/driving/${coords}?annotations=duration,distance`;
+        const res = await fetch(osrmUrl, {
+          headers: { 'User-Agent': 'RoteirodeColeta/1.0' },
+        });
+        if (!res.ok) throw new Error('OSRM HTTP ' + res.status);
+        const data = await res.json();
+        return new Response(JSON.stringify(data), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+        });
+      } catch (e) {
+        return err('OSRM proxy error: ' + e.message, 500);
+      }
+    }
+
+    // ═══════════════════════════════════════════
     // GEOCODING PROXY + KV CACHE (Plano B)
     // ═══════════════════════════════════════════
 
