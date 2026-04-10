@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.40';
+const APP_VERSION='v5.8.41';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -2353,6 +2353,9 @@ function restoreActiveRoute(){
     renderC();updStats();updBtns();
     // v4.6.9: Rebuild OSRM matrix em background para ETAs funcionarem no drag
     _rebuildCachedMatrix();
+    // v5.8.41: Restaurar mapa/rota automaticamente se clientes têm coordenadas
+    const _geocodedCount=clients.filter(c=>c.lat&&c.lng).length;
+    if(_geocodedCount>=2){_pendingMapRestore=true;console.log('[RESTORE] Agendando restauração do mapa ('+_geocodedCount+' clientes geocodificados)');}
     console.log('[RESTORE] Rota restaurada silenciosamente: '+clients.length+' clientes');
     return true;
   }catch(e){return false;}
@@ -4034,6 +4037,9 @@ function renderC(){
   const pendentes=clients.filter(c=>c._addrPending);
   const SVG_WARN_SM='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
   let bannerHtml='';
+  // v5.8.41: banner para clientes sem geocodificação (excluídos do cálculo de rota)
+  const semGeo=clients.filter(c=>!c.lat&&!c.lng&&!c._addrPending);
+  if(semGeo.length)bannerHtml+='<div class="ab w" style="margin-bottom:8px;background:rgba(220,38,38,.07);border-color:rgba(220,38,38,.25)"><span class="mot-ico" style="color:#dc2626">'+SVG_WARN_SM+'</span> <div><strong style="color:#dc2626">'+semGeo.length+' cliente'+(semGeo.length>1?'s sem':'  sem')+' endere\xE7o localizado</strong><div style="font-size:12px;color:var(--mu);margin-top:2px">'+(semGeo.length>1?'Estes clientes n\xE3o ser\xE3o inclu\xEDdos no c\xE1lculo de rota.':'Este cliente n\xE3o ser\xE1 inclu\xEDdo no c\xE1lculo de rota.')+' Edite para corrigir o endere\xE7o.</div></div></div>';
   // v5.8.39: banner específico para paradas além do limite de retorno (separado do genérico de conflito)
   const retExceeded=cfls.filter(c=>c.cmsg&&c.cmsg.includes('limite de retorno'));
   const windowCfls=cfls.filter(c=>!c.cmsg||!c.cmsg.includes('limite de retorno'));
@@ -4818,7 +4824,14 @@ function recalcETAsFromCache(){
     c.estT=st2(cur);c.conflict=false;c.cmsg='';
     if(c.janela==='manha'&&cur>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
     else if(c.janela==='tarde'&&cur<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
-    else if(c.janela==='custom'&&c.hi&&c.hf&&(cur<ts(c.hi)||cur>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
+    else if(c.janela==='custom'&&c.hi&&c.hf){
+      if(cur<ts(c.hi)){
+        // v5.8.41: chegada antes da janela — aguardar abertura e ajustar ETAs subsequentes
+        const waitMin=Math.round((ts(c.hi)-cur)/60);
+        c.conflict=true;c.cmsg='Chegada ~'+c.estT+', aguardar ~'+waitMin+'min (janela '+c.hi+')';
+        cur=ts(c.hi); // snapa para abertura da janela
+      } else if(cur>ts(c.hf)){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela encerrada \xE0s '+c.hf;}
+    }
     if(cur>retSec){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
     cur+=tempoSec;
     lastValidNode=toNode;
@@ -5266,6 +5279,9 @@ function createBaseMarker({position,map,title,type}){
   const mk=new google.maps.marker.AdvancedMarkerElement({position,map,content:el});
   return mk;
 }
+// v5.8.41: Flag para restaurar mapa após refresh (quando Google Maps inicializa depois dos clientes)
+let _pendingMapRestore=false;
+
 // v5.8.40: Substitui google.maps.visualization.HeatmapLayer (depreciado mai/2025, remoção mai/2026)
 // Implementação canvas pura via OverlayView — sem dependência da biblioteca visualization
 let _HeatmapCls=null;
@@ -5279,7 +5295,12 @@ function _makeHeatmap(opts){
         this.getPanes().overlayLayer.appendChild(c);this._cvs=c;
         const redraw=()=>this._draw();
         const m=this.getMap();
-        this._lis=[google.maps.event.addListener(m,'bounds_changed',redraw),google.maps.event.addListener(m,'zoom_changed',redraw)];
+        // v5.8.41: redraw no tilesloaded resolve heatmap em branco no primeiro load
+        this._lis=[
+          google.maps.event.addListener(m,'bounds_changed',redraw),
+          google.maps.event.addListener(m,'zoom_changed',redraw),
+          google.maps.event.addListenerOnce(m,'tilesloaded',()=>{setTimeout(()=>this._draw(),100);}),
+        ];
       }
       draw(){this._draw();}
       _draw(){
@@ -5327,6 +5348,19 @@ function initGoogleMaps(){
     }
   }
   /* v5.5.0: heatmap (Mapa de Clientes) criado lazily em renderDashStats quando o div esta visivel */
+  // v5.8.41: Restaurar mapa/rota automaticamente após refresh de página
+  if(_pendingMapRestore&&clients.length&&order.length){
+    _pendingMapRestore=false;
+    // Aguarda mapa estar pronto (tiles carregados) antes de chamar recalcRouteFromOrder
+    google.maps.event.addListenerOnce(gMap,'tilesloaded',()=>{
+      setTimeout(()=>{
+        if(gMap&&order.length&&clients.filter(c=>c.lat&&c.lng).length>=2){
+          console.log('[RESTORE-MAP] Redesenhando rota no mapa após restauração...');
+          recalcRouteFromOrder();
+        }
+      },200);
+    });
+  }
 }
 function initLeafMap(){}
 // v4.9.1: Invalidar cache de geocoding quando versão muda (corrige endereços cacheados errados)
@@ -5784,7 +5818,10 @@ function estimateTimesOSRM(legs){
     c.estT=st2(cur);c.conflict=false;c.cmsg='';
     if(c.janela==='manha'&&cur>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
     else if(c.janela==='tarde'&&cur<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
-    else if(c.janela==='custom'&&c.hi&&c.hf&&(cur<ts(c.hi)||cur>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
+    else if(c.janela==='custom'&&c.hi&&c.hf){
+      if(cur<ts(c.hi)){const wm=Math.round((ts(c.hi)-cur)/60);c.conflict=true;c.cmsg='Chegada ~'+c.estT+', aguardar ~'+wm+'min (janela '+c.hi+')';cur=ts(c.hi);}// v5.8.41: snap
+      else if(cur>ts(c.hf)){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela encerrada \xE0s '+c.hf;}
+    }
     if(cur>retS){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
     cur+=tempo; // Tempo de parada neste cliente
   });
@@ -5807,7 +5844,10 @@ function recalcDynamicETAs(){
     c.estT=st2(cur);c.conflict=false;c.cmsg='';
     if(c.janela==='manha'&&cur>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
     else if(c.janela==='tarde'&&cur<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
-    else if(c.janela==='custom'&&c.hi&&c.hf&&(cur<ts(c.hi)||cur>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
+    else if(c.janela==='custom'&&c.hi&&c.hf){
+      if(cur<ts(c.hi)){const wm=Math.round((ts(c.hi)-cur)/60);c.conflict=true;c.cmsg='Chegada ~'+c.estT+', aguardar ~'+wm+'min (janela '+c.hi+')';cur=ts(c.hi);}// v5.8.41: snap
+      else if(cur>ts(c.hf)){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela encerrada \xE0s '+c.hf;}
+    }
     if(cur>retS){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
     cur+=tempo; // Tempo de parada
   });
