@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.25';
+const APP_VERSION='v5.8.26';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 const ETA_BUFFER=20*60; // segundos
 
@@ -1012,6 +1012,11 @@ function applyCepToAddress(data,endEl,statusEl,prefix){
 // Address field input handler: try to extract CEP from typed text
 function onEndInput(prefix){
   const el=document.getElementById(prefix+'-end');if(!el)return;
+  // v5.8.26: no modal de edição, limpar CEP ao trocar logradouro para forçar re-geocodificação
+  if(prefix==='em'&&!_cepFilling){
+    const cepEl=document.getElementById('em-cep');
+    if(cepEl)cepEl.value='';
+  }
   const val=el.value;
   // Extract CEP pattern from typed text
   const cepMatch=val.match(/(\d{5})-?(\d{3})/);
@@ -1043,7 +1048,8 @@ async function geocodeCepForPrefix(prefix){
       const pc=d.results[0].address_components?.find(c=>c.types.includes('postal_code'));
       if(pc){
         const cepEl=document.getElementById(prefix+'-cep');
-        if(cepEl&&!cepEl.value.replace(/\D/g,'')){
+        // v5.8.26: em modo edição ('em') sempre atualizar CEP; nos demais, só se vazio
+        if(cepEl&&(prefix==='em'||!cepEl.value.replace(/\D/g,''))){
           cepEl.value=fmtCep(pc.long_name.replace(/\D/g,''));
           const statusEl=document.getElementById(prefix+'-cep-status');
           if(statusEl){statusEl.className='cep-status ok';statusEl.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> CEP detectado';setTimeout(()=>{statusEl.innerHTML='';},3000);}
@@ -2126,13 +2132,14 @@ async function _admExportCSV(){
 // Sync
 let _syncTimer=null;
 function _authHeaders(){return _authToken?{'Authorization':'Bearer '+_authToken,'Content-Type':'application/json'}:{'Content-Type':'application/json'};}
-async function _syncPull(){if(!_authToken)return;try{const res=await fetch(WORKER_URL+'/api/user/sync',{headers:_authHeaders()});if(!res.ok)return;const data=await res.json();if(!data.ok||!data.data)return;const d=data.data;const _sinceEdit=Date.now()-_lastLocalChange;if(d.cfg&&_sinceEdit>=5000&&(d.cfgUpdatedAt||0)>=_cfgUpdatedAt){Object.keys(d.cfg).forEach(k=>{if(d.cfg[k]!==undefined)cfg[k]=d.cfg[k];});localStorage.setItem('rota_cfg',JSON.stringify(cfg));_cfgUpdatedAt=d.cfgUpdatedAt||0;loadCfg();}if(d.tags&&Array.isArray(d.tags)&&_sinceEdit>=5000&&(d.tagsUpdatedAt||0)>=_tagsUpdatedAt){_tags=d.tags;localStorage.setItem('rota_tags',JSON.stringify(d.tags));_tagsUpdatedAt=d.tagsUpdatedAt||0;renderTagsConfig();updateTagSelects();renderC();}if(d.hist&&Array.isArray(d.hist)){const local=getHist();const allEntries=[...d.hist,...local];const byDate={};allEntries.forEach(h=>{if(!byDate[h.date]||h.savedAt>byDate[h.date].savedAt)byDate[h.date]=h;});const merged=Object.values(byDate).sort((a,b)=>b.date.localeCompare(a.date));try{localStorage.setItem('rota_hist',JSON.stringify(merged.slice(0,90)));}catch(e){}renderHist();}if(d.activeRoute&&d.activeRoute.clients&&d.activeRoute.clients.length){if(_sinceEdit>=5000){const localSaved=localStorage.getItem('rota_ativa');const localTs=localSaved?safeJsonParse('rota_ativa',{}).savedAt||'':'';if(d.activeRoute.savedAt>localTs){clients=d.activeRoute.clients;order=d.activeRoute.order||clients.map((_,i)=>i);if(d.activeRoute.routeId)_currentRouteId=d.activeRoute.routeId;localStorage.setItem('rota_ativa',JSON.stringify({clients,order,savedAt:d.activeRoute.savedAt,routeId:_currentRouteId||null,cloudVersion:_cloudVersion||0,cloudHash:_cloudHash||null}));renderC();updStats();updBtns();renderMotor();}}}else if(d.routeId&&!clients.length){cloudLoad(d.routeId).then(route=>{if(route&&route.clients&&route.clients.length){clients=route.clients;order=route.order||clients.map((_,i)=>i);renderC();updStats();updBtns();renderMotor();_rebuildCachedMatrix();autoSaveRoute();}}).catch(()=>{});}console.log('[SYNC] Pull completo');}catch(e){console.warn('[SYNC] Pull falhou:',e.message);}}
+async function _syncPull(){if(!_authToken)return;try{const res=await fetch(WORKER_URL+'/api/user/sync',{headers:_authHeaders()});if(!res.ok)return;const data=await res.json();if(!data.ok||!data.data)return;const d=data.data;const _sinceEdit=Date.now()-_lastLocalChange;if(d.cfg&&_sinceEdit>=5000&&(d.cfgUpdatedAt||0)>=_cfgUpdatedAt){Object.keys(d.cfg).forEach(k=>{if(d.cfg[k]!==undefined)cfg[k]=d.cfg[k];});localStorage.setItem('rota_cfg',JSON.stringify(cfg));_cfgUpdatedAt=d.cfgUpdatedAt||0;loadCfg();}if(d.tags&&Array.isArray(d.tags)&&_sinceEdit>=5000&&(d.tagsUpdatedAt||0)>=_tagsUpdatedAt){_tags=d.tags;localStorage.setItem('rota_tags',JSON.stringify(d.tags));_tagsUpdatedAt=d.tagsUpdatedAt||0;renderTagsConfig();updateTagSelects();renderC();}if(d.hist&&Array.isArray(d.hist)){const local=getHist();const allEntries=[...d.hist,...local];const byDate={};allEntries.forEach(h=>{if(!byDate[h.date]||h.savedAt>byDate[h.date].savedAt)byDate[h.date]=h;});const merged=Object.values(byDate).sort((a,b)=>b.date.localeCompare(a.date));try{localStorage.setItem('rota_hist',JSON.stringify(merged.slice(0,90)));}catch(e){}renderHist();}if(d.activeRoute&&d.activeRoute.clients&&d.activeRoute.clients.length&&sessionStorage.getItem('rota_user_cleared')!=='1'){if(_sinceEdit>=5000){const localSaved=localStorage.getItem('rota_ativa');const localTs=localSaved?safeJsonParse('rota_ativa',{}).savedAt||'':'';if(d.activeRoute.savedAt>localTs){clients=d.activeRoute.clients;order=d.activeRoute.order||clients.map((_,i)=>i);if(d.activeRoute.routeId)_currentRouteId=d.activeRoute.routeId;localStorage.setItem('rota_ativa',JSON.stringify({clients,order,savedAt:d.activeRoute.savedAt,routeId:_currentRouteId||null,cloudVersion:_cloudVersion||0,cloudHash:_cloudHash||null}));renderC();updStats();updBtns();renderMotor();}}}else if(d.routeId&&!clients.length&&sessionStorage.getItem('rota_user_cleared')!=='1'){cloudLoad(d.routeId).then(route=>{if(route&&route.clients&&route.clients.length){clients=route.clients;order=route.order||clients.map((_,i)=>i);renderC();updStats();updBtns();renderMotor();_rebuildCachedMatrix();autoSaveRoute();}}).catch(()=>{});}console.log('[SYNC] Pull completo');}catch(e){console.warn('[SYNC] Pull falhou:',e.message);}}
 async function _syncPush(){if(!_authToken)return;try{const activeRoute=clients.length?{clients:JSON.parse(JSON.stringify(clients)),order:[...order],savedAt:new Date().toISOString(),routeId:_currentRouteId||null}:null;await fetch(WORKER_URL+'/api/user/sync',{method:'POST',headers:_authHeaders(),body:JSON.stringify({cfg,tags:safeJsonParse('rota_tags',[]),hist:getHist(),routeId:_currentRouteId||null,activeRoute,lang:_lang||'pt',theme:localStorage.getItem('rota_theme')||'light',tagsUpdatedAt:_tagsUpdatedAt||0,cfgUpdatedAt:_cfgUpdatedAt||0})});console.log('[SYNC] Push completo');}catch(e){console.warn('[SYNC] Push falhou:',e.message);}}
 function _syncPushDebounced(){if(!_authToken)return;clearTimeout(_syncTimer);_syncTimer=setTimeout(_syncPush,800);}
 let _lastLocalChange=0;
 let _tagsUpdatedAt=0;
 let _cfgUpdatedAt=0;
-async function _syncPullRoute(){if(!_authToken)return;try{const res=await fetch(WORKER_URL+'/api/user/sync',{headers:_authHeaders()});if(!res.ok)return;const data=await res.json();if(!data.ok||!data.data)return;const d=data.data;if(!d.activeRoute||!d.activeRoute.clients||!d.activeRoute.clients.length)return;if(Date.now()-_lastLocalChange<5000)return;const localSaved=localStorage.getItem('rota_ativa');const localTs=localSaved?JSON.parse(localSaved).savedAt||'':'' ;if(d.activeRoute.savedAt<=localTs)return;clients=d.activeRoute.clients;order=d.activeRoute.order||clients.map((_,i)=>i);if(d.activeRoute.routeId&&d.activeRoute.routeId!==_currentRouteId){_currentRouteId=d.activeRoute.routeId;}localStorage.setItem('rota_ativa',JSON.stringify({clients,order,savedAt:d.activeRoute.savedAt,routeId:_currentRouteId||null,cloudVersion:_cloudVersion||0,cloudHash:_cloudHash||null}));renderC();updStats();updBtns();renderMotor();console.log('[MIRROR] Rota atualizada do outro dispositivo');}catch(e){}}
+async function _syncPullRoute(){if(!_authToken)return;try{const res=await fetch(WORKER_URL+'/api/user/sync',{headers:_authHeaders()});if(!res.ok)return;const data=await res.json();if(!data.ok||!data.data)return;const d=data.data;if(!d.activeRoute||!d.activeRoute.clients||!d.activeRoute.clients.length)return;if(sessionStorage.getItem('rota_user_cleared')==='1')return;// v5.8.26: respeitar limpeza explícita
+if(Date.now()-_lastLocalChange<5000)return;const localSaved=localStorage.getItem('rota_ativa');const localTs=localSaved?JSON.parse(localSaved).savedAt||'':'' ;if(d.activeRoute.savedAt<=localTs)return;clients=d.activeRoute.clients;order=d.activeRoute.order||clients.map((_,i)=>i);if(d.activeRoute.routeId&&d.activeRoute.routeId!==_currentRouteId){_currentRouteId=d.activeRoute.routeId;}localStorage.setItem('rota_ativa',JSON.stringify({clients,order,savedAt:d.activeRoute.savedAt,routeId:_currentRouteId||null,cloudVersion:_cloudVersion||0,cloudHash:_cloudHash||null}));renderC();updStats();updBtns();renderMotor();console.log('[MIRROR] Rota atualizada do outro dispositivo');}catch(e){}}
 let _mirrorTimer=null;
 function _startMirrorPoll(){if(_mirrorTimer)return;_mirrorTimer=setInterval(()=>{if(document.visibilityState==='visible')_syncPull();},3000);}
 function _stopMirrorPoll(){clearInterval(_mirrorTimer);_mirrorTimer=null;}
@@ -3812,13 +3819,20 @@ function clearAllClients(){
   if(!clients.length)return;
   const n=clients.length;
   showConfirm(t('confirm.clear_title'),t('confirm.clear_msg',{n}),()=>{
-    // v5.4.3: parar polling e limpar cloud state para evitar restauração automática
+    // v5.8.26: cancelar TODOS os timers pendentes que poderiam restaurar clientes
     if(_gestorPollTimer){clearInterval(_gestorPollTimer);_gestorPollTimer=null;}
+    clearTimeout(_autoSaveTimer);_autoSaveTimer=null;
+    clearTimeout(_syncTimer);_syncTimer=null;
     _currentRouteId=null;_cloudVersion=0;_cloudHash='';
+    // v5.8.26: atualizar _lastLocalChange para bloquear _syncPull por 5s
+    _lastLocalChange=Date.now();
     // v5.4.7: flag na sessionStorage — impede restore no refresh desta sessão
     sessionStorage.setItem('rota_user_cleared','1');
-    pushRouteState();clients=[];order=[];renderC();updStats();updBtns();resetMap();
+    clients=[];order=[];
     localStorage.removeItem('rota_ativa');
+    // v5.8.26: forçar push do estado vazio para o cloud (apaga activeRoute no servidor)
+    _syncPushDebounced();
+    renderC();updStats();updBtns();resetMap();
     toast(n+' '+t('cli.cli_removed',{n:n}),'ok');
   });
 }
@@ -3874,12 +3888,13 @@ function saveEditC(){
   const newEnd=_emEnd?_normalizeAddrString(titleCase(_emEnd)):c.endereco;
   // v5.8.25: detectar mudança de endereço → limpar geo e reagendar geocodificação
   const addrChanged=newEnd&&newEnd!==c.endereco;
+  const oldEndereco=c.endereco; // v5.8.26: guardar endereço antigo ANTES de sobrescrever
   c.endereco=newEnd;
   c.complemento='';
   c.tel=g('em-tel').value.trim();
   if(addrChanged){
-    // Limpar tudo: coords, cidade, CEP e cache associados ao endereço antigo
-    localStorage.removeItem('geo_'+c.endereco);delete _geoCache[c.endereco];
+    // v5.8.26: limpar cache do endereço ANTIGO (não do novo)
+    localStorage.removeItem('geo_'+oldEndereco);delete _geoCache[oldEndereco];
     c.lat=null;c.lng=null;c._cidade=null;c.cep=newCep||'';c.estT=null;c.conflict=false;c.cmsg='';
   }else{
     c.cep=newCep||c.cep;
@@ -4700,13 +4715,13 @@ function recalcETAsFromCache(){
       continue;
     }
     cur+=travel;
+    cur+=ETA_BUFFER; // v5.8.26: buffer por leg
     if(al1&&al2){const s1=ts(al1),s2=ts(al2);if(cur>=s1&&cur<s2)cur=s2;}
-    const dispCurM=cur+ETA_BUFFER; // v5.8.25: +20 min margem de segurança
-    c.estT=st2(dispCurM);c.conflict=false;c.cmsg='';
-    if(c.janela==='manha'&&dispCurM>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
-    else if(c.janela==='tarde'&&dispCurM<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
-    else if(c.janela==='custom'&&c.hi&&c.hf&&(dispCurM<ts(c.hi)||dispCurM>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
-    if(dispCurM>retSec){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
+    c.estT=st2(cur);c.conflict=false;c.cmsg='';
+    if(c.janela==='manha'&&cur>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
+    else if(c.janela==='tarde'&&cur<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
+    else if(c.janela==='custom'&&c.hi&&c.hf&&(cur<ts(c.hi)||cur>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
+    if(cur>retSec){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
     cur+=tempoSec;
     lastValidNode=toNode;
   }
@@ -5570,14 +5585,14 @@ function estimateTimesOSRM(legs){
     // Soma deslocamento: leg[legIdx] = trecho anterior até este cliente
     if(legIdx<legs.length)cur+=legs[legIdx].duration;
     legIdx++;
+    cur+=ETA_BUFFER; // v5.8.26: buffer por leg — propaga entre paradas (ex: saída C1 + viagem + buffer = chegada C2)
     // Verifica pausa de almoço
     if(al1&&al2){const s=ts(al1),e=ts(al2);if(cur>=s&&cur<e)cur=e;}
-    const dispCur=cur+ETA_BUFFER; // v5.8.25: +20 min margem de segurança
-    c.estT=st2(dispCur);c.conflict=false;c.cmsg='';
-    if(c.janela==='manha'&&dispCur>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
-    else if(c.janela==='tarde'&&dispCur<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
-    else if(c.janela==='custom'&&c.hi&&c.hf&&(dispCur<ts(c.hi)||dispCur>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
-    if(dispCur>retS){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
+    c.estT=st2(cur);c.conflict=false;c.cmsg='';
+    if(c.janela==='manha'&&cur>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
+    else if(c.janela==='tarde'&&cur<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
+    else if(c.janela==='custom'&&c.hi&&c.hf&&(cur<ts(c.hi)||cur>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
+    if(cur>retS){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
     cur+=tempo; // Tempo de parada neste cliente
   });
 }
@@ -5593,14 +5608,14 @@ function recalcDynamicETAs(){
     if(c._motDone){return;} // Pula concluídos
     if(!first){cur+=tempo;} // Tempo de deslocamento + parada (estimativa simples)
     first=false;
+    cur+=ETA_BUFFER; // v5.8.26: buffer por leg
     // Verifica pausa de almoço
     if(al1&&al2){const s=ts(al1),e=ts(al2);if(cur>=s&&cur<e)cur=e;}
-    const dispCurD=cur+ETA_BUFFER; // v5.8.25: +20 min margem de segurança
-    c.estT=st2(dispCurD);c.conflict=false;c.cmsg='';
-    if(c.janela==='manha'&&dispCurD>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
-    else if(c.janela==='tarde'&&dispCurD<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
-    else if(c.janela==='custom'&&c.hi&&c.hf&&(dispCurD<ts(c.hi)||dispCurD>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
-    if(dispCurD>retS){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
+    c.estT=st2(cur);c.conflict=false;c.cmsg='';
+    if(c.janela==='manha'&&cur>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
+    else if(c.janela==='tarde'&&cur<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
+    else if(c.janela==='custom'&&c.hi&&c.hf&&(cur<ts(c.hi)||cur>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
+    if(cur>retS){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
     cur+=tempo; // Tempo de parada
   });
 }
@@ -5612,9 +5627,9 @@ function estimateTimesSimple(){
     const c=clients[idx];
     // Sem dados de rota real, estima tempo de parada para cada cliente seguinte
     if(stop>0)cur+=tempo;
+    cur+=ETA_BUFFER; // v5.8.26: buffer por leg
     if(al1&&al2){const s=ts(al1),e=ts(al2);if(cur>=s&&cur<e)cur=e;}
-    const dispCurS=cur+ETA_BUFFER; // v5.8.25: +20 min margem de segurança
-    c.estT=st2(dispCurS);c.conflict=dispCurS>retS;c.cmsg=c.conflict?'Al\xE9m do limite de retorno':'';
+    c.estT=st2(cur);c.conflict=cur>retS;c.cmsg=c.conflict?'Al\xE9m do limite de retorno':'';
   });
 }
 function ts(t){const[h,m]=(t||'00:00').split(':').map(Number);return h*3600+m*60;}
