@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.28';
+const APP_VERSION='v5.8.29';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -916,13 +916,17 @@ function buildFullAddr(prefix){
 }
 // v5.8.25: extrai logradouro, número e complemento de uma string de endereço existente
 function _parseAddrParts(endereco){
+  // v5.8.29: busca o número em qualquer token (não só tokens[1])
+  // Suporta: "Rua Foo, Bairro Bar, 123, Apto 4" → logr="Rua Foo, Bairro Bar", num="123", comp="Apto 4"
   const mainPart=(endereco.split('\u2014')[0]||endereco).trim().replace(/,\s*$/,'');
   const tokens=mainPart.split(/,\s*/);
-  const logr=tokens[0]||'';
-  const num=(tokens[1]&&/^\d/.test(tokens[1].trim()))?tokens[1].trim():'';
-  const compParts=num?tokens.slice(2):tokens.slice(1);
-  const comp=compParts.join(', ').trim();
-  return {logr,num,comp};
+  let numIdx=-1;
+  for(let i=0;i<tokens.length;i++){if(/^\d/.test((tokens[i]||'').trim())){numIdx=i;break;}}
+  if(numIdx<0)return{logr:mainPart,num:'',comp:''};
+  const logr=tokens.slice(0,numIdx).join(', ');
+  const num=tokens[numIdx].trim();
+  const comp=tokens.slice(numIdx+1).join(', ').trim();
+  return{logr,num,comp};
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -4784,11 +4788,15 @@ async function recalcRouteFromOrder(){
     if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>{if(m.map)m.map=null;});gMarkers=[];gBaseMarkers.forEach(m=>{if(m.map)m.map=null;});gBaseMarkers=[];
     gRoute=new google.maps.DirectionsRenderer({map:gMap,directions:dirResult,suppressMarkers:true,polylineOptions:{strokeColor:'#6C5CE7',strokeWeight:4,strokeOpacity:0.8}});
     const legs=dirResult.routes[0].legs;
+    // v5.8.29: mapa cliente→parada real (índice em order[]) para alinhar numeração com os cartões
+    const _geoStopMap=new Map();
+    order.forEach((ci,stopIdx)=>{if(clients[ci]&&clients[ci].lat&&clients[ci].lng)_geoStopMap.set(clients[ci],stopIdx);});
     // Markers na nova ordem (AdvancedMarkerElement)
     geocoded.forEach((c,pos)=>{
       if(legs[pos]&&legs[pos].end_location){c.lat=legs[pos].end_location.lat();c.lng=legs[pos].end_location.lng();}
       const tipos=normalizeTipo(c.tipo);const fillColor=tipos.length?_getTagColor(tipos[0]):'#787878';
-      const mk=createAdvMarker({position:{lat:c.lat,lng:c.lng},map:gMap,label:String(pos+1),fillColor,onClick:()=>{openMarkerInfoWindow(mk,c,pos);}});
+      const stop=_geoStopMap.has(c)?_geoStopMap.get(c):pos;
+      const mk=createAdvMarker({position:{lat:c.lat,lng:c.lng},map:gMap,label:String(stop+1),fillColor,onClick:()=>{openMarkerInfoWindow(mk,c,stop);}});
       gMarkers.push(mk);
     });
     // v4.3.5: Marcadores de partida e retorno
@@ -5536,11 +5544,15 @@ async function calcRoute(){
       }
     });
     _routeTotalKm=totalDistKm;_routeTotalMin=totalDurMin;
+    // v5.8.29: mapa cliente→parada real para alinhar numeração marcador com cartão
+    const _ordGeoStopMap=new Map();
+    order.forEach((ci,stopIdx)=>{if(clients[ci]&&clients[ci].lat&&clients[ci].lng)_ordGeoStopMap.set(clients[ci],stopIdx);});
     // Markers
     orderedGeo.forEach((c,pos)=>{
       const tipos=normalizeTipo(c.tipo);const fillColor=tipos.length?_getTagColor(tipos[0]):'#787878';
       const dlMin=clientDeadlineMin(c);const isUrg=dlMin<24*60;
-      const mk=createAdvMarker({position:{lat:c.lat,lng:c.lng},map:gMap,label:String(pos+1),fillColor,strokeColor:isUrg?'#FF6B35':'#fff',strokeWeight:isUrg?3:2,onClick:()=>{openMarkerInfoWindow(mk,c,pos);}});
+      const stop=_ordGeoStopMap.has(c)?_ordGeoStopMap.get(c):pos;
+      const mk=createAdvMarker({position:{lat:c.lat,lng:c.lng},map:gMap,label:String(stop+1),fillColor,strokeColor:isUrg?'#FF6B35':'#fff',strokeWeight:isUrg?3:2,onClick:()=>{openMarkerInfoWindow(mk,c,stop);}});
       gMarkers.push(mk);
     });
     // Marcadores base/retorno
