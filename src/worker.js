@@ -707,7 +707,7 @@ async function handleRequest(request, env) {
         if (!address && !latlng) return err('Missing address or latlng');
 
         // Usa secret (preferencial) ou variável de env; a chave já é pública em app.js
-        const GMAP_KEY = env.GOOGLE_MAPS_KEY || 'AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM';
+        const GMAP_KEY = env.GOOGLE_MAPS_KEY || 'AIzaSyBpweA0jfF_lFgkKNvAJ_6NrPJ8H0bNjD8';
         if (!GMAP_KEY) return err('GOOGLE_MAPS_KEY not configured', 500);
 
         // Normalise cache key — lowercase, trim, collapse spaces
