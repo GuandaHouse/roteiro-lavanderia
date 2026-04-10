@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.26';
+const APP_VERSION='v5.8.27';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 const ETA_BUFFER=20*60; // segundos
 
@@ -3911,7 +3911,7 @@ function saveEditC(){
   c.obs=_emObs||'';
   if(c.janela==='custom'&&c.hi&&c.hf&&c.hi>=c.hf){toast(t('err.time_order'),'err');return;}
   closeModal('edit-modal');
-  renderC();updStats();renderMotor();
+  renderC();updStats();renderMotor();updateMapSidebar(); // v5.8.27: atualizar sidebar do mapa expandido
   if(addrChanged){
     // v5.8.25: reagendar geocodificação em background + recalcular rota quando tiver resultado
     toast(t('msg.client_updated')+' — reagendando endereço...','ok');
@@ -4809,7 +4809,7 @@ async function recalcRouteFromOrder(){
     _routeTotalKm=legs.reduce((s,l)=>s+l.distance.value,0)/1000;
     _routeTotalMin=legs.reduce((s,l)=>s+(l.duration_in_traffic||l.duration).value,0)/60; // v5.8.22
     console.log('[ROTA MANUAL] Rota recalculada: '+_routeTotalKm.toFixed(1)+'km | '+_routeTotalMin.toFixed(0)+'min');
-    renderC();updStats();
+    renderC();updStats();updateMapSidebar(); // v5.8.27: atualizar sidebar após recalcular rota
   }catch(e){console.error('[ROTA MANUAL] Erro ao recalcular:',e);}
 }
 
