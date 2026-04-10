@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.29';
+const APP_VERSION='v5.8.30';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -918,10 +918,15 @@ function buildFullAddr(prefix){
 function _parseAddrParts(endereco){
   // v5.8.29: busca o número em qualquer token (não só tokens[1])
   // Suporta: "Rua Foo, Bairro Bar, 123, Apto 4" → logr="Rua Foo, Bairro Bar", num="123", comp="Apto 4"
+  // v5.8.29b: token é número apenas se começa com dígito E não tem espaços
+  // (evita capturar nomes de rua como "9 de Julho", "15 de Novembro" como número)
   const mainPart=(endereco.split('\u2014')[0]||endereco).trim().replace(/,\s*$/,'');
   const tokens=mainPart.split(/,\s*/);
   let numIdx=-1;
-  for(let i=0;i<tokens.length;i++){if(/^\d/.test((tokens[i]||'').trim())){numIdx=i;break;}}
+  for(let i=0;i<tokens.length;i++){
+    const tk=(tokens[i]||'').trim();
+    if(/^\d/.test(tk)&&!/\s/.test(tk)){numIdx=i;break;}
+  }
   if(numIdx<0)return{logr:mainPart,num:'',comp:''};
   const logr=tokens.slice(0,numIdx).join(', ');
   const num=tokens[numIdx].trim();
