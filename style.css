@@ -343,6 +343,7 @@ body.dark .dash-drawer-toggle{background:rgba(13,11,20,.82);border-color:rgba(25
 /* v4.3.9: Field validation */
 @keyframes fieldShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-4px)}40%,80%{transform:translateX(4px)}}
 .field-error{border-color:var(--rd)!important;animation:fieldShake .4s ease;box-shadow:0 0 0 3px rgba(239,68,68,.12)!important}
+.field-inline-err{font-size:11px;color:var(--rd);margin-top:3px;display:none;font-weight:500} /* v5.8.44 */
 .obs-counter{position:absolute;bottom:6px;right:10px;font-size:10px;font-weight:600;color:var(--mu);pointer-events:none;opacity:.6}
 .obs-counter.near-limit{color:var(--rd);opacity:1}
 /* v4.3.9: Flash green on CEP auto-fill */
