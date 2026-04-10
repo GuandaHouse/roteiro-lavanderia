@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.38';
+const APP_VERSION='v5.8.39';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -851,7 +851,7 @@ function renderTagMultiSelect(id){
   html+='</div>';
   wrap.innerHTML=html;
 }
-function addFormTag(id,tid){_formTags[id]=_formTags[id]||[];if(!_formTags[id].includes(tid))_formTags[id].push(tid);renderTagMultiSelect(id);g(id+'-dd').style.display='none';}
+function addFormTag(id,tid){_formTags[id]=_formTags[id]||[];if(!_formTags[id].includes(tid))_formTags[id].push(tid);renderTagMultiSelect(id);const _dd=g(id+'-dd');if(_dd)_dd.style.display='none';} // v5.8.39: null guard — dropdown pode não existir no DOM ainda
 function rmFormTag(id,tid){_formTags[id]=(_formTags[id]||[]).filter(t=>t!==tid);renderTagMultiSelect(id);}
 function togTagDD(id){const dd=g(id+'-dd');dd.style.display=dd.style.display==='none'?'block':'none';}
 function getFormTags(id){return _formTags[id]||[];}
@@ -920,7 +920,12 @@ function buildFullAddr(prefix){
   const num=(document.getElementById(prefix+'-num')?.value||'').trim();
   const comp=(document.getElementById(prefix+'-comp')?.value||'').trim();
   let a=logr;
-  if(num)a+=', '+num;
+  // v5.8.39: evita duplicar número quando logradouro já contém o mesmo número
+  // ex: "Rua Flores, 407" + num="407" → NÃO append ", 407" de novo
+  if(num){
+    const logrHasNum=new RegExp('(^|,\\s*|\\s)'+num.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(\\s*,|\\s*$|\\s)').test(logr+' ');
+    if(!logrHasNum)a+=', '+num;
+  }
   if(comp)a+=', '+comp;
   return a;
 }
@@ -1131,6 +1136,9 @@ function titleCase(str){
     if(idx>0&&_TC_LOWER.has(word.toLowerCase()))return word.toLowerCase();
     const fi=word.search(/[a-zA-ZáàâãéèêíóôõúüçÁÀÂÃÉÈÊÍÓÔÕÚÜÇ]/);
     if(fi<0)return word;
+    // v5.8.39: preserva siglas ALL-CAPS (2-4 letras: SP, XV, CEP, APTO, etc.)
+    const letters=word.slice(fi).replace(/[^a-zA-Z]/g,'');
+    if(letters.length>=2&&letters.length<=4&&letters===letters.toUpperCase()&&/^[A-Z]+$/.test(letters))return word;
     return word.slice(0,fi)+word.charAt(fi).toUpperCase()+word.slice(fi+1).toLowerCase();
   });
 }
@@ -4026,8 +4034,12 @@ function renderC(){
   const pendentes=clients.filter(c=>c._addrPending);
   const SVG_WARN_SM='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
   let bannerHtml='';
-  if(cfls.length)bannerHtml+='<div class="ab w" style="margin-bottom:12px"><span class="mot-ico">'+SVG_WARN_SM+'</span> <div><strong>'+t('card.conflict',{n:cfls.length})+'</strong> '+t('card.risk',{n:coletasRisco})+'</div></div>';
-  if(pendentes.length)bannerHtml+='<div class="ab" style="margin-bottom:12px;background:rgba(255,170,0,.08);border-color:rgba(255,170,0,.3);display:flex;align-items:center;gap:10px"><span class="mot-ico" style="color:#f59e0b">'+SVG_WARN_SM+'</span><div style="flex:1"><strong style="color:#92400e">'+pendentes.length+' endere\xE7o'+(pendentes.length>1?'s precisam':'precisa')+' de verifica\xE7\xE3o</strong><div style="font-size:12px;color:var(--mu);margin-top:2px">O sistema encontrou mais de 1 local com esse nome. Clique para escolher o correto.</div></div><button class="btn bp" style="flex-shrink:0;font-size:12px;padding:6px 12px" onclick="showAddrPicker(\''+pendentes[0].id+'\')">Revisar agora</button></div>';
+  // v5.8.39: banner específico para paradas além do limite de retorno (separado do genérico de conflito)
+  const retExceeded=cfls.filter(c=>c.cmsg&&c.cmsg.includes('limite de retorno'));
+  const windowCfls=cfls.filter(c=>!c.cmsg||!c.cmsg.includes('limite de retorno'));
+  if(retExceeded.length){const isDark=document.body.classList.contains('dark');bannerHtml+='<div class="ab w" style="margin-bottom:8px;background:'+(isDark?'rgba(245,158,11,.1)':'rgba(254,243,199,.8)')+';border-color:'+(isDark?'rgba(245,158,11,.3)':'#F59E0B')+';color:'+(isDark?'#FBBF24':'#92400E')+'"><span class="mot-ico" style="color:#f59e0b">'+SVG_WARN_SM+'</span> <div><strong>'+retExceeded.length+' parada'+(retExceeded.length>1?'s':'')+(retExceeded.length>1?' excedem':' excede')+' o limite de retorno ('+(cfg.ret||'17:00')+')</strong></div></div>';}
+  if(windowCfls.length)bannerHtml+='<div class="ab w" style="margin-bottom:8px"><span class="mot-ico">'+SVG_WARN_SM+'</span> <div><strong>'+t('card.conflict',{n:windowCfls.length})+'</strong> '+t('card.risk',{n:coletasRisco})+'</div></div>';
+  if(pendentes.length)bannerHtml+='<div class="ab" style="margin-bottom:8px;background:rgba(255,170,0,.08);border-color:rgba(255,170,0,.3);display:flex;align-items:center;gap:10px"><span class="mot-ico" style="color:#f59e0b">'+SVG_WARN_SM+'</span><div style="flex:1"><strong style="color:#92400e">'+pendentes.length+' endere\xE7o'+(pendentes.length>1?'s precisam':'precisa')+' de verifica\xE7\xE3o</strong><div style="font-size:12px;color:var(--mu);margin-top:2px">O sistema encontrou mais de 1 local com esse nome. Clique para escolher o correto.</div></div><button class="btn bp" style="flex-shrink:0;font-size:12px;padding:6px 12px" onclick="showAddrPicker(\''+pendentes[0].id+'\')">Revisar agora</button></div>';
   g('cfl-banner').innerHTML=bannerHtml;
   el.innerHTML=order.map((idx,stop)=>{
     const c=clients[idx];
@@ -4061,7 +4073,8 @@ function renderC(){
           +(c.qtd?'<span>'+c.qtd+' '+(cfg._itemLabel||'item')+(c.qtd>1?'s':'')+'</span>':'')
           +(vd?'<span>'+vd+'</span>':'')
           +(jl?'<span>'+jl+'</span>':'')
-          +(c.estT?'<span class="et '+(c.conflict?'late':'')+'">'+t('card.arrival')+' '+c.estT+'</span>':'')
+          // v5.8.39: mostra "–" quando rota calculada mas cliente sem coordenadas (excluído do cálculo)
+          +(c.estT?'<span class="et '+(c.conflict?'late':'')+'">'+t('card.arrival')+' '+c.estT+'</span>':(clients.some(x=>x.estT)&&!c.lat&&!c.lng?'<span class="et" style="color:var(--mu);opacity:.6">'+t('card.arrival')+' \u2013</span>':''))
         +'</div>'
         +(c.obs?'<div style="font-size:12px;color:var(--mu);margin-top:3px;font-style:italic">'+_stripEmoji(c.obs)+'</div>':'')
         +(c.conflict?'<div class="cmsg">'+_icoAlert+' '+c.cmsg+'</div>':'')
