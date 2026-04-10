@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.30';
+const APP_VERSION='v5.8.31';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -2368,13 +2368,13 @@ function saveCfg(){
   cfg={saida:v('cfg-saida'),ret:v('cfg-ret'),tempo:parseInt(v('cfg-tempo'))||10,
     base:v('cfg-base'),retaddr:v('cfg-retaddr'),
     cidade:v('cfg-cidade').trim(),uf:v('cfg-uf').trim().toUpperCase().slice(0,2),
-    etaBuffer:Math.min(60,Math.max(0,parseInt(v('cfg-etaBuffer'))||20)), // v5.8.28: margem configurável
+    etaBuffer:(()=>{const _eb=parseInt(v('cfg-etaBuffer'));return Math.min(999,Math.max(0,isNaN(_eb)?20:_eb));})(), // v5.8.31: fix 0 válido, max 999
     al1:v('cfg-al1'),al2:v('cfg-al2'),
     tkey:v('cfg-tkey'),ttoken:v('cfg-ttoken'),
     akey:v('cfg-akey'),gkey:v('cfg-gkey')};
   // Validações
   if(cfg.saida&&cfg.ret&&cfg.saida>=cfg.ret){toast(t('err.time_order'),'err');return;}
-  if(cfg.tempo>240){toast(t('err.max_time'),'err');return;}
+  if(cfg.tempo>999){toast(t('err.max_time'),'err');return;}
   if(cfg.tempo<1){cfg.tempo=1;}
   if(cfg.al1&&cfg.al2&&cfg.al1>=cfg.al2){toast(t('err.lunch_order'),'err');return;}
   _lastLocalChange=Date.now();_cfgUpdatedAt=Date.now();
@@ -3820,7 +3820,9 @@ function addClient(){
 function removeC(id){
   const c=clients.find(x=>x.id===id);if(!c)return;
   showConfirm(t('confirm.delete_title'),t('confirm.remove_client',{name:c.nome}),()=>{
-    clients=clients.filter(x=>x.id!==id);order=clients.map((_,i)=>i);renderC();updStats();updBtns();if(!clients.length)resetMap();
+    clients=clients.filter(x=>x.id!==id);order=clients.map((_,i)=>i);renderC();updStats();updBtns();
+    if(!clients.length)resetMap();
+    else if(gRoute&&gMap)recalcRouteFromOrder(); // v5.8.31: atualiza marcadores e rota no mapa
     toast(t('t.removed'),'');
   });
 }
@@ -3879,9 +3881,11 @@ function editC(id){
   toggleEmValTipo();
   toggleEmJanela();
   g('edit-modal').classList.add('on');
-  // v4.6.2: Auto-fill CEP when client has address but empty CEP
-  if(!c.cep&&c.endereco&&c.endereco.length>=8){
-    geocodeCepForPrefix('em');
+  // v5.8.31: Auto-fill CEP — tenta extrair de c.obs (IA às vezes coloca lá), depois geocoda
+  if(!c.cep){
+    const obsMatch=(c.obs||'').match(/\b(\d{5})-?(\d{3})\b/);
+    if(obsMatch){g('em-cep').value=fmtCep(obsMatch[1]+obsMatch[2]);}
+    if(c.endereco&&c.endereco.length>=8){geocodeCepForPrefix('em');}
   }
 }
 function saveEditC(){
@@ -4513,6 +4517,7 @@ function _nnDeadline(matrix,gcIdx){
   const criticos=[],urgentes=[];
   for(let i=0;i<N;i++){
     if(clients[i].janela==='livre')continue;
+    if(gcIdx[i]===undefined)continue; // v5.8.31: pula não-geocodificados (sem entrada na matriz)
     const dl=_clientDeadlineSec(clients[i]);
     if(dl<24*3600)criticos.push({idx:i,dl}); // inclui manhã E custom (qualquer deadline real)
     else urgentes.push(i); // tarde (dl=24h) → nearest neighbor
@@ -4550,14 +4555,16 @@ function _nnDeadline(matrix,gcIdx){
 // Etapa 3b: Heurística — Cheapest Insertion com time windows
 function _cheapestInsertTW(matrix,gcIdx){
   const N=clients.length;const alpha=3000; // v4.6.7: consistente com α do SA
-  // Começar com o mais urgente
-  let urgIdx=0,minDl=_clientDeadlineSec(clients[0]);
-  for(let i=1;i<N;i++){const dl=_clientDeadlineSec(clients[i]);if(dl<minDl){minDl=dl;urgIdx=i;}}
+  // v5.8.31: Começar com o mais urgente GEOCODIFICADO (evita crash com não-geocodificados)
+  let urgIdx=-1,minDl=Infinity;
+  for(let i=0;i<N;i++){if(gcIdx[i]===undefined)continue;const dl=_clientDeadlineSec(clients[i]);if(dl<minDl){minDl=dl;urgIdx=i;}}
+  if(urgIdx<0)return [];
   const order=[urgIdx];const inserted=new Set([urgIdx]);
   while(inserted.size<N){
     let bestCost=Infinity,bestC=-1,bestPos=-1;
     for(let c=0;c<N;c++){
       if(inserted.has(c))continue;
+      if(gcIdx[c]===undefined)continue; // v5.8.31: pula não-geocodificados
       for(let pos=0;pos<=order.length;pos++){
         const test=[...order];test.splice(pos,0,c);
         const r=_evalOrder(test,matrix,alpha,gcIdx);
@@ -6566,8 +6573,9 @@ function removeCFromSidebar(id){
     clients=clients.filter(x=>x.id!==id);
     order=clients.map((_,i)=>i);
     renderC();updStats();updBtns();
-    if(mapIsFullscreen)updateMapSidebar();
     if(!clients.length)resetMap();
+    else if(gRoute&&gMap)recalcRouteFromOrder(); // v5.8.31: atualiza marcadores e rota no mapa
+    if(mapIsFullscreen)updateMapSidebar();
     toast(t('t.removed'),'');
   });
 }
