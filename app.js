@@ -419,7 +419,9 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.24';
+const APP_VERSION='v5.8.25';
+// v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
+const ETA_BUFFER=20*60; // segundos
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -901,6 +903,27 @@ function confirmInlineTag(id){
 // SECTION: CEP / GEOCODING
 // ════════════════════════════════════════════════════════════
 
+// v5.8.25: monta endereço completo a partir dos campos separados logradouro/número/complemento
+function buildFullAddr(prefix){
+  const logr=(document.getElementById(prefix+'-end')?.value||'').trim();
+  const num=(document.getElementById(prefix+'-num')?.value||'').trim();
+  const comp=(document.getElementById(prefix+'-comp')?.value||'').trim();
+  let a=logr;
+  if(num)a+=', '+num;
+  if(comp)a+=', '+comp;
+  return a;
+}
+// v5.8.25: extrai logradouro, número e complemento de uma string de endereço existente
+function _parseAddrParts(endereco){
+  const mainPart=(endereco.split('\u2014')[0]||endereco).trim().replace(/,\s*$/,'');
+  const tokens=mainPart.split(/,\s*/);
+  const logr=tokens[0]||'';
+  const num=(tokens[1]&&/^\d/.test(tokens[1].trim()))?tokens[1].trim():'';
+  const compParts=num?tokens.slice(2):tokens.slice(1);
+  const comp=compParts.join(', ').trim();
+  return {logr,num,comp};
+}
+
 /* ══════════════════════════════════════════════════════════════
    v4.3.9: CEP ↔ ENDEREÇO BIDIRECIONAL (ViaCEP)
    Campo CEP separado. CEP preenche endereço, endereço preenche CEP.
@@ -964,47 +987,26 @@ async function fetchCepAndFill(cep,prefix){
 }
 
 function applyCepToAddress(data,endEl,statusEl,prefix){
-  const parts=[];
-  if(data.logradouro)parts.push(data.logradouro);
-  if(data.bairro)parts.push(data.bairro);
-  const cidade=data.localidade?(data.localidade+(data.uf?', '+data.uf:'')):'';
-  if(cidade)parts.push(cidade);
-  const addrBase=parts.join(', ');
-  if(addrBase&&endEl){
-    const currentVal=endEl.value.trim();
-    let finalAddr=addrBase;
-    let preserved=false;
-    // v4.6.4: Se o usu\u00e1rio j\u00e1 digitou um n\u00famero no endere\u00e7o, preservar
-    if(currentVal&&data.logradouro){
-      const numMatch=currentVal.match(/,\s*(\d+[A-Za-z]?(?:\s*[-\/]\s*\d+[A-Za-z]?)?)\s*[-,\s]/);
-      if(numMatch){
-        const pp=[];
-        pp.push(data.logradouro+', '+numMatch[1]);
-        if(data.bairro)pp.push(data.bairro);
-        if(cidade)pp.push(cidade);
-        finalAddr=pp.join(' - ');
-        preserved=true;
-      }
-    }
+  // v5.8.25: preenche APENAS o campo logradouro — número e complemento são campos separados e não são tocados
+  if(data.logradouro&&endEl){
     _cepFilling=true;
-    endEl.value=finalAddr;
+    endEl.value=data.logradouro;
     endEl.dispatchEvent(new Event('input',{bubbles:true}));
     _cepFilling=false;
-    if(statusEl){
-      statusEl.className='cep-status ok';
-      statusEl.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> '+(data.logradouro||'')+' \u2014 '+(data.bairro||'')+', '+(data.localidade||'');
-      setTimeout(()=>{if(statusEl)statusEl.innerHTML='';},5000);
-    }
-    if(preserved){
-      toast(t('cep.updated'),'ok');
-    }else{
-      toast(t('cep.add_number'),'ok');
-      endEl.focus();
-      endEl.setSelectionRange(endEl.value.length,endEl.value.length);
-    }
-    // v4.3.9: Flash verde
+    // Flash verde no logradouro
     endEl.classList.remove('cep-flash');void endEl.offsetWidth;endEl.classList.add('cep-flash');
+    // Focar no campo número se ainda estiver vazio
+    const numEl=document.getElementById(prefix+'-num');
+    if(numEl&&!numEl.value.trim()){setTimeout(()=>{numEl.focus();},80);}
   }
+  if(statusEl){
+    // v5.8.25: formato padrão com em-dash — Logradouro — Bairro — Cidade
+    const parts=[data.logradouro,data.bairro,data.localidade].filter(Boolean);
+    statusEl.className='cep-status ok';
+    statusEl.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> '+parts.join(' \u2014 ');
+    setTimeout(()=>{if(statusEl)statusEl.innerHTML='';},5000);
+  }
+  toast(t('cep.add_number'),'ok');
 }
 
 // Address field input handler: try to extract CEP from typed text
@@ -1031,7 +1033,7 @@ function onEndInput(prefix){
 }
 // v4.4.0: Geocode address to extract CEP for edit modal and smart insert
 async function geocodeCepForPrefix(prefix){
-  const addr=document.getElementById(prefix+'-end')?.value;if(!addr||addr.length<8)return;
+  const addr=buildFullAddr(prefix);if(!addr||addr.length<8)return;
   try{
     const suffix=_getAddrSuffix?_getAddrSuffix():'';
     const bounds=_getAnchorBounds?_getAnchorBounds():'';
@@ -1110,7 +1112,7 @@ function onTitleCaseBlur(e){
 // Apply to all name, address, obs fields
 document.addEventListener('DOMContentLoaded',()=>{
   setTimeout(()=>{
-    ['f-nome','em-nome','si-nome','f-end','em-end','si-end','f-obs','em-obs','si-obs'].forEach(id=>{
+    ['f-nome','em-nome','si-nome','f-end','em-end','si-end','f-num','em-num','si-num','f-comp','em-comp','si-comp','f-obs','em-obs','si-obs'].forEach(id=>{
       const el=document.getElementById(id);
       if(el)el.addEventListener('blur',onTitleCaseBlur);
     });
@@ -1504,7 +1506,7 @@ function startGestorPolling(){
    ══════════════════════════════════════════════════════════════ */
 function openSmartInsert(){
   if(!clients.length){toast(t('e.route'),'err');return;}
-  ['si-nome','si-cep','si-end','si-tel','si-obs','si-val','si-hi','si-hf'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['si-nome','si-cep','si-end','si-num','si-comp','si-tel','si-obs','si-val','si-hi','si-hf'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('si-qtd').value='';
   initTagMultiSelect('si-tipo',[]);
   document.getElementById('si-valtipo').value='normal';
@@ -1515,9 +1517,12 @@ function openSmartInsert(){
 
 async function doSmartInsert(){
   const nome=titleCase(document.getElementById('si-nome').value.trim());
-  const end=titleCase(document.getElementById('si-end').value.trim());
-  if(!nome||!end){toast(t('err.fill_required'),'err');return;}
-  if(end.length<10||!/\d/.test(end)){toast(t('err.addr_invalid'),'err');return;}
+  // v5.8.25: monta endereço a partir dos campos separados
+  const end=titleCase(buildFullAddr('si'));
+  const siLogr=document.getElementById('si-end')?.value.trim();
+  if(!nome||!siLogr){toast(t('err.fill_required'),'err');return;}
+  if(!document.getElementById('si-num')?.value.trim()){toast('Informe o n\u00famero do endere\u00e7o','err');return;}
+  if(end.length<6){toast(t('err.addr_invalid'),'err');return;}
 
   const btn=document.getElementById('si-btn');
   btn.disabled=true;
@@ -2535,7 +2540,7 @@ function toggleSiJanela(){
   if(hw)hw.style.display=c?'':'none';if(fw)fw.style.display=c?'':'none';
 }
 function resetForm(){
-  ['f-nome','f-tel','f-cep','f-end','f-qtd','f-val','f-obs','f-hi','f-hf'].forEach(id=>g(id).value='');
+  ['f-nome','f-tel','f-cep','f-end','f-num','f-comp','f-qtd','f-val','f-obs','f-hi','f-hf'].forEach(id=>{const e=g(id);if(e)e.value='';});
   
   initTagMultiSelect('f-tipo',[]);g('f-janela').value='livre';if(g('f-valtipo')){g('f-valtipo').value='normal';toggleFValTipo();}
   g('f-data').value=new Date().toISOString().split('T')[0];
@@ -2894,7 +2899,13 @@ async function extractImg(){
     if(ext.nome)g('f-nome').value=ext.nome;
     if(ext.telefone)g('f-tel').value=ext.telefone;
     if(ext.cep){g('f-cep').value=fmtCep(ext.cep);onCepInput('f');}
-    if(ext.endereco)g('f-end').value=ext.endereco;
+    if(ext.endereco){
+      // v5.8.25: separar endereço extraído em logradouro/número/complemento
+      const _ap=_parseAddrParts(ext.endereco);
+      g('f-end').value=_ap.logr;
+      if(g('f-num'))g('f-num').value=_ap.num;
+      if(g('f-comp'))g('f-comp').value=_ap.comp;
+    }
     // complemento agora faz parte do endereco completo
     if(ext.tipo)initTagMultiSelect('f-tipo',normalizeTipo(ext.tipo));
     if(ext.qtd)g('f-qtd').value=ext.qtd;
@@ -3762,10 +3773,14 @@ function showConfirm(title,msg,onOk,onCancel,okLabel){
   g('confirm-modal').classList.add('on');
 }
 function addClient(){
-  const nome=titleCase(v('f-nome')),end=titleCase(v('f-end')),tipos=getFormTags('f-tipo');
+  const nome=titleCase(v('f-nome')),tipos=getFormTags('f-tipo');
+  // v5.8.25: monta endereço a partir dos campos separados
+  const end=titleCase(buildFullAddr('f'));
+  const logr=v('f-end').trim();
   if(!nome){toast(t('e.name'),'err');shakeField('f-nome');return;}
-  if(!end){toast(t('e.addr'),'err');shakeField('f-end');return;}
-  if(end.length<10||!/\d/.test(end)){toast(t('e.addrinv'),'err');return;}
+  if(!logr){toast(t('e.addr'),'err');shakeField('f-end');return;}
+  if(!v('f-num').trim()){toast('Informe o n\u00famero do endere\u00e7o','err');shakeField('f-num');return;}
+  if(end.length<6){toast(t('e.addrinv'),'err');return;}
   if(!tipos.length){toast(t('e.tag'),'err');return;}
   const qtd=parseInt(v('f-qtd'))||0;
   if(qtd<0){toast(t('err.qty_neg'),'err');return;}
@@ -3821,7 +3836,11 @@ function editC(id){
   g('em-id').value=id;
   g('em-nome').value=c.nome||'';
   g('em-cep').value=c.cep?fmtCep(c.cep):'';
-  g('em-end').value=(c.endereco||'')+(c.complemento?' — '+c.complemento:'');
+  // v5.8.25: separar endereço em logradouro / número / complemento para edição
+  const _ap=_parseAddrParts((c.endereco||'')+(c.complemento?' '+c.complemento:''));
+  g('em-end').value=_ap.logr;
+  g('em-num').value=_ap.num;
+  g('em-comp').value=_ap.comp;
   g('em-tel').value=c.tel||'';
   
   initTagMultiSelect('em-tipo',normalizeTipo(c.tipo));
@@ -3846,14 +3865,25 @@ function saveEditC(){
   const c=clients.find(x=>x.id===id);if(!c)return;
   // v4.4.0: Apply Title Case on save
   const _emNome=g('em-nome').value.trim();
-  const _emEnd=g('em-end').value.trim();
+  // v5.8.25: montar endereço a partir dos campos separados
+  const _emEndRaw=buildFullAddr('em');
+  const _emEnd=_emEndRaw.trim();
   const _emObs=g('em-obs').value.trim();
   c.nome=_emNome?titleCase(_emNome):c.nome;
-  c.cep=g('em-cep').value.replace(/\D/g,'');
-  c.endereco=_emEnd?_normalizeAddrString(titleCase(_emEnd)):c.endereco;
+  const newCep=g('em-cep').value.replace(/\D/g,'');
+  const newEnd=_emEnd?_normalizeAddrString(titleCase(_emEnd)):c.endereco;
+  // v5.8.25: detectar mudança de endereço → limpar geo e reagendar geocodificação
+  const addrChanged=newEnd&&newEnd!==c.endereco;
+  c.endereco=newEnd;
   c.complemento='';
   c.tel=g('em-tel').value.trim();
-  
+  if(addrChanged){
+    // Limpar tudo: coords, cidade, CEP e cache associados ao endereço antigo
+    localStorage.removeItem('geo_'+c.endereco);delete _geoCache[c.endereco];
+    c.lat=null;c.lng=null;c._cidade=null;c.cep=newCep||'';c.estT=null;c.conflict=false;c.cmsg='';
+  }else{
+    c.cep=newCep||c.cep;
+  }
   c.tipo=getFormTags('em-tipo');
   c.qtd=parseInt(g('em-qtd').value)||0;
   c.valTipo=g('em-valtipo').value;
@@ -3867,7 +3897,26 @@ function saveEditC(){
   if(c.janela==='custom'&&c.hi&&c.hf&&c.hi>=c.hf){toast(t('err.time_order'),'err');return;}
   closeModal('edit-modal');
   renderC();updStats();renderMotor();
-  toast(t('msg.client_updated'),'ok');
+  if(addrChanged){
+    // v5.8.25: reagendar geocodificação em background + recalcular rota quando tiver resultado
+    toast(t('msg.client_updated')+' — reagendando endereço...','ok');
+    nominatim(c.endereco,c).then(r=>{
+      if(r){
+        c.lat=r.lat;c.lng=r.lng;if(r.cidade)c._cidade=r.cidade;
+        if(r.route){c.endereco=_fmtAddrFromGeo(r,c.endereco);}
+        else if(r.bairro||r.cidade){
+          const base=(c.endereco.split('\u2014')[0]||c.endereco).trim();
+          let na=base;if(r.bairro)na+=' \u2014 '+titleCase(r.bairro);if(r.cidade)na+=' \u2014 '+titleCase(r.cidade);
+          if(na!==c.endereco)c.endereco=na;
+        }
+        autoSaveRoute();renderC();
+        // Se já temos rota gerada, recalcular com novo endereço
+        if(_routeTotalMin>0&&gMap){recalcRouteFromOrder();}
+      }
+    }).catch(()=>{});
+  }else{
+    toast(t('msg.client_updated'),'ok');
+  }
 }
 
 // v4.7.4: SVG inline icons para substituir emojis nos cards (M1 Monochrome)
@@ -4652,11 +4701,12 @@ function recalcETAsFromCache(){
     }
     cur+=travel;
     if(al1&&al2){const s1=ts(al1),s2=ts(al2);if(cur>=s1&&cur<s2)cur=s2;}
-    c.estT=st2(cur);c.conflict=false;c.cmsg='';
-    if(c.janela==='manha'&&cur>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
-    else if(c.janela==='tarde'&&cur<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
-    else if(c.janela==='custom'&&c.hi&&c.hf&&(cur<ts(c.hi)||cur>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
-    if(cur>retSec){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
+    const dispCurM=cur+ETA_BUFFER; // v5.8.25: +20 min margem de segurança
+    c.estT=st2(dispCurM);c.conflict=false;c.cmsg='';
+    if(c.janela==='manha'&&dispCurM>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
+    else if(c.janela==='tarde'&&dispCurM<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
+    else if(c.janela==='custom'&&c.hi&&c.hf&&(dispCurM<ts(c.hi)||dispCurM>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
+    if(dispCurM>retSec){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
     cur+=tempoSec;
     lastValidNode=toNode;
   }
@@ -5522,11 +5572,12 @@ function estimateTimesOSRM(legs){
     legIdx++;
     // Verifica pausa de almoço
     if(al1&&al2){const s=ts(al1),e=ts(al2);if(cur>=s&&cur<e)cur=e;}
-    c.estT=st2(cur);c.conflict=false;c.cmsg='';
-    if(c.janela==='manha'&&cur>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
-    else if(c.janela==='tarde'&&cur<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
-    else if(c.janela==='custom'&&c.hi&&c.hf&&(cur<ts(c.hi)||cur>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
-    if(cur>retS){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
+    const dispCur=cur+ETA_BUFFER; // v5.8.25: +20 min margem de segurança
+    c.estT=st2(dispCur);c.conflict=false;c.cmsg='';
+    if(c.janela==='manha'&&dispCur>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
+    else if(c.janela==='tarde'&&dispCur<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
+    else if(c.janela==='custom'&&c.hi&&c.hf&&(dispCur<ts(c.hi)||dispCur>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
+    if(dispCur>retS){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
     cur+=tempo; // Tempo de parada neste cliente
   });
 }
@@ -5544,11 +5595,12 @@ function recalcDynamicETAs(){
     first=false;
     // Verifica pausa de almoço
     if(al1&&al2){const s=ts(al1),e=ts(al2);if(cur>=s&&cur<e)cur=e;}
-    c.estT=st2(cur);c.conflict=false;c.cmsg='';
-    if(c.janela==='manha'&&cur>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
-    else if(c.janela==='tarde'&&cur<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
-    else if(c.janela==='custom'&&c.hi&&c.hf&&(cur<ts(c.hi)||cur>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
-    if(cur>retS){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
+    const dispCurD=cur+ETA_BUFFER; // v5.8.25: +20 min margem de segurança
+    c.estT=st2(dispCurD);c.conflict=false;c.cmsg='';
+    if(c.janela==='manha'&&dispCurD>ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel at\xE9 12:00';}
+    else if(c.janela==='tarde'&&dispCurD<ts('12:00')){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', dispon\xEDvel ap\xF3s 12:00';}
+    else if(c.janela==='custom'&&c.hi&&c.hf&&(dispCurD<ts(c.hi)||dispCurD>ts(c.hf))){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela '+c.hi+'-'+c.hf;}
+    if(dispCurD>retS){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
     cur+=tempo; // Tempo de parada
   });
 }
@@ -5561,7 +5613,8 @@ function estimateTimesSimple(){
     // Sem dados de rota real, estima tempo de parada para cada cliente seguinte
     if(stop>0)cur+=tempo;
     if(al1&&al2){const s=ts(al1),e=ts(al2);if(cur>=s&&cur<e)cur=e;}
-    c.estT=st2(cur);c.conflict=cur>retS;c.cmsg=c.conflict?'Al\xE9m do limite de retorno':'';
+    const dispCurS=cur+ETA_BUFFER; // v5.8.25: +20 min margem de segurança
+    c.estT=st2(dispCurS);c.conflict=dispCurS>retS;c.cmsg=c.conflict?'Al\xE9m do limite de retorno':'';
   });
 }
 function ts(t){const[h,m]=(t||'00:00').split(':').map(Number);return h*3600+m*60;}
