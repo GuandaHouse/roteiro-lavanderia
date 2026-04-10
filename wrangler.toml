@@ -16,6 +16,7 @@ id = "fff395a3bd844ea589c1eafc339b0a4c"
 [vars]
 GOOGLE_CLIENT_ID = "251116670672-eulttck17vcso97daub1n7gbruiku2bn.apps.googleusercontent.com"
 TRELLO_APP_KEY = "51ce653ffdde17dc703e4f5f3ce1a06f"
+GOOGLE_MAPS_KEY = "AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM"
 
 # AUTH_SECRET é secret — configurar via:
 # wrangler secret put AUTH_SECRET
