@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.43';
+const APP_VERSION='v5.8.44';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -1193,11 +1193,20 @@ document.addEventListener('DOMContentLoaded',()=>{
   },500);
 });
 
-// [8] VALIDAÇÃO VISUAL — borda vermelha + shake
-function shakeField(id){
+// [8] VALIDAÇÃO VISUAL — borda vermelha + shake + mensagem inline (v5.8.44)
+function shakeField(id,msg){
   const el=document.getElementById(id);if(!el)return;
   el.classList.add('field-error');
-  el.addEventListener('input',function rem(){el.classList.remove('field-error');el.removeEventListener('input',rem);},{once:true});
+  if(msg){
+    let em=document.getElementById(id+'-errmsg');
+    if(!em){em=document.createElement('div');em.id=id+'-errmsg';em.className='field-inline-err';el.parentNode.insertBefore(em,el.nextSibling);}
+    em.textContent=msg;em.style.display='block';
+  }
+  el.addEventListener('input',function rem(){
+    el.classList.remove('field-error');
+    const em=document.getElementById(id+'-errmsg');if(em)em.style.display='none';
+    el.removeEventListener('input',rem);
+  },{once:true});
 }
 
 // [9] CONTADOR DE CARACTERES — Observações
@@ -1382,9 +1391,11 @@ async function cloudPublish(){
       toast(t('t.published'),'ok');
       setCloudStatus('synced','Rota online e sincronizada em tempo real');
       _syncPushDebounced();
+      return true; // v5.8.44: sinaliza sucesso para o hook
     } else {
       // v5.8.38: BUG-05 — KV write limit → mensagem específica + fallback local
-      const isKvLimit=res.status===500||(data.error&&(data.error.includes('KV')||data.error.includes('limit')||data.error.includes('quota')));
+      // v5.8.44: res.status===500 também indica KV limit (HTTP level)
+      const isKvLimit=!res.ok||(data.error&&(data.error.includes('KV')||data.error.includes('limit')||data.error.includes('quota')));
       if(isKvLimit){
         toast('Limite do serviço cloud atingido. Rota salva localmente — link do motorista indisponível agora.','warn');
         setCloudStatus('offline','Limite do serviço atingido');
@@ -1392,9 +1403,11 @@ async function cloudPublish(){
       } else {
         toast(t('err.publish')+(data.error||t('err.unknown')),'err');
       }
+      return false; // v5.8.44: sinaliza falha para o hook
     }
   }catch(e){
     toast(t('err.connection')+': '+e.message,'err');
+    return false; // v5.8.44: sinaliza falha para o hook
   }finally{
     if(btn)btn.disabled=false;
   }
@@ -1597,7 +1610,7 @@ async function doSmartInsert(){
   const end=titleCase(buildFullAddr('si'));
   const siLogr=document.getElementById('si-end')?.value.trim();
   if(!nome||!siLogr){toast(t('err.fill_required'),'err');return;}
-  if(!document.getElementById('si-num')?.value.trim()){toast('Informe o n\u00famero do endere\u00e7o','err');return;}
+  if(!document.getElementById('si-num')?.value.trim()){toast('Informe o n\u00famero do endere\u00e7o','err');shakeField('si-num','N\u00famero obrigat\u00f3rio');return;}
   if(end.length<6){toast(t('err.addr_invalid'),'err');return;}
 
   const btn=document.getElementById('si-btn');
@@ -2203,7 +2216,7 @@ async function _admExportCSV(){
 let _syncTimer=null;
 function _authHeaders(){return _authToken?{'Authorization':'Bearer '+_authToken,'Content-Type':'application/json'}:{'Content-Type':'application/json'};}
 async function _syncPull(){if(!_authToken)return;try{const res=await fetch(WORKER_URL+'/api/user/sync',{headers:_authHeaders()});if(!res.ok)return;const data=await res.json();if(!data.ok||!data.data)return;const d=data.data;const _sinceEdit=Date.now()-_lastLocalChange;if(d.cfg&&_sinceEdit>=5000&&(d.cfgUpdatedAt||0)>=_cfgUpdatedAt){Object.keys(d.cfg).forEach(k=>{if(d.cfg[k]!==undefined)cfg[k]=d.cfg[k];});localStorage.setItem('rota_cfg',JSON.stringify(cfg));_cfgUpdatedAt=d.cfgUpdatedAt||0;if(!g('page-cfg')?.classList.contains('on'))loadCfg();/* v5.8.36: não repopula form enquanto usuário está em Configurações */}if(d.tags&&Array.isArray(d.tags)&&_sinceEdit>=5000&&(d.tagsUpdatedAt||0)>=_tagsUpdatedAt){_tags=d.tags;localStorage.setItem('rota_tags',JSON.stringify(d.tags));_tagsUpdatedAt=d.tagsUpdatedAt||0;if(!g('page-cfg')?.classList.contains('on')){renderTagsConfig();updateTagSelects();}renderC();/* v5.8.36: não sobrescreve tags enquanto usuário está em Configurações */}if(d.hist&&Array.isArray(d.hist)){const local=getHist();const allEntries=[...d.hist,...local];const byDate={};allEntries.forEach(h=>{if(!byDate[h.date]||h.savedAt>byDate[h.date].savedAt)byDate[h.date]=h;});const merged=Object.values(byDate).sort((a,b)=>b.date.localeCompare(a.date));try{localStorage.setItem('rota_hist',JSON.stringify(merged.slice(0,90)));}catch(e){}renderHist();}if(d.activeRoute&&d.activeRoute.clients&&d.activeRoute.clients.length&&sessionStorage.getItem('rota_user_cleared')!=='1'){if(_sinceEdit>=5000){const localSaved=localStorage.getItem('rota_ativa');const localTs=localSaved?safeJsonParse('rota_ativa',{}).savedAt||'':'';if(d.activeRoute.savedAt>localTs){clients=d.activeRoute.clients;order=d.activeRoute.order||clients.map((_,i)=>i);if(d.activeRoute.routeId)_currentRouteId=d.activeRoute.routeId;localStorage.setItem('rota_ativa',JSON.stringify({clients,order,savedAt:d.activeRoute.savedAt,routeId:_currentRouteId||null,cloudVersion:_cloudVersion||0,cloudHash:_cloudHash||null}));renderC();updStats();updBtns();renderMotor();}}}else if(d.routeId&&!clients.length&&sessionStorage.getItem('rota_user_cleared')!=='1'){cloudLoad(d.routeId).then(route=>{if(route&&route.clients&&route.clients.length){clients=route.clients;order=route.order||clients.map((_,i)=>i);renderC();updStats();updBtns();renderMotor();_rebuildCachedMatrix();autoSaveRoute();}}).catch(()=>{});}console.log('[SYNC] Pull completo');}catch(e){console.warn('[SYNC] Pull falhou:',e.message);}}
-async function _syncPush(){if(!_authToken)return;try{const activeRoute=clients.length?{clients:JSON.parse(JSON.stringify(clients)),order:[...order],savedAt:new Date().toISOString(),routeId:_currentRouteId||null}:null;await fetch(WORKER_URL+'/api/user/sync',{method:'POST',headers:_authHeaders(),body:JSON.stringify({cfg,tags:safeJsonParse('rota_tags',[]),hist:getHist(),routeId:_currentRouteId||null,activeRoute,lang:_lang||'pt',theme:localStorage.getItem('rota_theme')||'light',tagsUpdatedAt:_tagsUpdatedAt||0,cfgUpdatedAt:_cfgUpdatedAt||0})});console.log('[SYNC] Push completo');}catch(e){console.warn('[SYNC] Push falhou:',e.message);}}
+async function _syncPush(){if(!_authToken)return;try{const activeRoute=clients.length?{clients:JSON.parse(JSON.stringify(clients)),order:[...order],savedAt:new Date().toISOString(),routeId:_currentRouteId||null}:null;const _pushRes=await fetch(WORKER_URL+'/api/user/sync',{method:'POST',headers:_authHeaders(),body:JSON.stringify({cfg,tags:safeJsonParse('rota_tags',[]),hist:getHist(),routeId:_currentRouteId||null,activeRoute,lang:_lang||'pt',theme:localStorage.getItem('rota_theme')||'light',tagsUpdatedAt:_tagsUpdatedAt||0,cfgUpdatedAt:_cfgUpdatedAt||0})});if(_pushRes.ok){console.log('[SYNC] Push completo');}else{console.warn('[SYNC] Push falhou: HTTP',_pushRes.status);}  }catch(e){console.warn('[SYNC] Push falhou:',e.message);}}
 function _syncPushDebounced(){if(!_authToken)return;clearTimeout(_syncTimer);_syncTimer=setTimeout(_syncPush,800);}
 let _lastLocalChange=0;
 let _tagsUpdatedAt=0;
@@ -3231,7 +3244,7 @@ function importTC(){
 
     // ── ENDEREÇO + COMPLEMENTO (v4.8.9: reescrita completa) ──
     const _abrevs=[
-      [/\bAv\.\s?/gi,'Avenida '],[/\bAv[:\s]\s*/gi,'Avenida '], // v5.8.43: Av: com dois-pontos
+      [/\bAv\.\s?/gi,'Avenida '],[/\bAv[:\s]\s*/gi,'Avenida '], // v5.8.44: Av: com dois-pontos
       [/\bR\.\s?/gi,'Rua '],[/\bAl\.\s?/gi,'Alameda '],
       [/\bDr\.\s?/gi,'Doutor '],[/\bDr\s/gi,'Doutor '],
       [/\bProf\.\s?/gi,'Professor '],[/\bProf\s/gi,'Professor '],
@@ -3271,9 +3284,9 @@ function importTC(){
         }
       }
       // Endere\u00e7o? (logradouro ou CEP ou n\u00famero)
-      // v5.8.43: Ignorar linhas que são APENAS o rótulo "CEP: XXXXX-XXX" — sem logradouro
+      // v5.8.44: Ignorar linhas que são APENAS o rótulo "CEP: XXXXX-XXX" — sem logradouro
       if(/^cep\s*:?\s*\d{5}-?\d{3}\s*$/i.test(line)){lineRoles[li]='unknown';continue;}
-      // v5.8.43: Adicionar "av:" (com dois-pontos) ao detector de logradouro
+      // v5.8.44: Adicionar "av:" (com dois-pontos) ao detector de logradouro
       if(!endereco&&/(?:^(?:rua|r\.|av[.:\s]|avenida|alameda|al\.|travessa|trav\.|pra[c\u00e7]a|estrada|rod|viela|largo|beco)\b|\d{5}-?\d{3}|\b\d{1,5}\s*[-,])/i.test(line)){
         lineRoles[li]='addr';
         endereco=line;
@@ -3338,7 +3351,7 @@ function importTC(){
 
     // Extrair CEP do endere\u00e7o
     const cepM=endereco.match(/\b(\d{5}-?\d{3})\b/);
-    if(cepM){endereco=endereco.replace(cepM[0],'').replace(/[\s,\-\u2014:]+$/,'').replace(/^[\s,\-\u2014:]+/,'').trim();if(/^cep$/i.test(endereco))endereco='';} // v5.8.43: limpa rótulo 'CEP' quando sobra
+    if(cepM){endereco=endereco.replace(cepM[0],'').replace(/[\s,\-\u2014:]+$/,'').replace(/^[\s,\-\u2014:]+/,'').trim();if(/^cep$/i.test(endereco))endereco='';} // v5.8.44: limpa rótulo 'CEP' quando sobra
 
     // Expandir abreviações
     for(const [re,rep] of _abrevs)endereco=endereco.replace(re,rep);
@@ -3371,6 +3384,9 @@ function importTC(){
 
     // Se _p.c contém complemento (capturado erroneamente como cidade), limpar — já está em complemento
     if(_p.c&&compRe.test(_p.c))_p.c='';
+    // v5.8.44: Limpar qualificadores entre parênteses do bairro: 'Jardim Ipanema(zona Oeste)' → 'Jardim Ipanema'
+    if(_p.b)_p.b=_p.b.replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s{2,}/g,' ').trim();
+    if(_p.c)_p.c=_p.c.replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s{2,}/g,' ').trim();
     // v5.8.5: Logradouro, Número, Complemento — Bairro — Município
     let endFmt=titleCase(_p.l);
     if(_p.n)endFmt+=', '+_p.n;
@@ -3862,7 +3878,7 @@ function addClient(){
   const logr=v('f-end').trim();
   if(!nome){toast(t('e.name'),'err');shakeField('f-nome');return;}
   if(!logr){toast(t('e.addr'),'err');shakeField('f-end');return;}
-  if(!v('f-num').trim()){toast('Informe o n\u00famero do endere\u00e7o','err');shakeField('f-num');return;}
+  if(!v('f-num').trim()){toast('Informe o n\u00famero do endere\u00e7o','err');shakeField('f-num','Número obrigatório');return;}
   if(end.length<6){toast(t('e.addrinv'),'err');return;}
   if(!tipos.length){toast(t('e.tag'),'err');return;}
   const qtd=parseInt(v('f-qtd'))||0;
@@ -4073,7 +4089,7 @@ function renderC(){
           // v5.8.7: Badge de endereço pendente de verificação
           +(c._addrPending?'<button class="addr-pending-badge" onclick="event.stopPropagation();showAddrPicker(\''+c.id+'\')" title="Endere\xE7o amb\xEDguo \u2014 clique para verificar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> verificar</button>':'')
           // v5.8.38: Badge vermelho para clientes sem coordenadas (não serão roteados corretamente)
-          // v5.8.43: badge clicável "sem localização" → retenta geocoding ao clicar
+          // v5.8.44: badge clicável "sem localização" → retenta geocoding ao clicar
           +((!c.lat&&!c.lng&&!c._addrPending)?'<button class="addr-pending-badge" onclick="event.stopPropagation();_retryGeocode('+c.id+')" style="background:rgba(220,38,38,.1);color:#dc2626;border-color:rgba(220,38,38,.25)" title="Clique para tentar localizar novamente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="12"/><line x1="11" y1="16" x2="11.01" y2="16"/></svg> sem localiza\xE7\xE3o</button>':'')
           +(tagChips?'<div style="display:flex;gap:3px;flex-wrap:wrap;flex-shrink:0">'+tagChips+'</div>':'')
         +'</div>'
@@ -5520,7 +5536,7 @@ async function nominatim(addr,client){
   const cached=localStorage.getItem('geo_'+addr);
   if(cached){const c=JSON.parse(cached);_geoCache[addr]=c;_fireAmbigCheck(c);return c;}
   await _resolveGeoAnchor();
-  // v5.8.43: GEOCODING MULTI-ESTRATÉGIA para endereços incompletos
+  // v5.8.44: GEOCODING MULTI-ESTRATÉGIA para endereços incompletos
   // Problema: "Ulisses Guimarães" (incompleto, deveria ser "Rua Doutor Ulisses Guimarães")
   // "—" no meio da query confunde o Google → normalizar substituindo por ","
   // Estratégia: 3 tentativas em cascata, parar na primeira que retornar OK
@@ -5603,7 +5619,7 @@ async function nominatim(addr,client){
   _geoFailInc(addr);
   return null;
 }
-// v5.8.43: Retenta geocoding para cliente específico — limpa cache e tenta novamente
+// v5.8.44: Retenta geocoding para cliente específico — limpa cache e tenta novamente
 async function _retryGeocode(clientId){
   const c=clients.find(x=>x.id===clientId);if(!c)return;
   // Limpa cache de memória e localStorage
@@ -6885,7 +6901,7 @@ function showSyncIndicator(state,msg){
 const _origCloudPublish=cloudPublish;
 cloudPublish=async function(){
   showSyncIndicator('saving','Sincronizando...');
-  try{await _origCloudPublish();showSyncIndicator('ok','Sincronizado');}
+  try{const _ok=await _origCloudPublish();showSyncIndicator(_ok===false?'err':'ok',_ok===false?'Falha ao sincronizar':'Sincronizado');}
   catch(e){showSyncIndicator('err','Erro ao sincronizar');}
 };
 // Also hook into toast for saves
