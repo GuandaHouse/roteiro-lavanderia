@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.19';
+const APP_VERSION='v5.8.20';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -593,12 +593,30 @@ function _extractBaseAddr(addr){
 function _geoLocKey(baseAddr){
   return(baseAddr||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
 }
-function _geoLocGet(baseAddr){try{const d=JSON.parse(localStorage.getItem('rota_geo_locs')||'{}');return d[_geoLocKey(baseAddr)]||null;}catch(e){return null;}}
-function _geoLocAdd(baseAddr,newLocs){
-  if(!newLocs||!newLocs.length)return;
+function _geoLocGet(baseAddr){
   try{
     const d=JSON.parse(localStorage.getItem('rota_geo_locs')||'{}');
-    const key=_geoLocKey(baseAddr);const existing=d[key]||[];
+    const entry=d[_geoLocKey(baseAddr)];
+    if(!entry)return null;
+    // v5.8.20: suporte a {locs:[], ts:timestamp} para cachear resultado vazio (TTL 24h)
+    if(entry._empty){
+      const age=Date.now()-(entry.ts||0);
+      return age<86400000?[]:null; // null = re-query; []= confirmed empty within 24h
+    }
+    return entry;
+  }catch(e){return null;}
+}
+function _geoLocAdd(baseAddr,newLocs){
+  try{
+    const d=JSON.parse(localStorage.getItem('rota_geo_locs')||'{}');
+    const key=_geoLocKey(baseAddr);
+    if(!newLocs||!newLocs.length){
+      // v5.8.20: cachear resultado vazio com timestamp para evitar re-queries infinitas
+      if(!d[key]||!d[key]._empty)d[key]={_empty:true,ts:Date.now()};
+      localStorage.setItem('rota_geo_locs',JSON.stringify(d));
+      return;
+    }
+    const existing=Array.isArray(d[key])?d[key]:[];
     for(const loc of newLocs){
       if(!loc||!loc.lat||!loc.lng)continue;
       if(!existing.some(e=>_geoDistKm(e,loc)<2))existing.push({lat:loc.lat,lng:loc.lng,bairro:loc.bairro||'',cidade:loc.cidade||'',display:loc.display||''});
@@ -611,10 +629,18 @@ function _geoLocAdd(baseAddr,newLocs){
 // ViaCEP retorna TODOS os bairros com aquele nome de rua na cidade — muito mais preciso
 // que 12 queries Google biased que perdiam casos (ex: Colônia/Zona Sul).
 // clientCity: cidade do cliente (ex: "São Paulo") para buscar além da âncora se diferente.
+// v5.8.20: in-flight map — evita múltiplas chamadas paralelas para o mesmo endereço
+const _geoLocInFlight={};
 async function _findAllGeoLocations(baseAddr,clientCity){
   if(!baseAddr||!GKEY)return[];
   const cached=_geoLocGet(baseAddr);
-  if(cached&&cached.length>0)return cached;
+  if(cached!==null)return cached; // null=cache miss; []=confirmed empty; [...]= results
+  // v5.8.20: deduplicar chamadas concorrentes para o mesmo endereço
+  const key=_geoLocKey(baseAddr);
+  if(_geoLocInFlight[key])return _geoLocInFlight[key];
+  let resolveFn;
+  _geoLocInFlight[key]=new Promise(r=>{resolveFn=r;});
+  try{
   await _resolveGeoAnchor();
   const ax=_geoAnchor?_geoAnchor.lat:-23.55;
   const ay=_geoAnchor?_geoAnchor.lng:-46.63;
@@ -658,9 +684,10 @@ async function _findAllGeoLocations(baseAddr,clientCity){
     if(_geoAnchor&&_geoDistKm({lat:loc.lat,lng:loc.lng},{lat:ax,lng:ay})>100)continue;
     if(!found.some(f=>_geoDistKm(f,loc)<2))found.push(loc);
   }
-  if(found.length)_geoLocAdd(baseAddr,found);
+  _geoLocAdd(baseAddr,found); // v5.8.20: também cacheia resultado vazio (previne re-queries)
   console.log('[GEO-FIND] '+baseAddr+' (ViaCEP×'+cities.length+'+Google) → '+found.length+' local(is): '+found.map(f=>(f.cidade||'')+(f.bairro?'/'+f.bairro:'')).join(', '));
-  return found;
+  delete _geoLocInFlight[key];resolveFn(found);return found;
+  }catch(e){console.warn('[GEO-FIND] Erro:',e.message);delete _geoLocInFlight[key];resolveFn([]);return[];}
 }
 
 // v5.8.11: Verifica ambiguidade usando busca exaustiva.
@@ -2145,15 +2172,9 @@ function _initApp(){
     }
     if(changed){localStorage.setItem('rota_addr_choices',JSON.stringify(cleaned));console.log('[v5.8.16] Removidos choices sem type:alt do cache de endereços');}
   }catch(e){}
-  // v5.8.17: Limpar cache de locais geográficos (rota_geo_locs) — dados antigos via 12x Google
-  // podem estar incompletos (perdiam Colônia/Zona Sul etc). ViaCEP agora repopula automaticamente.
-  try{
-    if(!localStorage.getItem('rota_geo_locs_viacep_migrated')){
-      localStorage.removeItem('rota_geo_locs');
-      localStorage.setItem('rota_geo_locs_viacep_migrated','1');
-      console.log('[v5.8.17] Cache rota_geo_locs limpo — será repopulado via ViaCEP');
-    }
-  }catch(e){}
+  // v5.8.17: Migration de limpeza do rota_geo_locs foi REMOVIDA em v5.8.20
+  // Motivo: limpar o cache causaria spike de chamadas à API Google. O cache é cumulativo
+  // e o ViaCEP agora ADICIONA novos locais aos existentes sem precisar limpar.
   // v5.8.19: Corrigir endereços stale (choice salvo com endereco não atualizado pelo pickAddr antigo)
   setTimeout(()=>{_fixStaleAddrChoices();},800);
   // v5.8.9: Auditoria de ambiguidade geográfica — compara coords armazenadas vs geocode neutro
