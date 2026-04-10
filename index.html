@@ -518,7 +518,7 @@ html.auth-pending nav,html.auth-pending .page{display:none!important;}
 html:not(.auth-pending) #auth-screen{display:none;}
 </style>
 
-<link rel="stylesheet" href="style.css?v=5.8.39">
+<link rel="stylesheet" href="style.css?v=5.8.40">
 </head>
 <body>
 <!-- v4.8.7: Aplica dark ao body IMEDIATAMENTE (complementa o script do head) -->
@@ -1222,7 +1222,7 @@ html:not(.auth-pending) #auth-screen{display:none;}
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="app.js?v=5.8.39"></script>
+<script src="app.js?v=5.8.40"></script>
 <script>
 (function(){
   try{
@@ -1230,7 +1230,7 @@ html:not(.auth-pending) #auth-screen{display:none;}
     var k=c.gkey||'AIzaSyDquzcZIaEaofLt0rgLwutGOoSg4BRC3NM';
     if(k){
       var s=document.createElement('script');
-      s.src='https://maps.googleapis.com/maps/api/js?key='+k+'&libraries=visualization,marker&callback=initGoogleMaps';
+      s.src='https://maps.googleapis.com/maps/api/js?key='+k+'&libraries=marker&callback=initGoogleMaps';
       s.async=true;s.defer=true;
       document.head.appendChild(s);
     }
