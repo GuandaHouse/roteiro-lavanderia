@@ -929,8 +929,8 @@ html:not(.auth-pending) #auth-screen{display:none;}
         <div class="fg"><label>Estado (UF)</label><input type="text" id="cfg-uf" placeholder="Ex: SP" maxlength="2" style="text-transform:uppercase"/></div>
         <div class="fg"><label data-i18n="cfg.saida">Hor&#xE1;rio de sa&#xED;da</label><input type="time" id="cfg-saida" value="10:00"/></div>
         <div class="fg"><label data-i18n="cfg.retlim">Limite de retorno</label><input type="time" id="cfg-ret" value="17:00"/></div>
-        <div class="fg"><label data-i18n="cfg.tempo">Tempo/parada (min)</label><input type="number" id="cfg-tempo" value="10" min="1" max="240"/></div>
-        <div class="fg"><label>Margem nas chegadas (min) <span style="font-size:11px;color:var(--mu);font-weight:400">buffer por parada</span></label><input type="number" id="cfg-etaBuffer" value="20" min="0" max="60"/></div>
+        <div class="fg"><label data-i18n="cfg.tempo">Tempo/parada (min)</label><input type="number" id="cfg-tempo" value="10" min="1" max="999"/></div>
+        <div class="fg"><label>Margem nas chegadas (min) <span style="font-size:11px;color:var(--mu);font-weight:400">buffer por parada</span></label><input type="number" id="cfg-etaBuffer" value="20" min="0" max="999"/></div>
         <!-- v4.6.2: "Prioridade da rota" removido -->
         <!-- v4.6.1: cfg-wpp-margin removido -->
         <div class="fg"><label data-i18n="cfg.lunch1">Pausa almoço — início</label><input type="time" id="cfg-al1"/></div>
