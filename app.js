@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.22';
+const APP_VERSION='v5.8.23';
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -4706,11 +4706,11 @@ async function recalcRouteFromOrder(){
   const retAddr=cfg.retaddr||baseAddr;
   try{
     const waypoints=geocoded.map(c=>_waypointFor(c));
-    const dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({
-      origin:baseAddr,destination:retAddr,waypoints,
-      travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR',
-      drivingOptions:{departureTime:new Date(),trafficModel:'pessimistic'} // v5.8.22: trânsito em tempo real
-    },(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));
+    // v5.8.23: tenta com tráfego; se INVALID_REQUEST, retry sem drivingOptions
+    const _rReq={origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR'};
+    let dirResult;
+    try{dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({..._rReq,drivingOptions:{departureTime:new Date()}},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));}
+    catch(e2){console.warn('[ROTA MANUAL] retry sem tráfego:',e2.message);dirResult=await new Promise((rOk,rErr)=>new google.maps.DirectionsService().route(_rReq,(res,status)=>status==='OK'?rOk(res):rErr(new Error(status))));}
     // v4.6.9: Se outra chamada já disparou, descartar este resultado stale
     if(gen!==_recalcGen){console.log('[ROTA] Descartando resultado stale (gen '+gen+' vs '+_recalcGen+')');return;}
     if(gRoute)gRoute.setMap(null);gMarkers.forEach(m=>{if(m.map)m.map=null;});gMarkers=[];gBaseMarkers.forEach(m=>{if(m.map)m.map=null;});gBaseMarkers=[];
@@ -5409,11 +5409,22 @@ async function calcRoute(){
     let dirResult;
     try{
       _perf.dirStart=performance.now();
-      // v4.8.4: Timeout de 10s para Google Directions (evita pendura infinita)
-      dirResult=await Promise.race([
-        new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR',drivingOptions:{departureTime:new Date(),trafficModel:'pessimistic'}},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status)))), // v5.8.22: trânsito em tempo real
-        new Promise((_,rErr)=>setTimeout(()=>rErr(new Error('TIMEOUT_10s')),10000))
-      ]);
+      // v5.8.23: Tenta primeiro com tráfego em tempo real; se falhar (INVALID_REQUEST), retry sem drivingOptions
+      const _dirReq={origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR'};
+      try{
+        dirResult=await Promise.race([
+          new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({..._dirReq,drivingOptions:{departureTime:new Date()}},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status)))),
+          new Promise((_,rErr)=>setTimeout(()=>rErr(new Error('TIMEOUT_10s')),10000))
+        ]);
+        console.log('[CALC-ROUTE] Directions com tráfego OK');
+      }catch(trafficErr){
+        console.warn('[ROTA] Directions com tráfego falhou ('+trafficErr.message+') → retry sem drivingOptions');
+        dirResult=await Promise.race([
+          new Promise((rOk,rErr)=>new google.maps.DirectionsService().route(_dirReq,(res,status)=>status==='OK'?rOk(res):rErr(new Error(status)))),
+          new Promise((_,rErr)=>setTimeout(()=>rErr(new Error('TIMEOUT_10s')),10000))
+        ]);
+        console.log('[CALC-ROUTE] Directions básico OK (sem tráfego)');
+      }
       _perf.dirEnd=performance.now();
       console.log('[CALC-ROUTE] 5/6 Google Directions: '+Math.round(_perf.dirEnd-_perf.dirStart)+'ms');
     }catch(dirErr){
