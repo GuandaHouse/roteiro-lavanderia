@@ -697,6 +697,62 @@ async function handleRequest(request, env) {
     }
 
     // ═══════════════════════════════════════════
+    // GEOCODING PROXY + KV CACHE (Plano B)
+    // ═══════════════════════════════════════════
+
+    if (path === '/api/geocode' && method === 'GET') {
+      try {
+        const address = url.searchParams.get('address');
+        const latlng  = url.searchParams.get('latlng');
+        if (!address && !latlng) return err('Missing address or latlng');
+
+        const GMAP_KEY = env.GOOGLE_MAPS_KEY;
+        if (!GMAP_KEY) return err('GOOGLE_MAPS_KEY not configured in Worker secrets', 500);
+
+        // Normalise cache key — lowercase, trim, collapse spaces
+        const cacheInput = (address || latlng).toLowerCase().trim().replace(/\s+/g, ' ');
+        // Include region/components/bounds in key so different query contexts don't collide
+        const extra = (url.searchParams.get('components') || '') + (url.searchParams.get('bounds') || '');
+        const cacheKey = 'geo:' + cacheInput + (extra ? ':' + extra : '');
+
+        const GKV = env.ROTEIRO_KV;
+        if (GKV) {
+          const hit = await GKV.get(cacheKey);
+          if (hit) {
+            const data = JSON.parse(hit);
+            return new Response(JSON.stringify(data), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json', 'X-Geo-Cache': 'HIT', ...CORS_HEADERS },
+            });
+          }
+        }
+
+        // Build Google Geocoding URL — forward all params, inject server-side key
+        const gParams = new URLSearchParams();
+        for (const [k, v] of url.searchParams.entries()) {
+          if (k !== 'key') gParams.set(k, v); // never forward client key
+        }
+        gParams.set('key', GMAP_KEY);
+        const gUrl = 'https://maps.googleapis.com/maps/api/geocode/json?' + gParams.toString();
+
+        const res  = await fetch(gUrl);
+        const data = await res.json();
+
+        // Cache OK and ZERO_RESULTS for 30 days (only charge once per unique address)
+        if (GKV && (data.status === 'OK' || data.status === 'ZERO_RESULTS')) {
+          await GKV.put(cacheKey, JSON.stringify(data), { expirationTtl: 2592000 });
+        }
+
+        return new Response(JSON.stringify(data), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', 'X-Geo-Cache': 'MISS', ...CORS_HEADERS },
+        });
+      } catch (e) {
+        return err('Geocode proxy error: ' + e.message, 500);
+      }
+    }
+
+    // ═══════════════════════════════════════════
     // ROUTE SYNC ENDPOINTS (KV)
     // ═══════════════════════════════════════════
 
