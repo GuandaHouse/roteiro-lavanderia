@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.37';
+const APP_VERSION='v5.8.38';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -1286,14 +1286,33 @@ async function checkAmbWithCep(){
    CLOUD SYNC — Cloudflare Worker + KV
    ══════════════════════════════════════════════════════════════ */
 const WORKER_URL='https://roteiro-lavanderia.nigel-guandalini.workers.dev';
-// v5.8.32: Rate limiter global — máximo 15 chamadas Geocoding por 60s
-const _GEO_RATE_MAX=15;
+/// v5.8.38: Rate limiter global — máximo 30 chamadas Geocoding por 60s (era 15)
+const _GEO_RATE_MAX=30;
 let _geoRateLog=[];
+// v5.8.38: BUG-01 — guard de tentativas por endereço (evita loop infinito)
+const _geoFailCount={}; // addr → nº de falhas consecutivas na sessão
+const _GEO_MAX_FAILS=3; // após 3 falhas, abandona o endereço na sessão
 function _geoRateOk(){
   const now=Date.now();
   _geoRateLog=_geoRateLog.filter(t=>now-t<60000);
   if(_geoRateLog.length>=_GEO_RATE_MAX){console.warn('[GEO] Rate limit atingido ('+_GEO_RATE_MAX+'/min) — chamada bloqueada');return false;}
   _geoRateLog.push(now);return true;
+}
+function _geoFailOk(addr){
+  if(!addr)return true;
+  const k=addr.slice(0,60); // normaliza chave
+  if((_geoFailCount[k]||0)>=_GEO_MAX_FAILS){return false;}
+  return true;
+}
+function _geoFailInc(addr){
+  if(!addr)return;
+  const k=addr.slice(0,60);
+  _geoFailCount[k]=(_geoFailCount[k]||0)+1;
+  if(_geoFailCount[k]>=_GEO_MAX_FAILS)console.warn('[GEO] '+k+' atingiu '+_GEO_MAX_FAILS+' falhas — endereço suspenso na sessão');
+}
+function _geoFailReset(addr){
+  if(!addr)return;
+  delete _geoFailCount[addr.slice(0,60)];
 }
 // v5.8.21: Plano B — Geocoding Proxy via Worker (cache KV compartilhado, chave server-side)
 // Substitui todas as chamadas diretas à Google Geocoding API no cliente.
@@ -1350,11 +1369,21 @@ async function cloudPublish(){
     if(data.ok){
       _cloudVersion=data.version;
       _cloudHash=data.hash;
+      if(data.routeId)_currentRouteId=data.routeId; // v5.8.38: garante routeId do servidor
+      autoSaveRoute(); // v5.8.38: BUG-03 — persiste routeId no localStorage imediatamente
       toast(t('t.published'),'ok');
       setCloudStatus('synced','Rota online e sincronizada em tempo real');
       _syncPushDebounced();
     } else {
-      toast(t('err.publish')+(data.error||t('err.unknown')),'err');
+      // v5.8.38: BUG-05 — KV write limit → mensagem específica + fallback local
+      const isKvLimit=res.status===500||(data.error&&(data.error.includes('KV')||data.error.includes('limit')||data.error.includes('quota')));
+      if(isKvLimit){
+        toast('Limite do serviço cloud atingido. Rota salva localmente — link do motorista indisponível agora.','warn');
+        setCloudStatus('offline','Limite do serviço atingido');
+        autoSaveRoute(); // garante que rota está salva localmente
+      } else {
+        toast(t('err.publish')+(data.error||t('err.unknown')),'err');
+      }
     }
   }catch(e){
     toast(t('err.connection')+': '+e.message,'err');
@@ -3835,6 +3864,12 @@ function addClient(){
   const cep=v('f-cep').replace(/\D/g,'');
   const newClient={id:Date.now()+Math.random(),nome,endereco:_normalizeAddrString(end),cep,complemento:'',tel:v('f-tel'),tipo:tipos,qtd,val,valTipo,data:v('f-data')||new Date().toISOString().split('T')[0],janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null};
   clients.push(newClient);
+  // v5.8.38: BUG-06/09 — avisa quando geocoding está em cooldown (verifica sem consumir slot)
+  const _geoNow=Date.now();
+  const _geoActive=_geoRateLog.filter(t=>_geoNow-t<60000).length;
+  if(_geoActive>=_GEO_RATE_MAX){
+    toast('Cliente adicionado sem geolocalização (limite temporário). Reabra o card para tentar novamente em instantes.','warn');
+  }
   preGeocode(newClient); // v4.8.0: geocodificar em background imediatamente
   order=clients.map((_,i)=>i);
   resetForm();clearImg();renderC();updStats();updBtns();
@@ -3882,6 +3917,7 @@ function toggleEmValTipo(){
 }
 function editC(id){
   const c=clients.find(x=>x.id===id);if(!c)return;
+  delete _geoCepLastAddr['em']; // v5.8.38: limpa cache para forçar re-geocodificação ao abrir modal
   g('em-id').value=id;
   g('em-nome').value=c.nome||'';
   g('em-cep').value=c.cep?fmtCep(c.cep):'';
@@ -3926,7 +3962,10 @@ function saveEditC(){
   const newEnd=_emEnd?_normalizeAddrString(titleCase(_emEnd)):c.endereco;
   // v5.8.35: comparar só a base (sem sufixo — Bairro — Cidade) para não limpar geo ao editar outros campos
   const origBase=_normalizeAddrString(titleCase((c.endereco.split('\u2014')[0]||c.endereco).trim()));
-  const addrChanged=!!newEnd&&newEnd!==origBase;
+  // v5.8.38: também comparar com newEnd sem vírgula de espaçamento para evitar falso-positivo
+  const newEndNorm=newEnd.replace(/,\s*/g,' ').replace(/\s+/g,' ').trim().toLowerCase();
+  const origBaseNorm=origBase.replace(/,\s*/g,' ').replace(/\s+/g,' ').trim().toLowerCase();
+  const addrChanged=!!newEnd&&newEnd!==origBase&&newEndNorm!==origBaseNorm;
   const oldEndereco=c.endereco; // v5.8.26: guardar endereço antigo ANTES de sobrescrever
   c.endereco=addrChanged?newEnd:c.endereco; // v5.8.35: preservar sufixo se endereço não mudou
   c.complemento='';
@@ -4012,6 +4051,8 @@ function renderC(){
           +'<span class="cn">'+_stripEmoji(c.nome)+'</span>'
           // v5.8.7: Badge de endereço pendente de verificação
           +(c._addrPending?'<button class="addr-pending-badge" onclick="event.stopPropagation();showAddrPicker(\''+c.id+'\')" title="Endere\xE7o amb\xEDguo \u2014 clique para verificar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> verificar</button>':'')
+          // v5.8.38: Badge vermelho para clientes sem coordenadas (não serão roteados corretamente)
+          +((!c.lat&&!c.lng&&!c._addrPending)?'<span class="addr-pending-badge" style="background:rgba(220,38,38,.1);color:#dc2626;border-color:rgba(220,38,38,.25);cursor:default" title="Endere\xE7o n\xE3o encontrado \u2014 clique Editar e verifique o endere\xE7o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="12"/><line x1="11" y1="16" x2="11.01" y2="16"/></svg> sem localiza\xE7\xE3o</span>':'')
           +(tagChips?'<div style="display:flex;gap:3px;flex-wrap:wrap;flex-shrink:0">'+tagChips+'</div>':'')
         +'</div>'
         +(c.endereco?'<div class="ca">'+fmtEnderecoComCidade(c)+'</div>':'')
@@ -5354,6 +5395,8 @@ function _extractGeoResult(result){
 }
 // v5.8.8: nominatim — verificação de ambiguidade via chamada sem bounds
 async function nominatim(addr,client){
+  // v5.8.38: BUG-01 — abandona endereços que falharam demais (evita loop)
+  if(!_geoFailOk(addr)){return null;}
   // v5.8.13: helper para disparar ambiguidade em background em qualquer cache hit
   function _fireAmbigCheck(result){
     if(!client||_addrChoiceGet(addr,client.nome))return;
@@ -5401,6 +5444,7 @@ async function nominatim(addr,client){
         }
       }
       _geoCache[addr]=result;try{localStorage.setItem('geo_'+addr,JSON.stringify(result));}catch(e){}
+      _geoFailReset(addr); // v5.8.38: sucesso — zera contador de falhas
       if(!_isNearAnchor(result.lat,result.lng))console.warn('[GEO] '+addr+' resolveu LONGE da âncora: '+result.display);
       // v5.8.10: Verificação de ambiguidade em background (fire & forget)
       // Não bloqueia o geocode — badge aparece segundos depois se ambíguo
@@ -5422,7 +5466,8 @@ async function nominatim(addr,client){
       }
       return result;
     }
-  }catch(e){console.warn('Geocoding falhou:',addr,e);}
+  }catch(e){console.warn('Geocoding falhou:',addr,e);_geoFailInc(addr);}
+  _geoFailInc(addr); // v5.8.38: contabiliza falha (chegou aqui = ZERO_RESULTS ou erro)
   return null;
 }
 async function nominatimReverse(lat,lng){
@@ -5532,11 +5577,35 @@ async function calcRoute(){
     // Aplicar ordem otimizada
     const noCoords=[];
     for(let i=0;i<clients.length;i++){if(!clients[i].lat||!clients[i].lng)noCoords.push(i);}
-    order=optV2.order.concat(noCoords);
-    // v5.8.33: Avisar sobre clientes sem geocoding excluídos do mapa
+    // v5.8.38: Retry geocoding para clientes sem coordenadas (endereço simplificado: sem sufixo de bairro)
     if(noCoords.length){
-      const names=noCoords.map(i=>clients[i].nome).filter(Boolean).join(', ');
-      setTimeout(()=>toast(noCoords.length+' cliente(s) sem endere\xE7o encontrado no mapa: '+names+'. Verifique o endere\xE7o deles.','warn'),800);
+      const suffix=_getAddrSuffix?_getAddrSuffix():'';
+      await Promise.allSettled(noCoords.map(async(i)=>{
+        const c=clients[i];
+        if(!c.endereco||c.endereco.length<8)return;
+        if(!_geoRateOk())return;
+        const baseAddr2=(c.endereco.split('\u2014')[0]||c.endereco).trim();
+        const addrQuery=baseAddr2+(suffix?' '+suffix:'');
+        try{
+          const res=await _geocodeProxy('address='+encodeURIComponent(addrQuery)+'&region=br');
+          if(res.status==='OK'&&res.results&&res.results[0]){
+            const loc=res.results[0].geometry.location;
+            c.lat=typeof loc.lat==='function'?loc.lat():loc.lat;
+            c.lng=typeof loc.lng==='function'?loc.lng():loc.lng;
+            if(!c.cep){const pc=res.results[0].address_components?.find(a=>a.types.includes('postal_code'));if(pc)c.cep=pc.long_name.replace(/\D/g,'');}
+            console.log('[RETRY-GEO] \u2713 '+c.nome+' geocodificado: '+c.lat+','+c.lng);
+          }
+        }catch(e){console.warn('[RETRY-GEO] Falhou para '+c.nome+':',e.message);}
+      }));
+    }
+    // Recalcular noCoords após tentativas de geocodificação
+    const noCoords2=[];
+    for(let i=0;i<clients.length;i++){if(!clients[i].lat||!clients[i].lng)noCoords2.push(i);}
+    order=optV2.order.concat(noCoords2);
+    // v5.8.33: Avisar sobre clientes ainda sem geocoding (após retry)
+    if(noCoords2.length){
+      const names=noCoords2.map(i=>clients[i].nome).filter(Boolean).join(', ');
+      setTimeout(()=>toast(noCoords2.length+' cliente(s) sem endere\xE7o encontrado no mapa: '+names+'. Verifique o endere\xE7o deles.','warn'),800);
     }
     // Chamar Google Directions UMA VEZ com a ordem já otimizada (só pra renderizar mapa + ETAs exatos)
     const orderedGeo=order.filter(i=>clients[i].lat&&clients[i].lng).map(i=>clients[i]);
@@ -5861,7 +5930,8 @@ function renderHist(){
     const col=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes(_resolveTagId('coleta'));}).length,ent=h.clients.filter(c=>{const t=normalizeTipo(c.tipo);return t.includes(_resolveTagId('entrega'));}).length;
     const clientNames=h.clients.map(c=>(c.nome||'').toLowerCase()).join('|');
     const clientTels=h.clients.map(c=>(c.tel||'')).join('|');
-    return '<div class="hi" onclick="openHist('+i+')" data-clients="'+clientNames.replace(/"/g,'&quot;')+'" data-tels="'+clientTels.replace(/"/g,'&quot;')+'"><div style="width:42px;height:42px;background:var(--pul);border-radius:var(--rl2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0"><span class="mot-ico" style="width:20px;height:20px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span></div><div><div style="font-weight:700;font-size:14px">'+d.charAt(0).toUpperCase()+d.slice(1)+'</div><div class="hm">'+h.clients.length+' '+t('hist.clients')+' · '+t('misc.coletas',{n:col})+' / '+t('misc.entregas',{n:ent})+'</div></div></div>';
+    // v5.8.38: BUG-02 — usar stats.coletas/entregas (com {n}) em vez de misc (estático)
+    return '<div class="hi" onclick="openHist('+i+')" data-clients="'+clientNames.replace(/"/g,'&quot;')+'" data-tels="'+clientTels.replace(/"/g,'&quot;')+'"><div style="width:42px;height:42px;background:var(--pul);border-radius:var(--rl2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0"><span class="mot-ico" style="width:20px;height:20px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span></div><div><div style="font-weight:700;font-size:14px">'+d.charAt(0).toUpperCase()+d.slice(1)+'</div><div class="hm">'+h.clients.length+' '+t('hist.clients')+' · '+t(col===1?'stats.coleta':'stats.coletas',{n:col})+' / '+t(ent===1?'stats.entrega':'stats.entregas',{n:ent})+'</div></div></div>';
   }).join('');
 }
 // v4.6.2: Filter history list by date, client name, or phone
