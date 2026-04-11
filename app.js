@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.56';
+const APP_VERSION='v5.8.57';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -5477,10 +5477,13 @@ function _makeHeatmap(opts){
           oc2.beginPath();oc2.arc(px.x,px.y,r,0,Math.PI*2);oc2.fillStyle=g;oc2.fill();
         });
         // Passo 2: ler mapa de intensidade e colorizar via paleta
+        // v5.8.57: ler canal ALPHA (data[i+3]), não R (data[i])
+        // Com 'lighter'+círculos brancos, o canal R sempre desnormaliza para 255 (unpremultiply),
+        // mascarando o gradiente. O canal alpha acumula corretamente e reflete a intensidade real.
         const imgData=oc2.getImageData(0,0,w,h);const data=imgData.data;
         const pal=this._getPalette();
         for(let i=0;i<data.length;i+=4){
-          const intensity=Math.min(255,data[i]); // canal R = intensidade acumulada
+          const intensity=Math.min(255,data[i+3]); // canal A = intensidade acumulada real
           if(intensity>0){const col=pal[intensity];data[i]=col[0];data[i+1]=col[1];data[i+2]=col[2];data[i+3]=col[3];}
           else{data[i+3]=0;}
         }
