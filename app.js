@@ -419,10 +419,12 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.46';
+const APP_VERSION='v5.8.48';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
+// v5.8.48: BUG #2 — data local (evita virar dia às 21h por UTC-3)
+function localDateStr(){const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
 
 // v4.7.0: Safe JSON parse — protege contra localStorage corrompido
 function safeJsonParse(key,defaultValue){try{const v=localStorage.getItem(key);return v?JSON.parse(v):defaultValue;}catch(e){console.warn('[STORAGE] JSON corrompido em "'+key+'":', e.message);return defaultValue;}}
@@ -567,13 +569,16 @@ function _migrateAddrChoiceKeys(){
 }
 // v5.8.46: helper — limpeza de endereços armazenados (remove qualificadores entre parênteses)
 function _migrateClientAddresses(arr){
-  if(!Array.isArray(arr))return arr;
+  if(!Array.isArray(arr))return false;
+  let changed=false; // v5.8.48: retorna true se houve alteração (para persistir)
   arr.forEach(c=>{
     if(c.endereco&&/\([^)]+\)/.test(c.endereco)){
+      const before=c.endereco;
       c.endereco=c.endereco.replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s{2,}/g,' ').replace(/\s+—/g,' —').replace(/—\s+/g,'— ').trim();
+      if(c.endereco!==before)changed=true;
     }
   });
-  return arr;
+  return changed;
 }
 function _geoDistKm(a,b){const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng-a.lng)*Math.PI/180;const aa=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;return R*2*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));}
 function _hasGeoAmbiguity(results){if(!results||results.length<2)return false;const f=results[0].geometry?results[0].geometry.location:results[0];return results.slice(1).some(r=>{const l=r.geometry?r.geometry.location:r;return _geoDistKm({lat:f.lat,lng:f.lng},{lat:l.lat,lng:l.lng})>0.5;});}
@@ -894,7 +899,7 @@ function renderTagMultiSelect(id){
   let html='';
   sel.forEach(tid=>{
     const color=_getTagColor(tid);const label=_getTagLabel(tid);
-    if(label)html+='<span class="tag-ms-chip" style="background:'+color+'18;color:'+color+'">'+label+' <span class="tag-ms-x" onclick="event.stopPropagation();rmFormTag(\''+id+'\',\''+tid+'\')">×</span></span>';
+    if(label)html+='<span class="tag-ms-chip" data-tag-id="'+tid+'" style="background:'+color+'18;color:'+color+'">'+label+' <span class="tag-ms-x" onclick="event.stopPropagation();rmFormTag(\''+id+'\',\''+tid+'\')">×</span></span>';// v5.8.48: data-tag-id para fallback DOM
   });
   html+='<span class="tag-ms-add">Adicionar</span>';
   const avail=_tags.filter(t=>!sel.includes(t.id));
@@ -920,7 +925,14 @@ function renderTagMultiSelect(id){
 function addFormTag(id,tid){_formTags[id]=_formTags[id]||[];if(!_formTags[id].includes(tid))_formTags[id].push(tid);renderTagMultiSelect(id);const _dd=g(id+'-dd');if(_dd)_dd.style.display='none';} // v5.8.39: null guard — dropdown pode não existir no DOM ainda
 function rmFormTag(id,tid){_formTags[id]=(_formTags[id]||[]).filter(t=>t!==tid);renderTagMultiSelect(id);}
 function togTagDD(id){const dd=g(id+'-dd');dd.style.display=dd.style.display==='none'?'block':'none';}
-function getFormTags(id){return _formTags[id]||[];}
+function getFormTags(id){
+  // v5.8.48: fallback DOM — se _formTags[id] estiver vazio mas chips visíveis existem, reconstruir
+  if(!_formTags[id]||!_formTags[id].length){
+    const wrap=g(id);
+    if(wrap){const chips=wrap.querySelectorAll('.tag-ms-chip[data-tag-id]');if(chips.length){const ids=Array.from(chips).map(ch=>ch.getAttribute('data-tag-id')).filter(Boolean);if(ids.length){_formTags[id]=ids;return ids;}}}
+  }
+  return _formTags[id]||[];
+}
 
 // v4.3.9: Inline tag creation from within any form dropdown
 let _inlineTagColor=null;
@@ -1415,7 +1427,7 @@ let _motoristaViewedAt=null; // v4.3.2: timestamp de quando motorista abriu a ro
 let _pollTimer=null;
 
 function generateRouteId(){
-  const d=new Date().toISOString().split('T')[0];
+  const d=localDateStr(); // v5.8.48: data local
   const r=Math.random().toString(36).substring(2,8);
   return d+'-'+r;
 }
@@ -1441,7 +1453,7 @@ async function cloudPublish(){
       clients:JSON.parse(JSON.stringify(clients)),
       order:[...order],
       cfg:{base:cfg.base,retaddr:cfg.retaddr,saida:cfg.saida,ret:cfg.ret,tempo:cfg.tempo},
-      date:clients[0]?.data||new Date().toISOString().split('T')[0]
+      date:clients[0]?.data||localDateStr() // v5.8.48
     };
     const res=await fetch(WORKER_URL+'/api/route/publish',{
       method:'POST',
@@ -1459,13 +1471,18 @@ async function cloudPublish(){
       _syncPushDebounced();
       return true; // v5.8.46: sinaliza sucesso para o hook
     } else {
-      // v5.8.38: BUG-05 — KV write limit → mensagem específica + fallback local
-      // v5.8.46: res.status===500 também indica KV limit (HTTP level)
-      const isKvLimit=!res.ok||(data.error&&(data.error.includes('KV')||data.error.includes('limit')||data.error.includes('quota')));
+      // v5.8.48: distinguir KV limit de outros erros HTTP — isKvLimit só quando realmente é KV
+      const isKvLimit=data.error&&(data.error.includes('KV')||data.error.includes('limit')||data.error.includes('quota'));
       if(isKvLimit){
-        toast('Limite do serviço cloud atingido. Rota salva localmente — link do motorista indisponível agora.','warn');
-        setCloudStatus('offline','Limite do serviço atingido');
-        autoSaveRoute(); // garante que rota está salva localmente
+        // KV limit pode demorar algumas horas para desaparecer após upgrade do plano
+        toast('Limite do cloud atingido. Se acabou de ativar o plano pago, aguarde até 1h. Rota salva localmente.','warn');
+        setCloudStatus('offline','Limite temporário — aguarde alguns minutos');
+        autoSaveRoute();
+      } else if(!res.ok){
+        // Erro HTTP genérico — mostra o erro real
+        toast('Erro ao publicar: '+(data.error||'HTTP '+res.status)+'. Rota salva localmente.','err');
+        setCloudStatus('err','Erro ao sincronizar');
+        autoSaveRoute();
       } else {
         toast(t('err.publish')+(data.error||t('err.unknown')),'err');
       }
@@ -1698,7 +1715,7 @@ async function doSmartInsert(){
     hi:siJanela==='custom'?document.getElementById('si-hi').value:'',
     hf:siJanela==='custom'?document.getElementById('si-hf').value:'',
     obs:document.getElementById('si-obs').value.trim(),
-    data:clients[0]?.data||new Date().toISOString().split('T')[0],
+    data:clients[0]?.data||localDateStr(), // v5.8.48
     lat:null,lng:null,estT:null,
     _motStatus:null,_motPay:null,_motObs:'',_motDone:false
   };
@@ -1764,7 +1781,7 @@ async function doSmartInsert(){
     try{
       const body={routeId:_currentRouteId,clients:JSON.parse(JSON.stringify(clients)),order:[...order],
         cfg:{base:cfg.base,retaddr:cfg.retaddr,saida:cfg.saida,ret:cfg.ret,tempo:cfg.tempo},
-        date:clients[0]?.data||new Date().toISOString().split('T')[0]};
+        date:clients[0]?.data||localDateStr()} // v5.8.48;
       const pubRes=await fetch(WORKER_URL+'/api/route/publish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       const pubData=await pubRes.json();
       if(pubData.ok){_cloudVersion=pubData.version;_cloudHash=pubData.hash;}
@@ -2281,7 +2298,7 @@ async function _admExportCSV(){
 // Sync
 let _syncTimer=null;
 function _authHeaders(){return _authToken?{'Authorization':'Bearer '+_authToken,'Content-Type':'application/json'}:{'Content-Type':'application/json'};}
-async function _syncPull(){if(!_authToken)return;try{const res=await fetch(WORKER_URL+'/api/user/sync',{headers:_authHeaders()});if(!res.ok)return;const data=await res.json();if(!data.ok||!data.data)return;const d=data.data;const _sinceEdit=Date.now()-_lastLocalChange;if(d.cfg&&_sinceEdit>=5000&&(d.cfgUpdatedAt||0)>=_cfgUpdatedAt){Object.keys(d.cfg).forEach(k=>{if(d.cfg[k]!==undefined)cfg[k]=d.cfg[k];});localStorage.setItem('rota_cfg',JSON.stringify(cfg));_cfgUpdatedAt=d.cfgUpdatedAt||0;if(!g('page-cfg')?.classList.contains('on'))loadCfg();/* v5.8.36: não repopula form enquanto usuário está em Configurações */}if(d.tags&&Array.isArray(d.tags)&&_sinceEdit>=5000&&(d.tagsUpdatedAt||0)>=_tagsUpdatedAt){_tags=d.tags;localStorage.setItem('rota_tags',JSON.stringify(d.tags));_tagsUpdatedAt=d.tagsUpdatedAt||0;if(!g('page-cfg')?.classList.contains('on')){renderTagsConfig();updateTagSelects();}renderC();/* v5.8.36: não sobrescreve tags enquanto usuário está em Configurações */}if(d.hist&&Array.isArray(d.hist)){const local=getHist();const allEntries=[...d.hist,...local];const byDate={};allEntries.forEach(h=>{if(!byDate[h.date]||h.savedAt>byDate[h.date].savedAt)byDate[h.date]=h;});const merged=Object.values(byDate).sort((a,b)=>b.date.localeCompare(a.date));try{localStorage.setItem('rota_hist',JSON.stringify(merged.slice(0,90)));}catch(e){}renderHist();}if(d.activeRoute&&d.activeRoute.clients&&d.activeRoute.clients.length&&sessionStorage.getItem('rota_user_cleared')!=='1'){if(_sinceEdit>=5000){const localSaved=localStorage.getItem('rota_ativa');const localTs=localSaved?safeJsonParse('rota_ativa',{}).savedAt||'':'';if(d.activeRoute.savedAt>localTs){clients=_migrateClientAddresses(d.activeRoute.clients);order=d.activeRoute.order||clients.map((_,i)=>i);if(d.activeRoute.routeId)_currentRouteId=d.activeRoute.routeId;localStorage.setItem('rota_ativa',JSON.stringify({clients,order,savedAt:d.activeRoute.savedAt,routeId:_currentRouteId||null,cloudVersion:_cloudVersion||0,cloudHash:_cloudHash||null}));renderC();updStats();updBtns();renderMotor();}}}else if(d.routeId&&!clients.length&&sessionStorage.getItem('rota_user_cleared')!=='1'){cloudLoad(d.routeId).then(route=>{if(route&&route.clients&&route.clients.length){clients=_migrateClientAddresses(route.clients);order=route.order||clients.map((_,i)=>i);renderC();updStats();updBtns();renderMotor();_rebuildCachedMatrix();autoSaveRoute();}}).catch(()=>{});}console.log('[SYNC] Pull completo');}catch(e){console.warn('[SYNC] Pull falhou:',e.message);}}
+async function _syncPull(){if(!_authToken)return;try{const res=await fetch(WORKER_URL+'/api/user/sync',{headers:_authHeaders()});if(!res.ok)return;const data=await res.json();if(!data.ok||!data.data)return;const d=data.data;const _sinceEdit=Date.now()-_lastLocalChange;if(d.cfg&&_sinceEdit>=5000&&(d.cfgUpdatedAt||0)>=_cfgUpdatedAt){Object.keys(d.cfg).forEach(k=>{if(d.cfg[k]!==undefined)cfg[k]=d.cfg[k];});localStorage.setItem('rota_cfg',JSON.stringify(cfg));_cfgUpdatedAt=d.cfgUpdatedAt||0;if(!g('page-cfg')?.classList.contains('on'))loadCfg();/* v5.8.36: não repopula form enquanto usuário está em Configurações */}if(d.tags&&Array.isArray(d.tags)&&_sinceEdit>=5000&&(d.tagsUpdatedAt||0)>=_tagsUpdatedAt){_tags=d.tags;localStorage.setItem('rota_tags',JSON.stringify(d.tags));_tagsUpdatedAt=d.tagsUpdatedAt||0;if(!g('page-cfg')?.classList.contains('on')){renderTagsConfig();updateTagSelects();}renderC();/* v5.8.36: não sobrescreve tags enquanto usuário está em Configurações */}if(d.hist&&Array.isArray(d.hist)){const local=getHist();const allEntries=[...d.hist,...local];const byDate={};allEntries.forEach(h=>{if(!byDate[h.date]||h.savedAt>byDate[h.date].savedAt)byDate[h.date]=h;});const merged=Object.values(byDate).sort((a,b)=>b.date.localeCompare(a.date));try{localStorage.setItem('rota_hist',JSON.stringify(merged.slice(0,90)));}catch(e){}renderHist();}if(d.activeRoute&&d.activeRoute.clients&&d.activeRoute.clients.length&&sessionStorage.getItem('rota_user_cleared')!=='1'){if(_sinceEdit>=5000){const localSaved=localStorage.getItem('rota_ativa');const localTs=localSaved?safeJsonParse('rota_ativa',{}).savedAt||'':'';if(d.activeRoute.savedAt>localTs){clients=_migrateClientAddresses(d.activeRoute.clients);order=d.activeRoute.order||clients.map((_,i)=>i);if(d.activeRoute.routeId)_currentRouteId=d.activeRoute.routeId;localStorage.setItem('rota_ativa',JSON.stringify({clients,order,savedAt:new Date().toISOString(),routeId:_currentRouteId||null,cloudVersion:_cloudVersion||0,cloudHash:_cloudHash||null})); // v5.8.47: timestamp atualizado após migraçãorenderC();updStats();updBtns();renderMotor();}}}else if(d.routeId&&!clients.length&&sessionStorage.getItem('rota_user_cleared')!=='1'){cloudLoad(d.routeId).then(route=>{if(route&&route.clients&&route.clients.length){clients=_migrateClientAddresses(route.clients);order=route.order||clients.map((_,i)=>i);renderC();updStats();updBtns();renderMotor();_rebuildCachedMatrix();autoSaveRoute();}}).catch(()=>{});}console.log('[SYNC] Pull completo');}catch(e){console.warn('[SYNC] Pull falhou:',e.message);}}
 async function _syncPush(){if(!_authToken)return;try{const activeRoute=clients.length?{clients:JSON.parse(JSON.stringify(clients)),order:[...order],savedAt:new Date().toISOString(),routeId:_currentRouteId||null}:null;const _pushRes=await fetch(WORKER_URL+'/api/user/sync',{method:'POST',headers:_authHeaders(),body:JSON.stringify({cfg,tags:safeJsonParse('rota_tags',[]),hist:getHist(),routeId:_currentRouteId||null,activeRoute,lang:_lang||'pt',theme:localStorage.getItem('rota_theme')||'light',tagsUpdatedAt:_tagsUpdatedAt||0,cfgUpdatedAt:_cfgUpdatedAt||0})});if(_pushRes.ok){console.log('[SYNC] Push completo');}else{console.warn('[SYNC] Push falhou: HTTP',_pushRes.status);}  }catch(e){console.warn('[SYNC] Push falhou:',e.message);}}
 function _syncPushDebounced(){if(!_authToken)return;clearTimeout(_syncTimer);_syncTimer=setTimeout(_syncPush,800);}
 let _lastLocalChange=0;
@@ -2300,7 +2317,7 @@ function _stopMirrorPoll(){clearInterval(_mirrorTimer);_mirrorTimer=null;}
 
 // v5.0.1: Auto-limpeza da rota ao virar o dia
 function _autoClearIfNewDay(){
-  const today=new Date().toISOString().split('T')[0];
+  const today=localDateStr(); // v5.8.48: data local
   const lastDate=localStorage.getItem('rota_last_date');
   localStorage.setItem('rota_last_date',today);
   if(!lastDate||lastDate===today||clients.length===0)return;
@@ -2323,8 +2340,8 @@ function _initApp(){
   const now=new Date();const dateStr=now.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}).replace(/\.\./g,'.').replace(/\s+/g,' ').trim();
   document.getElementById('nav-date').textContent=dateStr;
   const mobDate=document.getElementById('mobile-date');if(mobDate)mobDate.textContent=dateStr;
-  document.getElementById('td').value=now.toISOString().split('T')[0];
-  document.getElementById('f-data').value=now.toISOString().split('T')[0];
+  document.getElementById('td').value=localDateStr(); // v5.8.48
+  document.getElementById('f-data').value=localDateStr(); // v5.8.48
   loadCfg();renderHist();loadTrelloSelection();
   if(clients.length===0&&!_isMotoristaMode)restoreActiveRoute();
   // v5.8.6: Migrar endereços antigos para formato padrão
@@ -2354,7 +2371,11 @@ function _initApp(){
   const savedTab=localStorage.getItem('rota_active_tab');
   if(savedTab&&savedTab!=='rota'&&!_isMotoristaMode){const tm={hist:1,dash:2,motor:3,cfg:4};const ti=tm[savedTab];const nt=document.querySelectorAll('.ntab');if(ti!==undefined&&nt[ti])goPage(savedTab,nt[ti]);}
   setTimeout(()=>{preloadDashData();},2000);
-  renderTagsConfig();updateTagSelects();initPreferredTab();initCustomSelects();renderAddrChoices();
+  renderTagsConfig();updateTagSelects();
+  // v5.8.48: inicializar _formTags[id] explicitamente — updateTagSelects apenas renderiza HTML
+  // mas não seta _formTags[id], então addClient() via Enter ou clique encontrava [] no primeiro uso
+  initTagMultiSelect('f-tipo',[]);initTagMultiSelect('em-tipo',[]);initTagMultiSelect('si-tipo',[]);
+  initPreferredTab();initCustomSelects();renderAddrChoices();
   applyI18n();updateLangBtns();
   if(!cfg.ttoken){const el=g('trello-nocred');if(el)el.style.display='block';const s1=g('trello-step1');if(s1)s1.style.display='none';}
   _authUpdateConfigUI();
@@ -2428,7 +2449,9 @@ function restoreActiveRoute(){
     // v4.9.2: AUTO-RESTORE SILENCIOSO — sem modal, sem perguntar
     // Decisão do Philip: refresh preserva tudo automaticamente. Limpar = botão "Limpar todos".
     clients=data.clients;order=data.order||clients.map((_,i)=>i);
-    _migrateClientAddresses(clients); // v5.8.46: limpa parênteses em bairros
+    const _migChanged=_migrateClientAddresses(clients); // v5.8.46: limpa parênteses em bairros
+    // v5.8.48: persistir imediatamente se houve migração (resolve Kelly Lemes (zona Oeste) stuck)
+    if(_migChanged){setTimeout(()=>{if(clients.length)autoSaveRoute();},200);}
     // v4.9.2: Restaurar estado cloud (routeId, version, hash) — permite polling retomar
     if(data.routeId){_currentRouteId=data.routeId;_cloudVersion=data.cloudVersion||0;_cloudHash=data.cloudHash||null;startGestorPolling();setCloudStatus('synced','Rota online e sincronizada em tempo real');console.log('[RESTORE] Cloud state restaurado: route='+_currentRouteId+' v'+_cloudVersion);}
     renderC();updStats();updBtns();
@@ -2706,7 +2729,7 @@ function resetForm(){
   ['f-nome','f-tel','f-cep','f-end','f-num','f-comp','f-qtd','f-val','f-obs','f-hi','f-hf'].forEach(id=>{const e=g(id);if(e)e.value='';});
   
   initTagMultiSelect('f-tipo',[]);g('f-janela').value='livre';if(g('f-valtipo')){g('f-valtipo').value='normal';toggleFValTipo();}
-  g('f-data').value=new Date().toISOString().split('T')[0];
+  g('f-data').value=localDateStr(); // v5.8.48
   g('ai-badge').style.display='none';g('amb-box').style.display='none';g('amb-box').innerHTML='';
   // v4.6.3: Also remove standalone CEP ambiguity alert
   const ambCepAlert=document.getElementById('amb-cep-alert');if(ambCepAlert)ambCepAlert.remove();
@@ -2915,7 +2938,7 @@ function previewFileImport(){
       qtd:_fileImportMap.qtd?Math.max(0,parseInt(row[_fileImportMap.qtd])||0):0,
       val:_fileImportMap.val?Math.max(0,parseFloat((row[_fileImportMap.val]||'0').toString().replace(',','.'))||0):0,
       obs:_fileImportMap.obs?(row[_fileImportMap.obs]||'').toString():'',
-      data:_fileImportMap.data?parseImportDate((row[_fileImportMap.data]||'').toString()):new Date().toISOString().split('T')[0],
+      data:_fileImportMap.data?parseImportDate((row[_fileImportMap.data]||'').toString()):localDateStr(), // v5.8.48
       janela:_fileImportMap.janela?parseJanela((row[_fileImportMap.janela]||'').toString()):'livre',
       _valid:true,_err:''
     };
@@ -2956,7 +2979,7 @@ function previewFileImport(){
 }
 
 function parseImportDate(str){
-  if(!str)return new Date().toISOString().split('T')[0];
+  if(!str)return localDateStr(); // v5.8.48
   // Try DD/MM/YYYY
   const br=/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/.exec(str.trim());
   if(br){
@@ -2966,13 +2989,13 @@ function parseImportDate(str){
   // Try YYYY-MM-DD
   const iso=/^(\d{4})-(\d{2})-(\d{2})/.exec(str.trim());
   if(iso)return iso[1]+'-'+iso[2]+'-'+iso[3];
-  // Excel serial
+  // Excel serial (UTC date → local)
   const num=parseFloat(str);
   if(!isNaN(num)&&num>40000&&num<60000){
     const d=new Date((num-25569)*86400*1000);
-    return d.toISOString().split('T')[0];
+    return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0'); // v5.8.48
   }
-  return new Date().toISOString().split('T')[0];
+  return localDateStr(); // v5.8.48
 }
 
 function parseJanela(str){
@@ -2999,7 +3022,7 @@ function resetFileImport(){
 function executeFileImport(){
   const valid=_fileImportPreviewRows.filter(r=>r._valid);
   if(!valid.length){toast(t('err.no_valid_import'),'err');return;}
-  const today=new Date().toISOString().split('T')[0];
+  const today=localDateStr(); // v5.8.48
   let count=0;
   valid.forEach(r=>{
     clients.push({
@@ -3542,7 +3565,7 @@ function importTC(){
     if(!ext.endereco||!ext.endereco.trim()){
       throw new Error('Parser não encontrou endereço para: '+card.name.substring(0,40));
     }
-    const dv=v('td')||new Date().toISOString().split('T')[0];
+    const dv=v('td')||localDateStr(); // v5.8.48
     const valTipo=ext.valorTipo==='medir'?'medir':ext.valorTipo==='pago'?'pago':'normal';
     let endFinal=ext.endereco||'';
     const nomeFmt=fmtNomeValor(card.name,ext.valor||0,valTipo);
@@ -3725,7 +3748,7 @@ async function reloadTrelloList(){
 
 function buildTrelloNavBar(){
   if(!selBoard||!selList)return '';
-  const dv=document.getElementById('td2')?.value||document.getElementById('td')?.value||new Date().toISOString().split('T')[0];
+  const dv=document.getElementById('td2')?.value||document.getElementById('td')?.value||localDateStr(); // v5.8.48
   return '<div style="border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:14px;background:var(--sf)">'
     +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;font-size:12px;color:var(--mu);font-weight:600">'
       +'<span class="mot-ico" style="opacity:.4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span> '
@@ -3960,7 +3983,7 @@ function addClient(){
     if(hi&&hf&&hi>=hf){toast(t('err.time_order'),'err');return;}
   }
   const cep=v('f-cep').replace(/\D/g,'');
-  const newClient={id:Date.now()+Math.random(),nome,endereco:_normalizeAddrString(end),cep,complemento:'',tel:v('f-tel'),tipo:tipos,qtd,val,valTipo,data:v('f-data')||new Date().toISOString().split('T')[0],janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null};
+  const newClient={id:Date.now()+Math.random(),nome,endereco:_normalizeAddrString(end),cep,complemento:'',tel:v('f-tel'),tipo:tipos,qtd,val,valTipo,data:v('f-data')||localDateStr() // v5.8.48,janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null};
   clients.push(newClient);
   // v5.8.38: BUG-06/09 — avisa quando geocoding está em cooldown (verifica sem consumir slot)
   const _geoNow=Date.now();
@@ -6148,7 +6171,7 @@ function genPDF_unused(){
 
 function getHist(){return safeJsonParse('rota_hist',[]);}
 function saveHist(){
-  const hist=getHist();const today=new Date().toISOString().split('T')[0];
+  const hist=getHist();const today=localDateStr(); // v5.8.48: data local (não UTC)
   const entry={date:today,savedAt:new Date().toISOString(),clients:JSON.parse(JSON.stringify(clients)),order:[...order]};
   const i=hist.findIndex(h=>h.date===today);
   if(i>=0)hist[i]=entry;else hist.unshift(entry);
