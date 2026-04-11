@@ -1453,7 +1453,7 @@ async function cloudPublish(){
       clients:JSON.parse(JSON.stringify(clients)),
       order:[...order],
       cfg:{base:cfg.base,retaddr:cfg.retaddr,saida:cfg.saida,ret:cfg.ret,tempo:cfg.tempo},
-      date:clients[0]?.data||localDateStr() // v5.8.48
+      date:clients[0]?.data||localDateStr()
     };
     const res=await fetch(WORKER_URL+'/api/route/publish',{
       method:'POST',
@@ -3983,7 +3983,7 @@ function addClient(){
     if(hi&&hf&&hi>=hf){toast(t('err.time_order'),'err');return;}
   }
   const cep=v('f-cep').replace(/\D/g,'');
-  const newClient={id:Date.now()+Math.random(),nome,endereco:_normalizeAddrString(end),cep,complemento:'',tel:v('f-tel'),tipo:tipos,qtd,val,valTipo,data:v('f-data')||localDateStr() // v5.8.48,janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null};
+  const newClient={id:Date.now()+Math.random(),nome,endereco:_normalizeAddrString(end),cep,complemento:'',tel:v('f-tel'),tipo:tipos,qtd,val,valTipo,data:v('f-data')||localDateStr(),janela:g('f-janela').value,hi:v('f-hi'),hf:v('f-hf'),obs:v('f-obs'),estT:null,conflict:false,cmsg:'',lat:null,lng:null};
   clients.push(newClient);
   // v5.8.38: BUG-06/09 — avisa quando geocoding está em cooldown (verifica sem consumir slot)
   const _geoNow=Date.now();
