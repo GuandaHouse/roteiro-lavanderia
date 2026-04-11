@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.53';
+const APP_VERSION='v5.8.54';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -1164,7 +1164,22 @@ async function geocodeCepForPrefix(prefix){
           if(statusEl){statusEl.className='cep-status ok';statusEl.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> CEP detectado';setTimeout(()=>{statusEl.innerHTML='';},3000);}
         }
       }
-      // v5.8.53: bairro auto-append REMOVIDO — causava inserção de texto inesperada no campo de endereço durante digitação
+      // v5.8.53: append bairro/cidade só no blur — nunca durante digitação
+      const endEl=document.getElementById(prefix+'-end');
+      if(endEl){
+        const curVal=endEl.value.trim();
+        // Só adiciona se ainda não tem separadores em-dash (bairro/cidade ainda não estão no campo)
+        if(!curVal.includes('\u2014')){
+          const bairroComp=d.results[0].address_components?.find(c=>c.types.includes('sublocality')||c.types.includes('sublocality_level_1'));
+          const cidadeComp=d.results[0].address_components?.find(c=>c.types.includes('administrative_area_level_2')||c.types.includes('locality'));
+          const bairro=bairroComp?bairroComp.long_name.replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s{2,}/g,' ').trim():'';
+          const cidade=cidadeComp?cidadeComp.long_name:'';
+          let newVal=curVal;
+          if(bairro)newVal+=' \u2014 '+titleCase(bairro);
+          if(cidade)newVal+=' \u2014 '+titleCase(cidade);
+          if(newVal!==curVal)endEl.value=newVal;
+        }
+      }
     }
   }catch(e){}
 }
