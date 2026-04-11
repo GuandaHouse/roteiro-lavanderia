@@ -1,4 +1,4 @@
-// src/worker.js — Roteiro de Coleta: Worker completo v5.2.0
+/// src/worker.js — Roteiro de Coleta: Worker completo v5.8.51
 // Endpoints: Auth + Admin Panel + Sync + Route KV + Proxy + ASSETS fallback
 //
 // KV BINDINGS:
@@ -372,31 +372,38 @@ async function handleSyncGet(request, env) {
 async function handleSyncPost(request, env) {
   const payload = await authenticateRequest(request, env);
   if (!payload) return json({ ok: false, error: 'Nao autenticado' }, 401);
-  const body = await request.json();
+  try {
+    const body = await request.json();
 
-  // v5.8.1: Conflict resolution — proteger tags e cfg com timestamps
-  // Buscar dados existentes para comparar versões
-  const existingRaw = await env.USERS.get(`sync:${payload.sub}`);
-  if (existingRaw) {
-    const existing = JSON.parse(existingRaw);
-    // Tags: só sobrescreve se incoming é mais recente OU igual (mesmo dispositivo)
-    if (body.tags && (body.tagsUpdatedAt || 0) < (existing.tagsUpdatedAt || 0)) {
-      body.tags = existing.tags;
-      body.tagsUpdatedAt = existing.tagsUpdatedAt;
+    // v5.8.1: Conflict resolution — proteger tags e cfg com timestamps
+    // Buscar dados existentes para comparar versões
+    const existingRaw = await env.USERS.get(`sync:${payload.sub}`);
+    if (existingRaw) {
+      const existing = JSON.parse(existingRaw);
+      // Tags: só sobrescreve se incoming é mais recente OU igual (mesmo dispositivo)
+      if (body.tags && (body.tagsUpdatedAt || 0) < (existing.tagsUpdatedAt || 0)) {
+        body.tags = existing.tags;
+        body.tagsUpdatedAt = existing.tagsUpdatedAt;
+      }
+      // Cfg: mesma lógica
+      if (body.cfg && (body.cfgUpdatedAt || 0) < (existing.cfgUpdatedAt || 0)) {
+        body.cfg = existing.cfg;
+        body.cfgUpdatedAt = existing.cfgUpdatedAt;
+      }
     }
-    // Cfg: mesma lógica
-    if (body.cfg && (body.cfgUpdatedAt || 0) < (existing.cfgUpdatedAt || 0)) {
-      body.cfg = existing.cfg;
-      body.cfgUpdatedAt = existing.cfgUpdatedAt;
-    }
-  }
 
-  const serialized = JSON.stringify(body);
-  if (serialized.length > 2 * 1024 * 1024) {
-    return json({ ok: false, error: 'Dados muito grandes. Reduza o historico.' }, 413);
+    const serialized = JSON.stringify(body);
+    if (serialized.length > 2 * 1024 * 1024) {
+      return json({ ok: false, error: 'Dados muito grandes. Reduza o historico.' }, 413);
+    }
+    await env.USERS.put(`sync:${payload.sub}`, serialized);
+    return json({ ok: true });
+  } catch (e) {
+    // v5.8.51: try-catch para expor erro real em vez de HTTP 500 cego
+    const msg = e?.message || String(e);
+    console.error('[SYNC POST] Erro:', msg);
+    return json({ ok: false, error: 'Sync error: ' + msg }, 500);
   }
-  await env.USERS.put(`sync:${payload.sub}`, serialized);
-  return json({ ok: true });
 }
 
 // ═══════════════════════════════════════════════════════════════
