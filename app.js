@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.1';
+const APP_VERSION='v5.9.2';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -843,7 +843,10 @@ function _fmtAddrFromGeo(geoResult,origAddr){
   if(!geoResult||!geoResult.route)return origAddr;
   const comp=_extractCompFromAddr(origAddr);
   let s=titleCase(geoResult.route);
-  if(geoResult.streetNum)s+=', '+geoResult.streetNum;
+  // v5.9.2: se OSM não retornou streetNum (comum em geocoding sem número exato),
+  // preserva o número do endereço original para não apagar o que o usuário digitou
+  const numToUse=geoResult.streetNum||_parseAddrParts(origAddr).num;
+  if(numToUse)s+=', '+numToUse;
   if(comp)s+=', '+comp;
   // v5.8.51: strip qualificadores "(zona Oeste)" do bairro antes de concatenar
   if(geoResult.bairro){const _b=geoResult.bairro.replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s{2,}/g,' ').trim();if(_b)s+=' \u2014 '+titleCase(_b);}

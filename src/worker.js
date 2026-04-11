@@ -1,4 +1,4 @@
-/// src/worker.js — Roteiro de Coleta: Worker completo v5.9.1
+/// src/worker.js — Roteiro de Coleta: Worker completo v5.9.2
 // v5.9.0: /api/geocode com cache KV compartilhado + OSM Nominatim como primário (zero custo)
 //         Google Geocoding só como último recurso (fallback).
 //         Economia estimada: >95% das chamadas à Google Geocoding API eliminadas.
@@ -43,8 +43,9 @@ function _osmToGoogle(osmResults) {
     const components = [];
     if (addr.house_number) components.push({ long_name: addr.house_number, short_name: addr.house_number, types: ['street_number'] });
     if (addr.road)         components.push({ long_name: addr.road,         short_name: addr.road,         types: ['route'] });
-    // Bairro: OSM usa suburb, neighbourhood, district, quarter
-    const bairro = addr.suburb || addr.neighbourhood || addr.quarter || addr.district || '';
+    // Bairro: no Brasil, neighbourhood = bairro real (ex: "Vila Santo Estéfano")
+    //         suburb = distrito maior (ex: "Cursino") — neighbourhood tem prioridade
+    const bairro = addr.neighbourhood || addr.suburb || addr.quarter || addr.district || '';
     if (bairro) components.push({ long_name: bairro, short_name: bairro, types: ['sublocality_level_1', 'sublocality', 'political'] });
     // Cidade
     const cidade = addr.city || addr.town || addr.village || addr.municipality || '';
@@ -864,10 +865,43 @@ async function handleRequest(request, env) {
                 // Converte formato OSM → formato Google (compatível com _extractGeoResult no cliente)
                 const converted = _osmToGoogle(osmData);
                 if (converted.status === 'OK') {
+                  // v5.9.2: enriquece com ViaCEP (Correios) para CEP e bairro corretos no Brasil
+                  // OSM tem dados postais imprecisos; ViaCEP usa a base oficial dos Correios
+                  try {
+                    const comps = converted.results[0].address_components;
+                    const route = comps.find(c => c.types.includes('route'))?.long_name || '';
+                    const city  = comps.find(c => c.types.includes('administrative_area_level_2'))?.long_name || '';
+                    const state = comps.find(c => c.types.includes('administrative_area_level_1'))?.short_name || '';
+                    if (route && city && state && state.length === 2) {
+                      // Remove artigos e preposições do nome da rua para melhor match ViaCEP
+                      const routeShort = route.replace(/^(rua|avenida|av\.|alameda|al\.|estrada|travessa|praça)\s+/i, '').slice(0, 40);
+                      const vcUrl = `https://viacep.com.br/ws/${state}/${encodeURIComponent(city)}/${encodeURIComponent(routeShort)}/json/`;
+                      const vcRes = await fetch(vcUrl, { signal: AbortSignal.timeout(4000) });
+                      if (vcRes.ok) {
+                        const vcData = await vcRes.json();
+                        if (Array.isArray(vcData) && vcData.length > 0 && !vcData[0].erro) {
+                          const vc = vcData[0];
+                          // Substitui CEP pelo dado oficial Correios
+                          const cepComp = comps.find(c => c.types.includes('postal_code'));
+                          const cepVal = (vc.cep || '').replace('-', '');
+                          if (cepVal) {
+                            if (cepComp) { cepComp.long_name = cepVal; cepComp.short_name = cepVal; }
+                            else comps.push({ long_name: cepVal, short_name: cepVal, types: ['postal_code'] });
+                          }
+                          // Substitui bairro pelo dado oficial Correios se disponível
+                          if (vc.bairro) {
+                            const bairroComp = comps.find(c => c.types.includes('sublocality_level_1'));
+                            if (bairroComp) { bairroComp.long_name = vc.bairro; bairroComp.short_name = vc.bairro; }
+                            else comps.push({ long_name: vc.bairro, short_name: vc.bairro, types: ['sublocality_level_1', 'sublocality', 'political'] });
+                          }
+                        }
+                      }
+                    }
+                  } catch (_vcErr) { /* ViaCEP é opcional — fallback silencioso */ }
                   if (KV_GEO) await KV_GEO.put(cacheKey, JSON.stringify(converted), { expirationTtl: 90 * 86400 }).catch(() => {});
                   return new Response(JSON.stringify(converted), {
                     status: 200,
-                    headers: { 'Content-Type': 'application/json', 'X-Geo-Cache': 'OSM', ...CORS_HEADERS },
+                    headers: { 'Content-Type': 'application/json', 'X-Geo-Cache': 'OSM+ViaCEP', ...CORS_HEADERS },
                   });
                 }
               }
