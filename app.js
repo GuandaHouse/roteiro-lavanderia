@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.58';
+const APP_VERSION='v5.8.59';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -4152,9 +4152,13 @@ function saveEditC(){
   if(_needsGeo){
     toast(t('msg.client_updated')+' — atualizando endereço...','ok');
     if(addrChanged){localStorage.removeItem('geo_'+c.endereco);delete _geoCache[c.endereco];}
+    // v5.8.59: reset fail count antes de tentar (evita suspensão por tentativas anteriores)
+    if(c.endereco){const _fk=c.endereco.slice(0,60);delete _geoFailCount[_fk];}
     nominatim(c.endereco,c).then(r=>{
       if(r){
         c.lat=r.lat;c.lng=r.lng;if(r.cidade)c._cidade=r.cidade;
+        // v5.8.59: propagar CEP do geocoding (atualiza sempre que encontrado)
+        if(r.cep)c.cep=r.cep;
         if(r.route){c.endereco=_fmtAddrFromGeo(r,c.endereco);}
         else if(r.bairro||r.cidade){
           const base=(c.endereco.split('\u2014')[0]||c.endereco).trim();
@@ -5581,15 +5585,19 @@ function preGeocode(client){
     return;
   }
   // Cliente sem coords → geocodificar (nominatim dispara a verificação de ambiguidade internamente)
+  // v5.8.59: reset fail count para clientes recém-adicionados (evita suspensão por tentativa anterior na sessão)
+  if(client.endereco){const _fk=client.endereco.slice(0,60);delete _geoFailCount[_fk];}
   nominatim(client.endereco,client).then(r=>{
     if(r){client.lat=r.lat;client.lng=r.lng;if(r.cidade)client._cidade=r.cidade;
+      // v5.8.59: propagar CEP do geocoding se o cliente não tiver
+      if(r.cep&&!client.cep)client.cep=r.cep;
       if(r.route){client.endereco=_fmtAddrFromGeo(r,client.endereco);}
       else if(r.bairro||r.cidade){// v5.8.24: resultado de memória — atualizar texto com bairro/cidade corretos
         const base=(client.endereco.split('\u2014')[0]||client.endereco).trim();
         let nAddr=base;if(r.bairro)nAddr+=' \u2014 '+titleCase(r.bairro);if(r.cidade)nAddr+=' \u2014 '+titleCase(r.cidade);
         if(nAddr!==client.endereco)client.endereco=nAddr;
       }
-      console.log('[PRE-GEO] '+client.nome+' geocodificado e endereço normalizado');
+      console.log('[PRE-GEO] '+client.nome+' geocodificado, endereço normalizado'+(r.cep?' CEP:'+r.cep:''));
       autoSaveRoute();renderC();
     } else if(client._addrPending){
       renderC();autoSaveRoute();
@@ -5658,7 +5666,10 @@ function _extractGeoResult(result){
   const streetNum=(comps.find(c=>c.types.includes('street_number'))||{}).long_name||'';
   const bairro=(comps.find(c=>c.types.includes('sublocality_level_1'))||comps.find(c=>c.types.includes('sublocality'))||comps.find(c=>c.types.includes('neighborhood'))||{}).long_name||'';
   const cidade=(comps.find(c=>c.types.includes('administrative_area_level_2'))||comps.find(c=>c.types.includes('locality'))||{}).long_name||'';
-  return {lat:loc.lat,lng:loc.lng,display:result.formatted_address,route,streetNum,bairro,cidade};
+  // v5.8.59: extrair CEP do geocoding para propagar a todos os fluxos que usam nominatim
+  const cepRaw=(comps.find(c=>c.types.includes('postal_code'))||{}).long_name||'';
+  const cep=cepRaw.replace(/\D/g,'').replace(/^(\d{5})(\d{3})$/,'$1-$2');
+  return {lat:loc.lat,lng:loc.lng,display:result.formatted_address,route,streetNum,bairro,cidade,cep};
 }
 // v5.8.8: nominatim — verificação de ambiguidade via chamada sem bounds
 async function nominatim(addr,client){
@@ -5788,6 +5799,8 @@ async function _retryGeocode(clientId){
   if(result){
     c.lat=result.lat;c.lng=result.lng;c._cidade=result.cidade||null;
     c._addrPending=false;
+    // v5.8.59: propagar CEP se não tiver
+    if(result.cep&&!c.cep)c.cep=result.cep;
     // v5.8.58: atualizar endereco com bairro/cidade (mesma lógica do preGeocode)
     if(result.route){c.endereco=_fmtAddrFromGeo(result,c.endereco);}
     else if(result.bairro||result.cidade){
