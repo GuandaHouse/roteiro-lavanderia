@@ -5608,6 +5608,19 @@ async function nominatim(addr,client){
   if(_geoCache[addr]){return _geoCache[addr];}
   const cached=localStorage.getItem('geo3_'+addr);
   if(cached){const c=JSON.parse(cached);_geoCache[addr]=c;return c;}
+  // v5.9.7: Verificar rota_geo_locs pelo endereço base (rua+número, sem complemento)
+  // Cobre clientes com endereço formatado (ex: "Rua X, 123 — Bairro — Cidade") que já foram
+  // geocodificados antes mas sob chave curta (sem o complemento/bairro/cidade).
+  try{
+    const _ba=_extractBaseAddr(addr);
+    if(_ba){const _gl=_geoLocGet(_ba);
+      if(_gl&&Array.isArray(_gl)&&_gl.length===1){const _gloc=_gl[0];if(_gloc.lat&&_gloc.lng){
+        _geoCache[addr]=_gloc;try{localStorage.setItem('geo3_'+addr,JSON.stringify(_gloc));}catch(e){}
+        _geoFailReset(addr);console.log('[GEO-LOC] '+addr+' → '+[_gloc.bairro,_gloc.cidade].filter(Boolean).join(', ')+' (rota_geo_locs)');
+        if(client&&!client.cep&&_gloc.cep)client.cep=_gloc.cep;return _gloc;
+      }}
+    }
+  }catch(e){}
   await _resolveGeoAnchor();
   const _hasDash=addr.includes('\u2014');
   const _qAddr=_hasDash?addr.replace(/\s*\u2014\s*/g,', '):addr;
