@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.52';
+const APP_VERSION='v5.8.53';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -1111,6 +1111,7 @@ function applyCepToAddress(data,endEl,statusEl,prefix){
 }
 
 // Address field input handler: try to extract CEP from typed text
+// v5.8.52: NÃO dispara geocoding aqui — geocoding só em onEndBlur (quando sai do campo)
 function onEndInput(prefix){
   const el=document.getElementById(prefix+'-end');if(!el)return;
   // v5.8.26: no modal de edição, limpar CEP ao trocar logradouro para forçar re-geocodificação
@@ -1119,7 +1120,7 @@ function onEndInput(prefix){
     if(cepEl)cepEl.value='';
   }
   const val=el.value;
-  // Extract CEP pattern from typed text
+  // Extract CEP pattern from typed text — preenche campo CEP, não toca no endereço
   const cepMatch=val.match(/(\d{5})-?(\d{3})/);
   if(cepMatch){
     const cep=cepMatch[1]+cepMatch[2];
@@ -1130,12 +1131,16 @@ function onEndInput(prefix){
       fetchCepValidate(cep,statusEl);
     }
   }
-  // v4.4.0: Schedule geocoding for Address→CEP on all prefixes
+  // v5.8.52: REMOVIDO — geocoding por input causava inserção de texto no meio da digitação
+  // Geocoding agora só dispara no blur (onEndBlur) — veja abaixo
+}
+// v5.8.52: Geocoding só dispara quando o usuário SAI do campo (blur)
+// Isso evita que o sistema insira texto enquanto o usuário ainda está digitando
+function onEndBlur(prefix){
+  const el=document.getElementById(prefix+'-end');if(!el)return;
+  const val=el.value.trim();if(val.length<8)return;
   if(prefix==='f'){schedGeo();}
-  else if(val.length>=10){
-    clearTimeout(window['_geoT_'+prefix]);
-    window['_geoT_'+prefix]=setTimeout(()=>geocodeCepForPrefix(prefix),2500); // v5.8.32: 1400→2500ms
-  }
+  else{geocodeCepForPrefix(prefix);}
 }
 // v4.4.0: Geocode address to extract CEP for edit modal and smart insert
 const _geoCepLastAddr={}; // v5.8.32: evita re-geocodificar mesmo endereço
@@ -1159,15 +1164,7 @@ async function geocodeCepForPrefix(prefix){
           if(statusEl){statusEl.className='cep-status ok';statusEl.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> CEP detectado';setTimeout(()=>{statusEl.innerHTML='';},3000);}
         }
       }
-      // v4.4.0 Obs 5c: Auto-complete bairro from geocoding
-      const bairroComp=d.results[0].address_components?.find(c=>c.types.includes('sublocality')||c.types.includes('sublocality_level_1'));
-      if(bairroComp){
-        const endEl=document.getElementById(prefix+'-end');
-        if(endEl&&!endEl.value.toLowerCase().includes(bairroComp.long_name.toLowerCase())){
-          // Bairro not in address yet — append it
-          endEl.value=endEl.value.replace(/,?\s*$/,'')+', '+bairroComp.long_name;
-        }
-      }
+      // v5.8.53: bairro auto-append REMOVIDO — causava inserção de texto inesperada no campo de endereço durante digitação
     }
   }catch(e){}
 }
