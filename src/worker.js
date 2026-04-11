@@ -1,4 +1,4 @@
-/// src/worker.js — Roteiro de Coleta: Worker completo v5.9.0
+/// src/worker.js — Roteiro de Coleta: Worker completo v5.9.1
 // v5.9.0: /api/geocode com cache KV compartilhado + OSM Nominatim como primário (zero custo)
 //         Google Geocoding só como último recurso (fallback).
 //         Economia estimada: >95% das chamadas à Google Geocoding API eliminadas.
@@ -812,7 +812,33 @@ async function handleRequest(request, env) {
           }
         }
 
-        // ── 2. OSM Nominatim (gratuito, sem custo por chamada) ──────────────
+        // ── 2a. OSM Nominatim Reverse (latlng reverso, gratuito) ───────────
+        if (latlng && !address) {
+          try {
+            const [osmLat, osmLng] = latlng.split(',').map(s => s.trim());
+            const revParams = new URLSearchParams({ lat: osmLat, lon: osmLng, format: 'json', addressdetails: '1', 'accept-language': 'pt-BR,pt' });
+            const revRes = await fetch('https://nominatim.openstreetmap.org/reverse?' + revParams, {
+              headers: { 'User-Agent': 'RoteirodeColeta/5.9 (nigel.guandalini@gmail.com)', 'Referer': 'https://guandahouse.github.io/roteiro-lavanderia/' },
+              signal: AbortSignal.timeout(6000),
+            });
+            if (revRes.ok) {
+              const revData = await revRes.json();
+              if (revData && revData.lat) {
+                // Wrap em array para reutilizar _osmToGoogle
+                const converted = _osmToGoogle([revData]);
+                if (converted.status === 'OK') {
+                  if (KV_GEO) await KV_GEO.put(cacheKey, JSON.stringify(converted), { expirationTtl: 30 * 86400 }).catch(() => {});
+                  return new Response(JSON.stringify(converted), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json', 'X-Geo-Cache': 'OSM-REV', ...CORS_HEADERS },
+                  });
+                }
+              }
+            }
+          } catch (_revErr) { /* fallback para Google abaixo */ }
+        }
+
+        // ── 2b. OSM Nominatim Forward (endereço → coords, gratuito) ─────────
         // Tentamos primeiro antes de gastar créditos do Google.
         // Só para queries de endereço (não latlng reverso).
         if (address && !latlng) {

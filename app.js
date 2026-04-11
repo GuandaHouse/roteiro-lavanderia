@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.0';
+const APP_VERSION='v5.9.1';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -719,17 +719,15 @@ function _geoLocAdd(baseAddr,newLocs){
   }catch(e){}
 }
 
-// v5.8.17: Busca via ViaCEP (Correios oficial) + 1 Google neutro
-// ViaCEP retorna TODOS os bairros com aquele nome de rua na cidade — muito mais preciso
-// que 12 queries Google biased que perdiam casos (ex: Colônia/Zona Sul).
-// clientCity: cidade do cliente (ex: "São Paulo") para buscar além da âncora se diferente.
-// v5.8.20: in-flight map — evita múltiplas chamadas paralelas para o mesmo endereço
+// v5.9.1: _findAllGeoLocations e _checkGeoAmbiguity removidos permanentemente.
+// Eram responsáveis por 6+ chamadas Google Geocoding por endereço (o maior custo do sistema).
+// Auto-disparo foi desativado em v5.9.0. Funções removidas do código em v5.9.1.
 const _geoLocInFlight={};
-async function _findAllGeoLocations(baseAddr,clientCity){
-  if(!baseAddr||!GKEY)return[];
-  const cached=_geoLocGet(baseAddr);
-  if(cached!==null)return cached; // null=cache miss; []=confirmed empty; [...]= results
-  // v5.8.20: deduplicar chamadas concorrentes para o mesmo endereço
+async function _findAllGeoLocations(baseAddr,clientCity){return[];} // stub — não faz chamadas
+async function _checkGeoAmbiguity(){return null;} // stub
+if(false){ // código morto mantido apenas para referência histórica — nunca executado
+const _DEAD_CODE_findAllGeoLocations=async function(baseAddr,clientCity){
+  if(!baseAddr)return[];
   const key=_geoLocKey(baseAddr);
   if(_geoLocInFlight[key])return _geoLocInFlight[key];
   let resolveFn;
@@ -801,8 +799,9 @@ async function _checkGeoAmbiguity(chosenLat,chosenLng,chosenBairro,chosenCidade,
     return[chosen,...others];
   }catch(e){console.warn('[GEO-AMB]',e.message);return undefined;}
 }
+;} // fim if(false) — código morto
 
-// v5.8.11: Auditoria de clientes já geocodificados — sessionStorage (1x por sessão de browser)
+// v5.8.11: _runStoredGeoAudit — mantida como stub (desativada em v5.9.0, auto-disparo removido)
 async function _runStoredGeoAudit(){
   if(!clients.length)return;
   const SESSION_KEY='rota_geo_audit_session';
@@ -1160,45 +1159,11 @@ function onEndBlur(prefix){
 }
 // v4.4.0: Geocode address to extract CEP for edit modal and smart insert
 const _geoCepLastAddr={}; // v5.8.32: evita re-geocodificar mesmo endereço
-async function geocodeCepForPrefix(prefix){
-  const addr=buildFullAddr(prefix);if(!addr||addr.length<8)return;
-  if(_geoCepLastAddr[prefix]===addr)return; // v5.8.32: mesmo endereço, skip
-  _geoCepLastAddr[prefix]=addr;
-  try{
-    const suffix=_getAddrSuffix?_getAddrSuffix():'';
-    const bounds=_getAnchorBounds?_getAnchorBounds():'';
-    const comps=_getAnchorComponents?_getAnchorComponents():'';
-    const d=await _geocodeProxy('address='+encodeURIComponent(addr+suffix)+'&region=br'+bounds+comps);
-    if(d&&d.status==='OK'&&d.results.length){
-      const pc=d.results[0].address_components?.find(c=>c.types.includes('postal_code'));
-      if(pc){
-        const cepEl=document.getElementById(prefix+'-cep');
-        // v5.8.26: em modo edição ('em') sempre atualizar CEP; nos demais, só se vazio
-        if(cepEl&&(prefix==='em'||!cepEl.value.replace(/\D/g,''))){
-          cepEl.value=fmtCep(pc.long_name.replace(/\D/g,''));
-          const statusEl=document.getElementById(prefix+'-cep-status');
-          if(statusEl){statusEl.className='cep-status ok';statusEl.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> CEP detectado';setTimeout(()=>{statusEl.innerHTML='';},3000);}
-        }
-      }
-      // v5.8.53: append bairro/cidade só no blur — nunca durante digitação
-      const endEl=document.getElementById(prefix+'-end');
-      if(endEl){
-        const curVal=endEl.value.trim();
-        // Só adiciona se ainda não tem separadores em-dash (bairro/cidade ainda não estão no campo)
-        if(!curVal.includes('\u2014')){
-          const bairroComp=d.results[0].address_components?.find(c=>c.types.includes('sublocality')||c.types.includes('sublocality_level_1'));
-          const cidadeComp=d.results[0].address_components?.find(c=>c.types.includes('administrative_area_level_2')||c.types.includes('locality'));
-          const bairro=bairroComp?bairroComp.long_name.replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s{2,}/g,' ').trim():'';
-          const cidade=cidadeComp?cidadeComp.long_name:'';
-          let newVal=curVal;
-          if(bairro)newVal+=' \u2014 '+titleCase(bairro);
-          if(cidade)newVal+=' \u2014 '+titleCase(cidade);
-          if(newVal!==curVal)endEl.value=newVal;
-        }
-      }
-    }
-  }catch(e){}
-}
+// v5.9.1: geocodeCepForPrefix — Geocoding Google removido permanentemente.
+// CEP obtido via ViaCEP (quando usuário digita o CEP → preenche endereço).
+// Bairro/cidade adicionados ao endereço no save (preGeocode → OSM Nominatim gratuito).
+// Mantém assinatura para compatibilidade com chamadas existentes no código.
+async function geocodeCepForPrefix(prefix){}
 
 // Validate CEP extracted from address (don't overwrite address)
 async function fetchCepValidate(cep,statusEl){
@@ -1335,68 +1300,10 @@ function initObsCounters(){
 }
 document.addEventListener('DOMContentLoaded',()=>setTimeout(initObsCounters,600));
 
-// [11] BIDIRECIONAL: Endereço → CEP via Google Geocoding
-// Quando schedGeo resolve o endereço, extrair postal_code e preencher campo CEP
-const _origCheckAmb=typeof checkAmb==='function'?checkAmb:null;
-async function checkAmbWithCep(){
-  const addr=v('f-end');if(addr.length<8)return;
-  try{
-    const d=await _geocodeProxy('address='+encodeURIComponent(addr+_getAddrSuffix())+'&region=br'+_getAnchorBounds()+_getAnchorComponents());
-    if(d&&d.status==='OK'&&d.results.length){
-      // Extrair CEP do resultado
-      const comps=d.results[0].address_components||[];
-      const pcComp=comps.find(c=>c.types.includes('postal_code'));
-      if(pcComp){
-        const cepEl=document.getElementById('f-cep');
-        if(cepEl&&!cepEl.value.replace(/\D/g,'')){
-          // v4.4.0: Se endereço é ambíguo (múltiplos resultados), alertar antes de preencher
-          if(d.results.length>1){
-            const ambAlert=document.getElementById('amb-cep-alert');
-            if(ambAlert)ambAlert.remove();
-            const alertDiv=document.createElement('div');
-            alertDiv.id='amb-cep-alert';
-            alertDiv.className='cep-amb-alert';
-            alertDiv.innerHTML='<span class="mot-ico" style="flex-shrink:0;margin-top:1px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>'
-              +'<div>Endereço ambíguo detectado. CEP sugerido: <strong>'+fmtCep(pcComp.long_name.replace(/\D/g,''))+'</strong>. Confirme o bairro ou CEP antes de prosseguir.</div>'
-              +'<button onclick="document.getElementById(\'f-cep\').value=\''+fmtCep(pcComp.long_name.replace(/\D/g,''))+'\';this.closest(\'.cep-amb-alert\').remove();toast(\'CEP confirmado\',\'ok\')">Confirmar</button>';
-            const ambBox=document.getElementById('amb-box');
-            if(ambBox)ambBox.parentNode.insertBefore(alertDiv,ambBox);
-          } else {
-            cepEl.value=fmtCep(pcComp.long_name.replace(/\D/g,''));
-            const statusEl=document.getElementById('f-cep-status');
-            if(statusEl){
-              statusEl.className='cep-status ok';
-              statusEl.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> CEP detectado';
-              setTimeout(()=>{statusEl.innerHTML='';},3000);
-            }
-          }
-        }
-      }
-      // v5.8.7: Lógica de ambiguidade com memória
-      const addr2=v('f-end');
-      if(d.results.length>1&&_hasGeoAmbiguity(d.results)){
-        const mem=_addrChoiceGet(addr2);
-        if(mem){
-          // Memória encontrada — aplicar silenciosamente
-          ambRes=[{...mem,display_name:mem.rawAddr||addr2}];ambSel=0;
-          g('amb-box').style.display='none';
-          toast('\u2713 Endere\xE7o confirmado automaticamente ('+[mem.bairro,mem.cidade].filter(Boolean).join(', ')+')','ok');
-        } else {
-          // Sem memória — mostrar picker enriquecido (bairro + cidade)
-          ambRes=d.results.map(r=>_extractGeoResult(r));
-          const box=g('amb-box');
-          const SVG_WARN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
-          let html='<div class="ab w"><span class="mot-ico">'+SVG_WARN+'</span> <strong>Endere\xE7o amb\xEDguo</strong> \u2014 '+d.results.length+' locais encontrados. Selecione o correto:</div>';
-          ambRes.forEach((r,i)=>{
-            const loc=[r.bairro,r.cidade].filter(Boolean).join(' \u2014 ')||r.display;
-            html+='<div class="ao" id="ao-'+i+'" onclick="selAmb('+i+')"><strong style="font-size:13px">'+loc+'</strong><div style="font-size:11px;color:var(--mu);margin-top:2px">'+r.display+'</div></div>';
-          });
-          box.innerHTML=html;box.style.display='block';
-        }
-      } else {g('amb-box').style.display='none';}
-    }
-  }catch(e){g('amb-box').style.display='none';}
-}
+// v5.9.1: checkAmbWithCep e checkAmb — stubs. Geocoding Google removido permanentemente.
+// CEP via ViaCEP. Bairro/cidade via OSM no save. schedGeo não é mais chamado.
+async function checkAmbWithCep(){}
+async function checkAmb(){}
 
 /* ══════════════════════════════════════════════════════════════
 
@@ -3841,24 +3748,10 @@ function resetTrello(){
   }
 }
 
-// GEO AMBIGUITY
-function schedGeo(){clearTimeout(geoT);geoT=setTimeout(typeof checkAmbWithCep==='function'?checkAmbWithCep:checkAmb,2500);} // v5.8.32: 1400→2500ms
-async function checkAmb(){
-  const addr=v('f-end');if(addr.length<8)return;
-  const box=g('amb-box');
-  try{
-    const d=await _geocodeProxy('address='+encodeURIComponent(addr+_getAddrSuffix())+'&region=br'+_getAnchorBounds()+_getAnchorComponents());
-    if(d&&d.status==='OK'&&d.results.length>1&&_hasGeoAmbiguity(d.results)){
-      const mem=_addrChoiceGet(addr);
-      if(mem){ambRes=[mem];ambSel=0;box.style.display='none';toast('\u2713 Endere\xE7o confirmado automaticamente ('+[mem.bairro,mem.cidade].filter(Boolean).join(', ')+')','ok');return;}
-      ambRes=d.results.map(r=>_extractGeoResult(r));
-      const SVG_WARN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
-      let html='<div class="ab w"><span class="mot-ico">'+SVG_WARN+'</span> <strong>Endere\xE7o amb\xEDguo</strong> \u2014 '+d.results.length+' locais encontrados. Selecione o correto:</div>';
-      ambRes.forEach((r,i)=>{const loc=[r.bairro,r.cidade].filter(Boolean).join(' \u2014 ')||r.display;html+='<div class="ao" id="ao-'+i+'" onclick="selAmb('+i+')"><strong style="font-size:13px">'+loc+'</strong><div style="font-size:11px;color:var(--mu);margin-top:2px">'+r.display+'</div></div>';});
-      box.innerHTML=html;box.style.display='block';
-    } else {box.style.display='none';}
-  }catch(e){box.style.display='none';}
-}
+// v5.9.1: schedGeo e checkAmb desativados — chamavam Geocoding API Google.
+// Não são mais chamados de nenhum input handler (removido em v5.8.60).
+function schedGeo(){}
+// checkAmb já definida como stub acima (v5.9.1)
 function selAmb(i){
   document.querySelectorAll('.ao').forEach(a=>a.classList.remove('sel'));
   g('ao-'+i)?.classList.add('sel');ambSel=i;
@@ -4555,22 +4448,16 @@ async function _rebuildCachedMatrix(){
   const geocodedIdx=order.filter(i=>clients[i]&&clients[i].lat&&clients[i].lng);
   if(geocodedIdx.length<2)return;
   try{
-    // Geocodificar endereço base via Google Geocoding API
+    // v5.9.1: Geocodificar base/retorno via nominatim() — já tem cache localStorage (zero chamadas repetidas)
     const baseAddr=cfg.base;
     if(!baseAddr)return;
-    // v4.8.4: Timeout 6s para geocoding em rebuild background
-    const _rbC1=new AbortController();const _rbT1=setTimeout(()=>_rbC1.abort(),6000);
-    const geoResp=await _geocodeProxy('address='+encodeURIComponent(baseAddr+', Brasil')+'&region=br',_rbC1.signal);
-    clearTimeout(_rbT1);
-    if(!geoResp||geoResp.status!=='OK'||!geoResp.results[0]?.geometry?.location)return;
-    const baseLoc=geoResp.results[0].geometry.location;
-    const baseCoords={lat:baseLoc.lat,lng:baseLoc.lng};
+    const baseGeo=await nominatim(baseAddr);
+    if(!baseGeo)return;
+    const baseCoords={lat:baseGeo.lat,lng:baseGeo.lng};
     let retCoords=baseCoords;
     if(cfg.retaddr&&cfg.retaddr!==baseAddr){
-      const _rbC2=new AbortController();const _rbT2=setTimeout(()=>_rbC2.abort(),6000);
-      const retResp=await _geocodeProxy('address='+encodeURIComponent(cfg.retaddr+', Brasil')+'&region=br',_rbC2.signal);
-      clearTimeout(_rbT2);
-      if(retResp.status==='OK'&&retResp.results[0]){const rl=retResp.results[0].geometry.location;retCoords={lat:rl.lat,lng:rl.lng};}
+      const retGeo=await nominatim(cfg.retaddr);
+      if(retGeo)retCoords={lat:retGeo.lat,lng:retGeo.lng};
     }
     const allCoords=[baseCoords,...geocodedIdx.map(i=>({lat:clients[i].lat,lng:clients[i].lng})),retCoords];
     const gcIdx={};
@@ -5606,12 +5493,20 @@ async function _resolveGeoAnchor(){
   if(_geoAnchor)return _geoAnchor;
   const base=cfg.base;
   if(!base)return null;
-  // v5.4.8: Se cidade configurada explicitamente, usar como sufixo garantido
   const cidadeExplicita=cfg.cidade?cfg.cidade.trim():'';
   const ufExplicita=cfg.uf?cfg.uf.trim().toUpperCase():'';
+  // v5.9.1: Cache localStorage — evita geocoding do endereço da empresa a cada sessão (TTL 7 dias)
+  try{
+    const _ckey='rota_geo_anchor_v2';
+    const _hit=JSON.parse(localStorage.getItem(_ckey)||'null');
+    if(_hit&&_hit._base===base&&(Date.now()-(_hit._ts||0))<7*86400000){
+      _geoAnchor={lat:_hit.lat,lng:_hit.lng,state:_hit.state,city:_hit.city};
+      console.log('[GEO-ANCHOR] localStorage cache: '+_geoAnchor.city+', '+_geoAnchor.state);
+      return _geoAnchor;
+    }
+  }catch(e){}
   const suffix=cidadeExplicita?(', '+cidadeExplicita+(ufExplicita?', '+ufExplicita:'')+', Brasil'):', Brasil';
   try{
-    // v4.8.4: Timeout de 6s para resolver ancora
     const _acCtrl=new AbortController();const _acTid=setTimeout(()=>_acCtrl.abort(),6000);
     const d=await _geocodeProxy('address='+encodeURIComponent(base+suffix)+'&region=br',_acCtrl.signal);
     clearTimeout(_acTid);
@@ -5619,13 +5514,14 @@ async function _resolveGeoAnchor(){
       const loc=d.results[0].geometry.location;
       const comps=d.results[0].address_components;
       const state=ufExplicita||(comps.find(c=>c.types.includes('administrative_area_level_1'))||{}).short_name||'';
-      // v5.4.8: cidade explicita tem prioridade — evita Google retornar cidade errada
       const city=cidadeExplicita||(comps.find(c=>c.types.includes('administrative_area_level_2'))||comps.find(c=>c.types.includes('locality'))||{}).long_name||'';
       _geoAnchor={lat:loc.lat,lng:loc.lng,state,city};
-      console.log('[GEO-ANCHOR] Base resolvida:',city+', '+state,'(',loc.lat.toFixed(4)+','+loc.lng.toFixed(4)+')'+(cidadeExplicita?' [cidade configurada]':''));
+      // Persistir por 7 dias — endereço da empresa raramente muda
+      try{localStorage.setItem('rota_geo_anchor_v2',JSON.stringify({..._geoAnchor,_base:base,_ts:Date.now()}));}catch(e){}
+      console.log('[GEO-ANCHOR] Resolvida e cacheada: '+city+', '+state);
       return _geoAnchor;
     }
-  }catch(e){console.warn('[GEO-ANCHOR] Falha ao resolver base:',e);}
+  }catch(e){console.warn('[GEO-ANCHOR] Falha:',e);}
   return null;
 }
 function _isNearAnchor(lat,lng){
@@ -5681,76 +5577,27 @@ async function nominatim(addr,client){
   if(_geoCache[addr]){return _geoCache[addr];}
   const cached=localStorage.getItem('geo_'+addr);
   if(cached){const c=JSON.parse(cached);_geoCache[addr]=c;return c;}
+  // v5.9.1: 1 query única — Worker resolve via OSM Nominatim (gratuito) + Google só como fallback.
+  // Elimina o loop de 5 estratégias que gerava múltiplas chamadas para o mesmo endereço.
   await _resolveGeoAnchor();
-  // v5.8.46: GEOCODING MULTI-ESTRATÉGIA para endereços incompletos
-  // Problema: "Ulisses Guimarães" (incompleto, deveria ser "Rua Doutor Ulisses Guimarães")
-  // "—" no meio da query confunde o Google → normalizar substituindo por ","
-  // Estratégia: 3 tentativas em cascata, parar na primeira que retornar OK
   const _hasDash=addr.includes('\u2014');
-
-  // Extrai cidade provável do último segmento "—" (ex: "Aciban Mauá" → "Mauá")
-  let _cityHint='';
-  if(_hasDash){
-    const _parts=addr.split('\u2014');
-    const _last=(_parts[_parts.length-1]||'').trim();
-    const _words=_last.split(/\s+/).filter(w=>w.length>2&&/^[A-ZÁÉÍÓÚÀÂÃÊÕÇ]/u.test(w));
-    _cityHint=_words[_words.length-1]||''; // última palavra capitalizada = provável cidade
-  }
-  // Endereço normalizado para query: "—" → ","
   const _qAddr=_hasDash?addr.replace(/\s*\u2014\s*/g,', '):addr;
-  // Parte base (antes do primeiro "—") para fallbacks
-  const _baseAddr=_hasDash?addr.split('\u2014')[0].trim():addr;
-
-  // Monta as estratégias de query em ordem de especificidade
   const _stateStr=_geoAnchor?.state||'';
-  const _queries=[
-    // 1ª: addr normalizado + cidade extraída do "—" + estado (melhor pista geográfica)
-    _cityHint&&_stateStr ? _qAddr+', '+_cityHint+', '+_stateStr+', Brasil' : null,
-    // 2ª: addr normalizado + apenas estado (genérico)
-    _stateStr ? _qAddr+', '+_stateStr+', Brasil' : null,
-    // 3ª: addr normalizado + âncora city+state (comportamento pré-v5.8.40, como fallback)
-    _geoAnchor?.city&&_stateStr ? _qAddr+', '+_geoAnchor.city+', '+_stateStr+', Brasil' : null,
-    // 4ª: somente base (rua+número) + cidade extraída — para endereços com bairro verbose
-    _cityHint&&_baseAddr&&_baseAddr!==addr ? _baseAddr+', '+_cityHint+(_stateStr?', '+_stateStr:'')+', Brasil' : null,
-    // 5ª: raw + ", Brasil" sem qualquer filtro geográfico (último recurso)
-    _qAddr+', Brasil',
-  ].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i); // remove nulls e duplicatas
-
-  const _runQuery=async(q,extraParams)=>{
-    try{
-      const _c=new AbortController();const _t=setTimeout(()=>_c.abort(),6000);
-      const d=await _geocodeProxy('address='+encodeURIComponent(q)+'&region=br'+(extraParams||''),_c.signal);
-      clearTimeout(_t);
-      return d;
-    }catch(e){return null;}
-  };
-
-  const _saveAndReturn=async(result)=>{
-    _geoCache[addr]=result;try{localStorage.setItem('geo_'+addr,JSON.stringify(result));}catch(e){}
-    _geoFailReset(addr);
-    // v5.9.0: _checkGeoAmbiguity removido do fluxo automático — gerava 6+ calls Google por endereço.
-    // A verificação de ambiguidade fica disponível via _retryGeocode ou ação manual.
-    if(!_isNearAnchor(result.lat,result.lng))console.warn('[GEO] '+addr+' resolveu LONGE da âncora: '+result.display);
-    return result;
-  };
-
+  const _query=_stateStr?(_qAddr+', '+_stateStr+', Brasil'):(_qAddr+', Brasil');
   try{
-    // Tentativa com bounds + components (mais restrita, só âncora)
-    for(let qi=0;qi<_queries.length;qi++){
-      const q=_queries[qi];
-      // Nas primeiras tentativas usa bounds; nas últimas abre o filtro
-      const extraParams=qi<3?(_getAnchorBounds()+_getAnchorComponents()):('&components=country:BR');
-      const d=await _runQuery(q,extraParams);
-      if(!d||d.status==='ZERO_RESULTS')continue;
-      if(d.status==='OK'&&d.results?.length){
-        const nearResults=d.results.filter(r=>_isNearAnchor(r.geometry.location.lat,r.geometry.location.lng));
-        const best=(nearResults.length?nearResults:d.results)[0];
-        const result=_extractGeoResult(best);
-        console.log('[GEO] '+addr+' → '+result.cidade+' (estratégia '+(qi+1)+'/'+_queries.length+': "'+q.slice(-40)+'")');
-        return await _saveAndReturn(result);
-      }
+    const _c=new AbortController();const _t=setTimeout(()=>_c.abort(),8000);
+    const d=await _geocodeProxy('address='+encodeURIComponent(_query)+'&region=br',_c.signal);
+    clearTimeout(_t);
+    if(d&&d.status==='OK'&&d.results?.length){
+      const result=_extractGeoResult(d.results[0]);
+      _geoCache[addr]=result;
+      try{localStorage.setItem('geo_'+addr,JSON.stringify(result));}catch(e){}
+      _geoFailReset(addr);
+      if(!_isNearAnchor(result.lat,result.lng))console.warn('[GEO] '+addr+' longe da âncora: '+result.display);
+      console.log('[GEO] '+addr+' → '+result.cidade+' (OSM/proxy, 1 chamada)');
+      return result;
     }
-  }catch(e){console.warn('Geocoding falhou:',addr,e);_geoFailInc(addr);}
+  }catch(e){console.warn('[GEO] Falha:',addr,e);}
   _geoFailInc(addr);
   return null;
 }
@@ -5902,13 +5749,12 @@ async function calcRoute(){
         const baseAddr2=(c.endereco.split('\u2014')[0]||c.endereco).trim();
         const addrQuery=baseAddr2+(suffix?' '+suffix:'');
         try{
-          const res=await _geocodeProxy('address='+encodeURIComponent(addrQuery)+'&region=br');
-          if(res.status==='OK'&&res.results&&res.results[0]){
-            const loc=res.results[0].geometry.location;
-            c.lat=typeof loc.lat==='function'?loc.lat():loc.lat;
-            c.lng=typeof loc.lng==='function'?loc.lng():loc.lng;
-            if(!c.cep){const pc=res.results[0].address_components?.find(a=>a.types.includes('postal_code'));if(pc)c.cep=pc.long_name.replace(/\D/g,'');}
-            console.log('[RETRY-GEO] \u2713 '+c.nome+' geocodificado: '+c.lat+','+c.lng);
+          // v5.9.1: usa nominatim() (OSM, gratuito) em vez de _geocodeProxy (Google Geocoding)
+          const res=await nominatim(c.endereco);
+          if(res){
+            c.lat=res.lat;c.lng=res.lng;
+            if(!c.cep&&res.cep)c.cep=res.cep;
+            console.log('[RETRY-GEO] \u2713 '+c.nome+' geocodificado via OSM: '+c.lat+','+c.lng);
           }
         }catch(e){console.warn('[RETRY-GEO] Falhou para '+c.nome+':',e.message);}
       }));
