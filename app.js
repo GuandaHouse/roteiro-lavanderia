@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.59';
+const APP_VERSION='v5.8.60';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -4098,12 +4098,8 @@ function editC(id){
   // v5.8.31: Auto-fill CEP de obs se disponível
   const obsMatch=(c.obs||'').match(/\b(\d{5})-?(\d{3})\b/);
   if(!c.cep&&obsMatch){g('em-cep').value=fmtCep(obsMatch[1]+obsMatch[2]);}
-  // v5.8.56: auto-geocode se endereço incompleto (sem bairro/cidade) OU sem CEP
-  // Não gateado apenas por !c.cep — clientes com CEP mas sem bairro também precisam do auto-complete
-  const _emHasSuffix=(c.endereco||'').includes('\u2014');
-  if((!c.cep||!_emHasSuffix)&&c.endereco&&c.endereco.length>=8){
-    setTimeout(()=>geocodeCepForPrefix('em'),2500);
-  }
+  // v5.8.60: removido auto-geocode ao abrir modal (geocode-on-save — só geocodifica ao clicar Salvar)
+  // Antes: setTimeout(geocodeCepForPrefix('em'), 2500) interrompia o usuário enquanto ainda digitava
 }
 function saveEditC(){
   const id=parseFloat(g('em-id').value);
