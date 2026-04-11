@@ -1,4 +1,7 @@
-/// src/worker.js — Roteiro de Coleta: Worker completo v5.8.51
+/// src/worker.js — Roteiro de Coleta: Worker completo v5.9.0
+// v5.9.0: /api/geocode com cache KV compartilhado + OSM Nominatim como primário (zero custo)
+//         Google Geocoding só como último recurso (fallback).
+//         Economia estimada: >95% das chamadas à Google Geocoding API eliminadas.
 // Endpoints: Auth + Admin Panel + Sync + Route KV + Proxy + ASSETS fallback
 //
 // KV BINDINGS:
@@ -25,6 +28,54 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type,Authorization',
   'Access-Control-Max-Age': '86400',
 };
+
+// v5.9.0: Converte resultado do OSM Nominatim para o formato Google Geocoding API.
+// Necessário porque o cliente usa _extractGeoResult() que espera address_components do Google.
+function _osmToGoogle(osmResults) {
+  if (!osmResults || !osmResults.length) return { status: 'ZERO_RESULTS', results: [] };
+  const results = osmResults.map(r => {
+    const addr = r.address || {};
+    const lat  = parseFloat(r.lat);
+    const lng  = parseFloat(r.lon);
+    if (isNaN(lat) || isNaN(lng)) return null;
+
+    // Monta address_components no formato Google
+    const components = [];
+    if (addr.house_number) components.push({ long_name: addr.house_number, short_name: addr.house_number, types: ['street_number'] });
+    if (addr.road)         components.push({ long_name: addr.road,         short_name: addr.road,         types: ['route'] });
+    // Bairro: OSM usa suburb, neighbourhood, district, quarter
+    const bairro = addr.suburb || addr.neighbourhood || addr.quarter || addr.district || '';
+    if (bairro) components.push({ long_name: bairro, short_name: bairro, types: ['sublocality_level_1', 'sublocality', 'political'] });
+    // Cidade
+    const cidade = addr.city || addr.town || addr.village || addr.municipality || '';
+    if (cidade) components.push({ long_name: cidade, short_name: cidade, types: ['administrative_area_level_2', 'political'] });
+    // Estado
+    const estado = addr.state || '';
+    const estadoCode = addr.state_code || addr['ISO3166-2-lvl4'] || '';
+    if (estado) components.push({ long_name: estado, short_name: estadoCode.replace(/^BR-/,'') || estado.slice(0,2).toUpperCase(), types: ['administrative_area_level_1', 'political'] });
+    // País
+    if (addr.country) components.push({ long_name: addr.country, short_name: addr.country_code?.toUpperCase() || 'BR', types: ['country', 'political'] });
+    // CEP
+    if (addr.postcode) components.push({ long_name: addr.postcode, short_name: addr.postcode, types: ['postal_code'] });
+
+    return {
+      formatted_address: r.display_name || '',
+      geometry: {
+        location: { lat, lng },
+        location_type: 'ROOFTOP',
+        viewport: r.boundingbox ? {
+          northeast: { lat: parseFloat(r.boundingbox[1]), lng: parseFloat(r.boundingbox[3]) },
+          southwest: { lat: parseFloat(r.boundingbox[0]), lng: parseFloat(r.boundingbox[2]) },
+        } : { northeast: { lat, lng }, southwest: { lat, lng } },
+      },
+      address_components: components,
+      place_id: 'osm_' + (r.osm_type || 'n') + r.osm_id,
+      types: [r.type || r.class || 'premise'],
+    };
+  }).filter(Boolean);
+
+  return results.length ? { status: 'OK', results } : { status: 'ZERO_RESULTS', results: [] };
+}
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -740,24 +791,87 @@ async function handleRequest(request, env) {
         const latlng  = url.searchParams.get('latlng');
         if (!address && !latlng) return err('Missing address or latlng');
 
-        // Usa secret (preferencial) ou variável de env
         const GMAP_KEY = env.GOOGLE_MAPS_KEY || 'AIzaSyBpweA0jfF_lFgkKNvAJ_6NrPJ8H0bNjD8';
-        if (!GMAP_KEY) return err('GOOGLE_MAPS_KEY not configured', 500);
+        const KV_GEO   = env.ROTEIRO_KV; // reutiliza o mesmo KV namespace
 
-        // Build Google Geocoding URL — forward all params, inject server-side key
+        // ── Cache key: normaliza query para máximo de hits ──────────────────
+        const _rawKey  = (address || latlng || '').toLowerCase().replace(/\s+/g, ' ').trim();
+        // Remove params que variam por sessão (bounds, components) mas não afetam o resultado
+        // para maximizar taxa de cache hit. Mantém apenas address/latlng + region.
+        const _region  = url.searchParams.get('region') || 'br';
+        const cacheKey = 'geo_v2_' + _region + '_' + _rawKey.slice(0, 220);
+
+        // ── 1. Cache KV compartilhado (serve todos os usuários) ──────────────
+        if (KV_GEO) {
+          const cached = await KV_GEO.get(cacheKey, 'json').catch(() => null);
+          if (cached) {
+            return new Response(JSON.stringify(cached), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json', 'X-Geo-Cache': 'HIT', ...CORS_HEADERS },
+            });
+          }
+        }
+
+        // ── 2. OSM Nominatim (gratuito, sem custo por chamada) ──────────────
+        // Tentamos primeiro antes de gastar créditos do Google.
+        // Só para queries de endereço (não latlng reverso).
+        if (address && !latlng) {
+          try {
+            const osmParams = new URLSearchParams({
+              q: address,
+              format: 'json',
+              limit: '5',
+              addressdetails: '1',
+              countrycodes: 'br',
+              'accept-language': 'pt-BR,pt',
+            });
+            const osmRes = await fetch('https://nominatim.openstreetmap.org/search?' + osmParams, {
+              headers: {
+                'User-Agent': 'RoteirodeColeta/5.9 (nigel.guandalini@gmail.com)',
+                'Referer': 'https://guandahouse.github.io/roteiro-lavanderia/',
+              },
+              signal: AbortSignal.timeout(6000),
+            });
+            if (osmRes.ok) {
+              const osmData = await osmRes.json();
+              if (Array.isArray(osmData) && osmData.length > 0) {
+                // Converte formato OSM → formato Google (compatível com _extractGeoResult no cliente)
+                const converted = _osmToGoogle(osmData);
+                if (converted.status === 'OK') {
+                  if (KV_GEO) await KV_GEO.put(cacheKey, JSON.stringify(converted), { expirationTtl: 90 * 86400 }).catch(() => {});
+                  return new Response(JSON.stringify(converted), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json', 'X-Geo-Cache': 'OSM', ...CORS_HEADERS },
+                  });
+                }
+              }
+            }
+          } catch (_osmErr) {
+            // OSM timeout ou erro — fallback para Google abaixo
+          }
+        }
+
+        // ── 3. Fallback: Google Geocoding API ───────────────────────────────
+        if (!GMAP_KEY) return err('GOOGLE_MAPS_KEY not configured', 500);
         const gParams = new URLSearchParams();
         for (const [k, v] of url.searchParams.entries()) {
-          if (k !== 'key') gParams.set(k, v); // never forward client key
+          if (k !== 'key') gParams.set(k, v);
         }
         gParams.set('key', GMAP_KEY);
         const gUrl = 'https://maps.googleapis.com/maps/api/geocode/json?' + gParams.toString();
 
-        const res  = await fetch(gUrl);
+        const res  = await fetch(gUrl, { signal: AbortSignal.timeout(8000) });
         const data = await res.json();
+
+        // Cacheia resultado Google (sucesso ou ZERO_RESULTS por 24h)
+        if (KV_GEO && data.status) {
+          const ttl = data.status === 'OK' ? 90 * 86400 : 86400;
+          await KV_GEO.put(cacheKey, JSON.stringify(data), { expirationTtl: ttl }).catch(() => {});
+        }
 
         return new Response(JSON.stringify(data), {
           status: 200,
-          headers: { 'Content-Type': 'application/json', 'X-Geo-Cache': 'MISS', ...CORS_HEADERS },
+          headers: { 'Content-Type': 'application/json', 'X-Geo-Cache': 'GOOGLE', ...CORS_HEADERS },
         });
       } catch (e) {
         return err('Geocode proxy error: ' + e.message, 500);
