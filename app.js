@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.5';
+const APP_VERSION='v5.9.6';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -4019,7 +4019,7 @@ function saveEditC(){
   c.tel=g('em-tel').value.trim();
   if(addrChanged){
     // v5.8.26: limpar cache do endereço ANTIGO (não do novo)
-    localStorage.removeItem('geo_'+oldEndereco);delete _geoCache[oldEndereco];
+    localStorage.removeItem('geo3_'+oldEndereco);delete _geoCache[oldEndereco];
     c.lat=null;c.lng=null;c._cidade=null;c.cep=newCep||'';c.estT=null;c.conflict=false;c.cmsg='';
   }else{
     c.cep=newCep||c.cep;
@@ -4041,7 +4041,7 @@ function saveEditC(){
   const _needsGeo=addrChanged||(!c.endereco.includes('\u2014')&&c.endereco.length>=8);
   if(_needsGeo){
     toast(t('msg.client_updated')+' — atualizando endereço...','ok');
-    if(addrChanged){localStorage.removeItem('geo_'+c.endereco);delete _geoCache[c.endereco];}
+    if(addrChanged){localStorage.removeItem('geo3_'+c.endereco);delete _geoCache[c.endereco];}
     // v5.8.59: reset fail count antes de tentar (evita suspensão por tentativas anteriores)
     if(c.endereco){const _fk=c.endereco.slice(0,60);delete _geoFailCount[_fk];}
     nominatim(c.endereco,c).then(r=>{
@@ -5427,12 +5427,13 @@ function initGoogleMaps(){
 function initLeafMap(){}
 // v4.9.1: Invalidar cache de geocoding quando versão muda (corrige endereços cacheados errados)
 (function(){
-  const GEO_CACHE_VER='5.4.8';
+  const GEO_CACHE_VER='5.9.6';
   if(localStorage.getItem('_geoCacheVer')!==GEO_CACHE_VER){
     let cleared=0;
     for(let i=localStorage.length-1;i>=0;i--){
       const k=localStorage.key(i);
-      if(k&&k.startsWith('geo_')){localStorage.removeItem(k);cleared++;}
+      // v5.9.6: limpa cache antigo (geo_) e novo (geo3_) ao invalidar versão
+      if(k&&(k.startsWith('geo_')||k.startsWith('geo3_'))){localStorage.removeItem(k);cleared++;}
     }
     localStorage.setItem('_geoCacheVer',GEO_CACHE_VER);
     if(cleared)console.log('[GEO] Cache invalidado (v'+GEO_CACHE_VER+'): '+cleared+' entradas removidas');
@@ -5571,11 +5572,11 @@ async function nominatim(addr,client){
   const mem=_addrChoiceGet(addr,client?.nome);
   if(mem){
     console.log('[GEO-MEM] '+addr+' → '+[mem.bairro,mem.cidade].filter(Boolean).join(', ')+' (memória)');
-    localStorage.removeItem('geo_'+addr);delete _geoCache[addr];
+    localStorage.removeItem('geo3_'+addr);delete _geoCache[addr];
     _geoCache[addr]=mem;return mem;
   }
   if(_geoCache[addr]){return _geoCache[addr];}
-  const cached=localStorage.getItem('geo_'+addr);
+  const cached=localStorage.getItem('geo3_'+addr);
   if(cached){const c=JSON.parse(cached);_geoCache[addr]=c;return c;}
   await _resolveGeoAnchor();
   const _hasDash=addr.includes('\u2014');
@@ -5590,7 +5591,7 @@ async function nominatim(addr,client){
     if(d&&d.status==='OK'&&d.results?.length){
       const result=_extractGeoResult(d.results[0]);
       _geoCache[addr]=result;
-      try{localStorage.setItem('geo_'+addr,JSON.stringify(result));}catch(e){}
+      try{localStorage.setItem('geo3_'+addr,JSON.stringify(result));}catch(e){}
       _geoFailReset(addr);
       console.log('[GEO] '+addr+' → '+result.cidade+' (OSM)');
       return result;
@@ -5652,7 +5653,7 @@ async function nominatim(addr,client){
         if(_vcLogr)result.route=_vcLogr;
         if(_num)result.streetNum=_num;
         _geoCache[addr]=result;
-        try{localStorage.setItem('geo_'+addr,JSON.stringify(result));}catch(e){}
+        try{localStorage.setItem('geo3_'+addr,JSON.stringify(result));}catch(e){}
         _geoFailReset(addr);
         console.log('[GEO-VC] '+addr+' → '+result.lat+','+result.lng+' via ViaCEP+OSM');
         return result;
@@ -5669,7 +5670,7 @@ async function _retryGeocode(clientId){
   // Limpa cache de memória e localStorage
   const addr=c.endereco;
   delete _geoCache[addr];
-  try{localStorage.removeItem('geo_'+addr);}catch(e){}
+  try{localStorage.removeItem('geo3_'+addr);}catch(e){}
   // Reset do contador de falhas para permitir nova tentativa
   if(addr){const k=addr.slice(0,60);delete _geoFailCount[k];}
   toast('Tentando localizar "'+c.nome+'"…','ok');
