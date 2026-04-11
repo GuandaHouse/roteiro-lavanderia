@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.49';
+const APP_VERSION='v5.8.50';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -442,7 +442,9 @@ function _resolveTagId(idOrLabel){if(_tags.some(t=>t.id===idOrLabel))return idOr
 // v5.8.5: Normaliza separadores de endereço — evita vírgulas/traços duplicados
 function _normalizeAddrString(raw){
   if(!raw||raw.length<5)return raw;
-  let s=raw.trim().replace(/\s{2,}/g,' ');
+  let s=raw.trim();
+  s=s.replace(/\s*\([^)]*\)\s*/g,' ').trim(); // v5.8.50: strip qualificadores "(zona Oeste)" etc
+  s=s.replace(/\s{2,}/g,' ');
   s=s.replace(/\s*[-\u2013\u2014]{2,}\s*/g,' \u2014 ');  // múltiplos traços → em-dash
   s=s.replace(/,\s*[-\u2013\u2014]\s*/g,' \u2014 ');      // , - → —
   s=s.replace(/\s*[-\u2013\u2014]\s*,\s*/g,' \u2014 ');  // - , → —
@@ -569,16 +571,11 @@ function _migrateAddrChoiceKeys(){
 }
 // v5.8.46: helper — limpeza de endereços armazenados (remove qualificadores entre parênteses)
 function _migrateClientAddresses(arr){
-  if(!Array.isArray(arr))return false;
-  let changed=false; // v5.8.48: retorna true se houve alteração (para persistir)
+  if(!Array.isArray(arr))return arr; // v5.8.50: retorna array (não boolean) — callers clients=_migr... funcionam
   arr.forEach(c=>{
-    if(c.endereco&&/\([^)]+\)/.test(c.endereco)){
-      const before=c.endereco;
-      c.endereco=c.endereco.replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s{2,}/g,' ').replace(/\s+—/g,' —').replace(/—\s+/g,'— ').trim();
-      if(c.endereco!==before)changed=true;
-    }
+    if(c.endereco){const fixed=_normalizeAddrString(c.endereco);if(fixed!==c.endereco)c.endereco=fixed;}
   });
-  return changed;
+  return arr;
 }
 function _geoDistKm(a,b){const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng-a.lng)*Math.PI/180;const aa=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;return R*2*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));}
 function _hasGeoAmbiguity(results){if(!results||results.length<2)return false;const f=results[0].geometry?results[0].geometry.location:results[0];return results.slice(1).some(r=>{const l=r.geometry?r.geometry.location:r;return _geoDistKm({lat:f.lat,lng:f.lng},{lat:l.lat,lng:l.lng})>0.5;});}
@@ -2450,9 +2447,9 @@ function restoreActiveRoute(){
     // v4.9.2: AUTO-RESTORE SILENCIOSO — sem modal, sem perguntar
     // Decisão do Philip: refresh preserva tudo automaticamente. Limpar = botão "Limpar todos".
     clients=data.clients;order=data.order||clients.map((_,i)=>i);
-    const _migChanged=_migrateClientAddresses(clients); // v5.8.46: limpa parênteses em bairros
-    // v5.8.48: persistir imediatamente se houve migração (resolve Kelly Lemes (zona Oeste) stuck)
-    if(_migChanged){setTimeout(()=>{if(clients.length)autoSaveRoute();},200);}
+    _migrateClientAddresses(clients); // v5.8.50: normaliza endereços (strip parens, etc)
+    autoSaveRoute(); // v5.8.50: persiste imediatamente — sem setTimeout, antes que sync possa sobrescrever
+    _syncPushDebounced(); // v5.8.50: empurra dados limpos ao cloud (para não restaurar sujo na próxima sync)
     // v4.9.2: Restaurar estado cloud (routeId, version, hash) — permite polling retomar
     if(data.routeId){_currentRouteId=data.routeId;_cloudVersion=data.cloudVersion||0;_cloudHash=data.cloudHash||null;startGestorPolling();setCloudStatus('synced','Rota online e sincronizada em tempo real');console.log('[RESTORE] Cloud state restaurado: route='+_currentRouteId+' v'+_cloudVersion);}
     renderC();updStats();updBtns();
