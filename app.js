@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.54';
+const APP_VERSION='v5.8.55';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -573,7 +573,19 @@ function _migrateAddrChoiceKeys(){
 function _migrateClientAddresses(arr){
   if(!Array.isArray(arr))return arr; // v5.8.50: retorna array (não boolean) — callers clients=_migr... funcionam
   arr.forEach(c=>{
-    if(c.endereco){const fixed=_normalizeAddrString(c.endereco);if(fixed!==c.endereco)c.endereco=fixed;}
+    if(c.endereco){
+      // v5.8.55: corrige endereços malformados com número após sufixo (bug v5.8.54)
+      // Padrão errado: "Rua X — Bairro — Cidade, 776" → correto: "Rua X, 776 — Bairro — Cidade"
+      if(c.endereco.includes('\u2014')&&/,\s*\d+[A-Za-z]?\s*$/.test(c.endereco)){
+        const m=c.endereco.match(/^(.*?)\s*\u2014\s*(.*),\s*(\d+[A-Za-z]?)\s*$/);
+        if(m){
+          c.endereco=m[1].trim()+', '+m[3].trim()+' \u2014 '+m[2].trim();
+          c.lat=null;c.lng=null; // força re-geocodificação com endereço correto
+          console.log('[MIGRATE] v5.8.55 endereço corrigido:',c.nome,'→',c.endereco);
+        }
+      }
+      const fixed=_normalizeAddrString(c.endereco);if(fixed!==c.endereco)c.endereco=fixed;
+    }
   });
   return arr;
 }
@@ -995,14 +1007,19 @@ function buildFullAddr(prefix){
   const logr=(document.getElementById(prefix+'-end')?.value||'').trim();
   const num=(document.getElementById(prefix+'-num')?.value||'').trim();
   const comp=(document.getElementById(prefix+'-comp')?.value||'').trim();
-  let a=logr;
+  // v5.8.55: separar base (antes do —) do sufixo (— Bairro — Cidade) para inserir número no lugar certo
+  const emdashIdx=logr.indexOf('\u2014');
+  const logrBase=emdashIdx>=0?logr.slice(0,emdashIdx).trim():logr;
+  const logrSuffix=emdashIdx>=0?logr.slice(emdashIdx).trim():'';
+  let a=logrBase;
   // v5.8.39: evita duplicar número quando logradouro já contém o mesmo número
-  // ex: "Rua Flores, 407" + num="407" → NÃO append ", 407" de novo
   if(num){
-    const logrHasNum=new RegExp('(^|,\\s*|\\s)'+num.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(\\s*,|\\s*$|\\s)').test(logr+' ');
+    const logrHasNum=new RegExp('(^|,\\s*|\\s)'+num.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(\\s*,|\\s*$|\\s)').test(logrBase+' ');
     if(!logrHasNum)a+=', '+num;
   }
   if(comp)a+=', '+comp;
+  // Re-attach bairro/cidade suffix AFTER the number
+  if(logrSuffix)a+=' '+logrSuffix;
   return a;
 }
 // v5.8.25: extrai logradouro, número e complemento de uma string de endereço existente
@@ -5419,14 +5436,13 @@ let _HeatmapCls=null;
 function _makeHeatmap(opts){
   if(!_HeatmapCls){
     _HeatmapCls=class extends google.maps.OverlayView{
-      constructor(o){super();this._data=o.data||[];this._radius=o.radius||35;this._gradient=o.gradient||null;this._cvs=null;this._lis=[];if(o.map)this.setMap(o.map);}
+      constructor(o){super();this._data=o.data||[];this._radius=o.radius||35;this._gradient=o.gradient||null;this._cvs=null;this._lis=[];this._palette=null;if(o.map)this.setMap(o.map);}
       onAdd(){
         const c=document.createElement('canvas');
         c.style.cssText='position:absolute;top:0;left:0;pointer-events:none';
         this.getPanes().overlayLayer.appendChild(c);this._cvs=c;
         const redraw=()=>this._draw();
         const m=this.getMap();
-        // v5.8.41: redraw no tilesloaded resolve heatmap em branco no primeiro load
         this._lis=[
           google.maps.event.addListener(m,'bounds_changed',redraw),
           google.maps.event.addListener(m,'zoom_changed',redraw),
@@ -5434,30 +5450,53 @@ function _makeHeatmap(opts){
         ];
       }
       draw(){this._draw();}
+      // v5.8.55: algoritmo correto — acumulação de intensidade em offscreen + colorização por paleta
       _draw(){
         if(!this._cvs)return;const proj=this.getProjection();if(!proj)return;
         const m=this.getMap();const div=m.getDiv();
-        const w=div.offsetWidth,h=div.offsetHeight;
+        const w=div.offsetWidth,h=div.offsetHeight;if(!w||!h)return;
         this._cvs.width=w;this._cvs.height=h;
         this._cvs.style.width=w+'px';this._cvs.style.height=h+'px';
-        const ctx=this._cvs.getContext('2d');ctx.clearRect(0,0,w,h);
-        const stops=this._gradient||['rgba(108,92,231,0)','rgba(108,92,231,.25)','rgba(108,92,231,.55)','rgba(108,92,231,.9)'];
+        // Passo 1: canvas offscreen para acumular intensidade com blending aditivo
+        const oc=document.createElement('canvas');oc.width=w;oc.height=h;
+        const oc2=oc.getContext('2d');
+        oc2.globalCompositeOperation='lighter'; // soma intensidades em regiões sobrepostas
         this._data.forEach(pt=>{
           let lat,lng,wt=1;
           if(pt instanceof google.maps.LatLng){lat=pt.lat();lng=pt.lng();}
           else if(pt&&pt.location){lat=typeof pt.location.lat==='function'?pt.location.lat():pt.location.lat;lng=typeof pt.location.lng==='function'?pt.location.lng():pt.location.lng;wt=pt.weight||1;}
           else{lat=pt[0];lng=pt[1];}
           const px=proj.fromLatLngToDivPixel(new google.maps.LatLng(lat,lng));if(!px)return;
-          const r=this._radius*(0.5+Math.min(1.5,wt*0.8));
-          const g=ctx.createRadialGradient(px.x,px.y,0,px.x,px.y,r);
-          stops.forEach((s,i)=>{
-            const pos=i/(stops.length-1);
-            const mo=s.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
-            if(mo){const a=parseFloat(mo[4]||1)*Math.min(1,.2+wt*.5);g.addColorStop(pos,'rgba('+mo[1]+','+mo[2]+','+mo[3]+','+a.toFixed(2)+')');}
-            else g.addColorStop(pos,s);
-          });
-          ctx.beginPath();ctx.arc(px.x,px.y,r,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+          const r=this._radius*(0.5+Math.min(2,wt*0.8));
+          const g=oc2.createRadialGradient(px.x,px.y,0,px.x,px.y,r);
+          g.addColorStop(0,'rgba(255,255,255,0.5)');
+          g.addColorStop(0.35,'rgba(255,255,255,0.25)');
+          g.addColorStop(0.7,'rgba(255,255,255,0.08)');
+          g.addColorStop(1,'rgba(255,255,255,0)');
+          oc2.beginPath();oc2.arc(px.x,px.y,r,0,Math.PI*2);oc2.fillStyle=g;oc2.fill();
         });
+        // Passo 2: ler mapa de intensidade e colorizar via paleta
+        const imgData=oc2.getImageData(0,0,w,h);const data=imgData.data;
+        const pal=this._getPalette();
+        for(let i=0;i<data.length;i+=4){
+          const intensity=Math.min(255,data[i]); // canal R = intensidade acumulada
+          if(intensity>0){const col=pal[intensity];data[i]=col[0];data[i+1]=col[1];data[i+2]=col[2];data[i+3]=col[3];}
+          else{data[i+3]=0;}
+        }
+        const ctx=this._cvs.getContext('2d');ctx.clearRect(0,0,w,h);ctx.putImageData(imgData,0,0);
+      }
+      _getPalette(){
+        if(this._palette)return this._palette;
+        const stops=this._gradient||['rgba(108,92,231,0)','rgba(108,92,231,.35)','rgba(108,92,231,.7)','rgba(108,92,231,1)'];
+        const pc=document.createElement('canvas');pc.width=1;pc.height=256;
+        const pctx=pc.getContext('2d');
+        const grad=pctx.createLinearGradient(0,0,0,256);
+        stops.forEach((s,i)=>grad.addColorStop(i/(stops.length-1),s));
+        pctx.fillStyle=grad;pctx.fillRect(0,0,1,256);
+        const pd=pctx.getImageData(0,0,1,256).data;
+        this._palette=new Array(256);
+        for(let i=0;i<256;i++)this._palette[i]=[pd[i*4],pd[i*4+1],pd[i*4+2],pd[i*4+3]];
+        return this._palette;
       }
       onRemove(){this._lis.forEach(l=>google.maps.event.removeListener(l));this._lis=[];if(this._cvs){this._cvs.parentNode?.removeChild(this._cvs);this._cvs=null;}}
     };
@@ -6312,7 +6351,8 @@ async function preloadDashData(){
         pts.push([r.lat,r.lng]);
         const rev=await nominatimReverse(r.lat,r.lng);
         const addr=rev.address||{};
-        const bairro=(addr.suburb||addr.neighbourhood||addr.quarter||addr.city_district||'').trim();
+        // v5.8.55: strip parênteses de qualificadores "(Zona Oeste)" etc
+        const bairro=((addr.suburb||addr.neighbourhood||addr.quarter||addr.city_district||'').trim()).replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s{2,}/g,' ').trim();
         if(bairro){
           br[bairro]=(br[bairro]||0)+1;
           if(!_bairroCoords)_bairroCoords={};
@@ -6363,7 +6403,8 @@ async function renderDash(){
         // Reverse geocode to get suburb/neighborhood
         const rev=await nominatimReverse(r.lat,r.lng);
         const addr=rev.address||{};
-        const bairro=(addr.suburb||addr.neighbourhood||addr.quarter||addr.city_district||'').trim();
+        // v5.8.55: strip parênteses de qualificadores "(Zona Oeste)" etc
+        const bairro=((addr.suburb||addr.neighbourhood||addr.quarter||addr.city_district||'').trim()).replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s{2,}/g,' ').trim();
         if(bairro){
           br[bairro]=(br[bairro]||0)+1;
           if(!_bairroCoords)_bairroCoords={};
