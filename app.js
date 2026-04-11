@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.2';
+const APP_VERSION='v5.9.3';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -1667,7 +1667,7 @@ async function doSmartInsert(){
 
   // Geocode o novo cliente para ter coordenadas
   try{
-    const geo=await nominatim(newClient.endereco);
+    const geo=await nominatim(newClient.endereco,newClient);
     if(geo){newClient.lat=geo.lat;newClient.lng=geo.lng;}
   }catch(e){}
 
@@ -5567,26 +5567,22 @@ function _extractGeoResult(result){
 async function nominatim(addr,client){
   // v5.8.38: BUG-01 — abandona endereços que falharam demais (evita loop)
   if(!_geoFailOk(addr)){return null;}
-  // v5.9.0: _fireAmbigCheck removido — disparava _checkGeoAmbiguity (6+ calls Google) em todo cache hit.
   // v5.8.24: Memória explícita do usuário tem PRIORIDADE sobre qualquer cache
   const mem=_addrChoiceGet(addr,client?.nome);
   if(mem){
     console.log('[GEO-MEM] '+addr+' → '+[mem.bairro,mem.cidade].filter(Boolean).join(', ')+' (memória)');
-    // Evictar cache obsoleto que possa ter as coordenadas erradas
-    localStorage.removeItem('geo_'+addr);
-    delete _geoCache[addr];
+    localStorage.removeItem('geo_'+addr);delete _geoCache[addr];
     _geoCache[addr]=mem;return mem;
   }
   if(_geoCache[addr]){return _geoCache[addr];}
   const cached=localStorage.getItem('geo_'+addr);
   if(cached){const c=JSON.parse(cached);_geoCache[addr]=c;return c;}
-  // v5.9.1: 1 query única — Worker resolve via OSM Nominatim (gratuito) + Google só como fallback.
-  // Elimina o loop de 5 estratégias que gerava múltiplas chamadas para o mesmo endereço.
   await _resolveGeoAnchor();
   const _hasDash=addr.includes('\u2014');
   const _qAddr=_hasDash?addr.replace(/\s*\u2014\s*/g,', '):addr;
   const _stateStr=_geoAnchor?.state||'';
   const _query=_stateStr?(_qAddr+', '+_stateStr+', Brasil'):(_qAddr+', Brasil');
+  // ── Tentativa 1: OSM por endereço ────────────────────────────────────────
   try{
     const _c=new AbortController();const _t=setTimeout(()=>_c.abort(),8000);
     const d=await _geocodeProxy('address='+encodeURIComponent(_query)+'&region=br',_c.signal);
@@ -5596,11 +5592,48 @@ async function nominatim(addr,client){
       _geoCache[addr]=result;
       try{localStorage.setItem('geo_'+addr,JSON.stringify(result));}catch(e){}
       _geoFailReset(addr);
-      if(!_isNearAnchor(result.lat,result.lng))console.warn('[GEO] '+addr+' longe da âncora: '+result.display);
-      console.log('[GEO] '+addr+' → '+result.cidade+' (OSM/proxy, 1 chamada)');
+      console.log('[GEO] '+addr+' → '+result.cidade+' (OSM)');
       return result;
     }
-  }catch(e){console.warn('[GEO] Falha:',addr,e);}
+  }catch(e){console.warn('[GEO] Falha OSM:',addr,e);}
+
+  // ── Tentativa 2: fallback por CEP (muito mais confiável no Brasil) ────────
+  // v5.9.2: CEP geocodifica melhor que nome de rua no OSM Nominatim.
+  // Fonte do CEP: client.cep → padrão no addr → ViaCEP por rua+cidade
+  let _fbCep=(client?.cep||'').replace(/\D/g,'');
+  if(!_fbCep){
+    const _cm=addr.match(/\b(\d{5})-?(\d{3})\b/);
+    if(_cm)_fbCep=_cm[1]+_cm[2];
+  }
+  // Se ainda sem CEP, tenta ViaCEP pelo nome da rua (gratuito, CORS liberado)
+  if(!_fbCep&&_geoAnchor?.state&&_geoAnchor?.city){
+    try{
+      const _rua=((_qAddr.split(',')[0]||'').replace(/^(rua|avenida|av\.|alameda|al\.|estrada|travessa|praça)\s+/i,'').trim()).slice(0,40);
+      if(_rua.length>=5){
+        const _vcUrl='https://viacep.com.br/ws/'+_geoAnchor.state+'/'+encodeURIComponent(_geoAnchor.city)+'/'+encodeURIComponent(_rua)+'/json/';
+        const _vcR=await fetch(_vcUrl,{signal:AbortSignal.timeout(4000)});
+        if(_vcR.ok){const _vcD=await _vcR.json();if(Array.isArray(_vcD)&&_vcD.length&&!_vcD[0].erro){_fbCep=(_vcD[0].cep||'').replace(/\D/g,'');if(_fbCep&&client)client.cep=_fbCep.slice(0,5)+'-'+_fbCep.slice(5);}}
+      }
+    }catch(e){}
+  }
+  if(_fbCep&&_fbCep.length===8){
+    const _cepFmt=_fbCep.slice(0,5)+'-'+_fbCep.slice(5);
+    try{
+      const _c2=new AbortController();const _t2=setTimeout(()=>_c2.abort(),6000);
+      const d2=await _geocodeProxy('address='+encodeURIComponent(_cepFmt+', Brasil')+'&region=br',_c2.signal);
+      clearTimeout(_t2);
+      if(d2&&d2.status==='OK'&&d2.results?.length){
+        const result=_extractGeoResult(d2.results[0]);
+        // Preserva rota e número do endereço original (CEP geocodifica o bloco, não o número exato)
+        if(!result.route){const _op=_parseAddrParts(addr);result.route=_op.logr;result.streetNum=_op.num;}
+        _geoCache[addr]=result;
+        try{localStorage.setItem('geo_'+addr,JSON.stringify(result));}catch(e){}
+        _geoFailReset(addr);
+        console.log('[GEO-CEP] '+addr+' → coordenadas via CEP '+_cepFmt);
+        return result;
+      }
+    }catch(e){console.warn('[GEO-CEP] Falha:',e);}
+  }
   _geoFailInc(addr);
   return null;
 }
@@ -5692,7 +5725,7 @@ async function calcRoute(){
     const GEO_BATCH=5;
     for(let b=0;b<needGeo.length;b+=GEO_BATCH){
       const batch=needGeo.slice(b,b+GEO_BATCH);
-      const results=await Promise.all(batch.map(c=>nominatim(c.endereco).catch(()=>null)));
+      const results=await Promise.all(batch.map(c=>nominatim(c.endereco,c).catch(()=>null)));
       results.forEach((r,i)=>{
         if(r){batch[i].lat=r.lat;batch[i].lng=r.lng;if(r.cidade)batch[i]._cidade=r.cidade;
           if(r.route){batch[i].endereco=_fmtAddrFromGeo(r,batch[i].endereco);}
@@ -5753,7 +5786,7 @@ async function calcRoute(){
         const addrQuery=baseAddr2+(suffix?' '+suffix:'');
         try{
           // v5.9.1: usa nominatim() (OSM, gratuito) em vez de _geocodeProxy (Google Geocoding)
-          const res=await nominatim(c.endereco);
+          const res=await nominatim(c.endereco,c);
           if(res){
             c.lat=res.lat;c.lng=res.lng;
             if(!c.cep&&res.cep)c.cep=res.cep;
@@ -6191,7 +6224,7 @@ async function preloadDashData(){
   const br={};const pts=[];
   for(const c of allC){
     try{
-      const r=await nominatim(c.endereco);
+      const r=await nominatim(c.endereco,c);
       if(r){
         pts.push([r.lat,r.lng]);
         const rev=await nominatimReverse(r.lat,r.lng);
@@ -6242,7 +6275,7 @@ async function renderDash(){
   // Nominatim: sequential to respect rate limit
   for(const c of allC){
     try{
-      const r=await nominatim(c.endereco);
+      const r=await nominatim(c.endereco,c);
       if(r){
         pts.push([r.lat,r.lng]);
         // Reverse geocode to get suburb/neighborhood
