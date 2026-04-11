@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.4';
+const APP_VERSION='v5.9.5';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -5597,53 +5597,67 @@ async function nominatim(addr,client){
     }
   }catch(e){console.warn('[GEO] Falha OSM:',addr,e);}
 
-  // ── Tentativa 2: fallback por CEP (muito mais confiável no Brasil) ────────
-  // v5.9.4: ViaCEP TEM PRIORIDADE sobre client.cep — o CEP salvo pode estar errado.
-  // ViaCEP usa a base oficial dos Correios: é a fonte mais confiável para ruas brasileiras.
-  // Ordem: ViaCEP por rua+cidade → CEP no addr → client.cep (último recurso)
-  let _fbCep='';
-  // 1º: ViaCEP pela rua (fonte autoritativa — Correios)
+  // ── Tentativa 2: ViaCEP → query canônica OSM ─────────────────────────────
+  // v5.9.5: ViaCEP retorna o endereço oficial dos Correios (logradouro+bairro+cidade).
+  // Usamos esses dados para montar uma query OSM muito mais específica e confiável
+  // do que o nome de rua incompleto digitado pelo usuário.
+  // NÃO tentamos geocodificar o CEP diretamente (OSM não indexa CEPs bare).
+  let _fbCep='',_vcLogr='',_vcBairro='',_vcCity='',_vcUf='';
+  const _origParts=_parseAddrParts(addr);
+  // 1º: ViaCEP pelo nome da rua (Correios — fonte autoritativa)
   if(_geoAnchor?.state&&_geoAnchor?.city){
     try{
-      const _rua=((_qAddr.split(',')[0]||'').replace(/^(rua|avenida|av\.|alameda|al\.|estrada|travessa|praça)\s+/i,'').trim()).slice(0,40);
+      const _rua=(_origParts.logr.replace(/^(rua|avenida|av\.|alameda|al\.|estrada|travessa|praça)\s+/i,'').trim()).slice(0,40);
       if(_rua.length>=5){
         const _vcUrl='https://viacep.com.br/ws/'+_geoAnchor.state+'/'+encodeURIComponent(_geoAnchor.city)+'/'+encodeURIComponent(_rua)+'/json/';
-        const _vcR=await fetch(_vcUrl,{signal:AbortSignal.timeout(4000)});
+        const _vcR=await fetch(_vcUrl,{signal:AbortSignal.timeout(5000)});
         if(_vcR.ok){
           const _vcD=await _vcR.json();
           if(Array.isArray(_vcD)&&_vcD.length&&!_vcD[0].erro){
-            _fbCep=(_vcD[0].cep||'').replace(/\D/g,'');
-            // Corrige client.cep se ViaCEP retornou algo diferente (CEP salvo estava errado)
-            if(_fbCep&&client&&client.cep&&client.cep.replace(/\D/g,'')!==_fbCep){
-              console.log('[GEO-CEP] Corrigindo CEP: '+client.cep+' → '+_fbCep.slice(0,5)+'-'+_fbCep.slice(5));
-            }
+            const _vc=_vcD[0];
+            _fbCep=(_vc.cep||'').replace(/\D/g,'');
+            _vcLogr=_vc.logradouro||'';
+            _vcBairro=_vc.bairro||'';
+            _vcCity=_vc.localidade||_geoAnchor.city;
+            _vcUf=_vc.uf||_geoAnchor.state;
             if(_fbCep&&client)client.cep=_fbCep.slice(0,5)+'-'+_fbCep.slice(5);
+            console.log('[GEO-VC] ViaCEP achou: '+_vcLogr+', '+_vcBairro+', '+_vcCity+' CEP='+_fbCep);
           }
         }
       }
     }catch(e){}
   }
-  // 2º: CEP embutido no endereço digitado
+  // 2º: CEP embutido no addr ou em client.cep (só como referência, não para geocodificar bare)
   if(!_fbCep){const _cm=addr.match(/\b(\d{5})-?(\d{3})\b/);if(_cm)_fbCep=_cm[1]+_cm[2];}
-  // 3º: client.cep salvo (último recurso — pode estar desatualizado)
   if(!_fbCep)_fbCep=(client?.cep||'').replace(/\D/g,'');
-  if(_fbCep&&_fbCep.length===8){
-    const _cepFmt=_fbCep.slice(0,5)+'-'+_fbCep.slice(5);
+  // Monta query OSM canônica com dados do ViaCEP (muito mais preciso que nome de rua incompleto)
+  if(_vcLogr||_fbCep){
+    const _street=_vcLogr||_origParts.logr;
+    const _num=_origParts.num;
+    const _bairroQ=_vcBairro;
+    const _cityQ=_vcCity||_geoAnchor?.city||'';
+    const _ufQ=_vcUf||_geoAnchor?.state||'';
+    // Ex: "Rua Kalil Nader Habr, 776, Vila Santo Estéfano, São Paulo, SP, Brasil"
+    const _vcQuery=[_street,_num,_bairroQ,_cityQ,_ufQ,'Brasil'].filter(Boolean).join(', ');
     try{
-      const _c2=new AbortController();const _t2=setTimeout(()=>_c2.abort(),6000);
-      const d2=await _geocodeProxy('address='+encodeURIComponent(_cepFmt+', Brasil')+'&region=br',_c2.signal);
+      const _c2=new AbortController();const _t2=setTimeout(()=>_c2.abort(),8000);
+      const d2=await _geocodeProxy('address='+encodeURIComponent(_vcQuery)+'&region=br',_c2.signal);
       clearTimeout(_t2);
       if(d2&&d2.status==='OK'&&d2.results?.length){
         const result=_extractGeoResult(d2.results[0]);
-        // Preserva rota e número do endereço original (CEP geocodifica o bloco, não o número exato)
-        if(!result.route){const _op=_parseAddrParts(addr);result.route=_op.logr;result.streetNum=_op.num;}
+        // Garante dados corretos do ViaCEP (bairro/CEP do OSM pode estar errado)
+        if(_vcBairro)result.bairro=_vcBairro;
+        if(_vcCity)result.cidade=_vcCity;
+        if(_fbCep)result.cep=_fbCep.slice(0,5)+'-'+_fbCep.slice(5);
+        if(_vcLogr)result.route=_vcLogr;
+        if(_num)result.streetNum=_num;
         _geoCache[addr]=result;
         try{localStorage.setItem('geo_'+addr,JSON.stringify(result));}catch(e){}
         _geoFailReset(addr);
-        console.log('[GEO-CEP] '+addr+' → coordenadas via CEP '+_cepFmt);
+        console.log('[GEO-VC] '+addr+' → '+result.lat+','+result.lng+' via ViaCEP+OSM');
         return result;
       }
-    }catch(e){console.warn('[GEO-CEP] Falha:',e);}
+    }catch(e){console.warn('[GEO-VC] Falha query canônica:',e);}
   }
   _geoFailInc(addr);
   return null;
