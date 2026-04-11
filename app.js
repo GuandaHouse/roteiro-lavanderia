@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.57';
+const APP_VERSION='v5.8.58';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -5774,6 +5774,7 @@ async function nominatim(addr,client){
   return null;
 }
 // v5.8.46: Retenta geocoding para cliente específico — limpa cache e tenta novamente
+// v5.8.58: também atualiza c.endereco com bairro/cidade (igualando comportamento de preGeocode)
 async function _retryGeocode(clientId){
   const c=clients.find(x=>x.id===clientId);if(!c)return;
   // Limpa cache de memória e localStorage
@@ -5787,8 +5788,16 @@ async function _retryGeocode(clientId){
   if(result){
     c.lat=result.lat;c.lng=result.lng;c._cidade=result.cidade||null;
     c._addrPending=false;
+    // v5.8.58: atualizar endereco com bairro/cidade (mesma lógica do preGeocode)
+    if(result.route){c.endereco=_fmtAddrFromGeo(result,c.endereco);}
+    else if(result.bairro||result.cidade){
+      const base=(c.endereco.split('\u2014')[0]||c.endereco).trim();
+      const _cb=result.bairro?result.bairro.replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s{2,}/g,' ').trim():'';
+      let nAddr=base;if(_cb)nAddr+=' \u2014 '+titleCase(_cb);if(result.cidade)nAddr+=' \u2014 '+titleCase(result.cidade);
+      if(nAddr!==c.endereco)c.endereco=nAddr;
+    }
     renderC();updStats();autoSaveRoute();
-    toast('Localizado: '+result.display,'ok');
+    toast('\u2713 Localizado: '+result.display,'ok');
   } else {
     toast('Ainda não encontrado. Tente editar o endereço.','warn');
   }
