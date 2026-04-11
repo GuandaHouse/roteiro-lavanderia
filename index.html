@@ -735,8 +735,8 @@ html:not(.auth-pending) #auth-screen{display:none;}
       <div class="fg2">
         <div class="fg"><label data-i18n="form.nome">Nome *</label><input type="text" id="f-nome" data-i18n-ph="form.nome.ph" placeholder="Nome completo"/></div>
         <div class="fg"><label data-i18n="form.tel">Telefone</label><input type="tel" id="f-tel" data-i18n-ph="form.tel.ph" placeholder="(11) 99999-9999"/></div>
-        <div class="fg full" style="display:flex;gap:8px"><div class="fg" style="flex:1"><label data-i18n="form.end">Logradouro *</label><input type="text" id="f-end" placeholder="Rua, Av., Travessa..." oninput="schedGeo();onEndInput('f')" onblur="onEndBlur('f')"/></div><div style="flex:0 0 120px"><label style="font-size:12px;color:var(--mu)">N&#xFA;mero</label><input type="text" id="f-num" placeholder="123" oninput="schedGeo()"/></div></div>
-        <div class="fg full" style="display:flex;gap:8px;margin-top:2px"><div style="flex:1"><label style="font-size:12px;color:var(--mu)">Complemento</label><input type="text" id="f-comp" placeholder="Apto, Bloco..." oninput="schedGeo()"/></div><div style="flex:0 0 120px"><label data-i18n="form.cep">CEP</label><input type="text" id="f-cep" class="cep-input" placeholder="00000-000" maxlength="9" oninput="onCepInput('f')"/><div class="cep-status" id="f-cep-status"></div></div></div>
+        <div class="fg full" style="display:flex;gap:8px"><div class="fg" style="flex:1"><label data-i18n="form.end">Logradouro *</label><input type="text" id="f-end" placeholder="Rua, Av., Travessa..." oninput="onEndInput('f')"/></div><div style="flex:0 0 120px"><label style="font-size:12px;color:var(--mu)">N&#xFA;mero</label><input type="text" id="f-num" placeholder="123"/></div></div>
+        <div class="fg full" style="display:flex;gap:8px;margin-top:2px"><div style="flex:1"><label style="font-size:12px;color:var(--mu)">Complemento</label><input type="text" id="f-comp" placeholder="Apto, Bloco..."/></div><div style="flex:0 0 120px"><label data-i18n="form.cep">CEP</label><input type="text" id="f-cep" class="cep-input" placeholder="00000-000" maxlength="9" oninput="onCepInput('f')"/><div class="cep-status" id="f-cep-status"></div></div></div>
         <div class="fg"><label data-i18n="form.tipo">Tipo *</label>
           <div id="f-tipo" class="tag-multi-wrap"></div>
         </div>
@@ -1126,7 +1126,7 @@ html:not(.auth-pending) #auth-screen{display:none;}
     <div class="edit-row">
       <div class="edit-field" style="grid-column:1/-1"><label data-i18n="form.nome">Nome</label><input type="text" id="em-nome"/></div>
     </div>
-    <div class="edit-field" style="grid-column:1/-1"><div style="display:flex;gap:8px"><div class="edit-field" style="flex:1"><label data-i18n="form.end">Logradouro</label><input type="text" id="em-end" placeholder="Rua, Av., Travessa..." oninput="onEndInput('em')" onblur="onEndBlur('em')"/></div><div style="flex:0 0 110px"><label style="font-size:12px;color:var(--mu)">N&#xFA;mero</label><input type="text" id="em-num" placeholder="123"/></div></div><div style="display:flex;gap:8px;margin-top:8px"><div style="flex:1"><label style="font-size:12px;color:var(--mu)">Complemento</label><input type="text" id="em-comp" placeholder="Apto, Bloco..."/></div><div style="flex:0 0 110px"><label data-i18n="form.cep">CEP</label><input type="text" id="em-cep" class="cep-input" placeholder="00000-000" maxlength="9" oninput="onCepInput('em')"/><div class="cep-status" id="em-cep-status"></div></div></div></div>
+    <div class="edit-field" style="grid-column:1/-1"><div style="display:flex;gap:8px"><div class="edit-field" style="flex:1"><label data-i18n="form.end">Logradouro</label><input type="text" id="em-end" placeholder="Rua, Av., Travessa..." oninput="onEndInput('em')"/></div><div style="flex:0 0 110px"><label style="font-size:12px;color:var(--mu)">N&#xFA;mero</label><input type="text" id="em-num" placeholder="123"/></div></div><div style="display:flex;gap:8px;margin-top:8px"><div style="flex:1"><label style="font-size:12px;color:var(--mu)">Complemento</label><input type="text" id="em-comp" placeholder="Apto, Bloco..."/></div><div style="flex:0 0 110px"><label data-i18n="form.cep">CEP</label><input type="text" id="em-cep" class="cep-input" placeholder="00000-000" maxlength="9" oninput="onCepInput('em')"/><div class="cep-status" id="em-cep-status"></div></div></div></div>
     <div class="edit-row">
       <div class="edit-field"><label data-i18n="form.tel">Telefone</label><input type="text" id="em-tel"/></div>
       <div class="edit-field"><label data-i18n="form.tipo">Tipo</label><div id="em-tipo" class="tag-multi-wrap"></div></div>
@@ -1195,7 +1195,7 @@ html:not(.auth-pending) #auth-screen{display:none;}
     <p style="font-size:13px;color:var(--mu);margin-bottom:16px" data-i18n="modal.insert.desc">O cliente será inserido após as paradas já concluídas, na melhor posição possível.</p>
     <div class="fg2">
       <div class="fg full"><label data-i18n="form.nome">Nome</label><input type="text" id="si-nome" data-i18n-ph="form.nome.ph" placeholder="Nome do cliente"/></div>
-      <div class="fg full" style="display:flex;gap:8px"><div class="fg" style="flex:1"><label data-i18n="form.end">Logradouro</label><input type="text" id="si-end" placeholder="Rua, Av., Travessa..." oninput="onEndInput('si')" onblur="onEndBlur('si')"/></div><div style="flex:0 0 110px"><label style="font-size:12px;color:var(--mu)">N&#xFA;mero</label><input type="text" id="si-num" placeholder="123"/></div></div>
+      <div class="fg full" style="display:flex;gap:8px"><div class="fg" style="flex:1"><label data-i18n="form.end">Logradouro</label><input type="text" id="si-end" placeholder="Rua, Av., Travessa..." oninput="onEndInput('si')"/></div><div style="flex:0 0 110px"><label style="font-size:12px;color:var(--mu)">N&#xFA;mero</label><input type="text" id="si-num" placeholder="123"/></div></div>
       <div class="fg full" style="display:flex;gap:8px;margin-top:2px"><div style="flex:1"><label style="font-size:12px;color:var(--mu)">Complemento</label><input type="text" id="si-comp" placeholder="Apto, Bloco..."/></div><div style="flex:0 0 110px"><label data-i18n="form.cep">CEP</label><input type="text" id="si-cep" class="cep-input" placeholder="00000-000" maxlength="9" oninput="onCepInput('si')"/><div class="cep-status" id="si-cep-status"></div></div></div>
       <div class="fg"><label data-i18n="form.tel">Telefone</label><input type="text" id="si-tel" data-i18n-ph="form.tel.ph" placeholder="(11) 99999-9999"/></div>
       <div class="fg"><label data-i18n="form.tipo">Tipo</label><div id="si-tipo" class="tag-multi-wrap"></div></div>
@@ -1222,7 +1222,7 @@ html:not(.auth-pending) #auth-screen{display:none;}
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="app.js?v=5.8.59"></script>
+<script src="app.js?v=5.8.60"></script>
 <script>
 (function(){
   try{
