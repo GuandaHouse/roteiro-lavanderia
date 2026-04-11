@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.60';
+const APP_VERSION='v5.9.0';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -2398,8 +2398,9 @@ function _initApp(){
   // e o ViaCEP agora ADICIONA novos locais aos existentes sem precisar limpar.
   // v5.8.19: Corrigir endereços stale (choice salvo com endereco não atualizado pelo pickAddr antigo)
   setTimeout(()=>{_fixStaleAddrChoices();},800);
-  // v5.8.9: Auditoria de ambiguidade geográfica — compara coords armazenadas vs geocode neutro
-  setTimeout(()=>{_runStoredGeoAudit();},2500);
+  // v5.9.0: _runStoredGeoAudit desativado automaticamente — gerava até 90 chamadas Google/sessão.
+  // A detecção de ambiguidade continua disponível mas só dispara manualmente (menu de contexto).
+  // setTimeout(()=>{_runStoredGeoAudit();},2500);
   // v5.0.1: Auto-limpeza da rota ao virar o dia
   if(!_isMotoristaMode)_autoClearIfNewDay();
   const savedTab=localStorage.getItem('rota_active_tab');
@@ -3645,11 +3646,8 @@ function importTC(){
   toast(count+t('t.clients_imported'),'ok');
   g('trello-nav-bar').innerHTML=buildTrelloNavBar();
   g('trello-cards').innerHTML='<div class="ab ok"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> '+count+' cliente(s) importado(s)!</div>';
-  // v5.8.14: Auditoria pós-importação — detecta endereços ambíguos sem precisar de F5
-  // Delay de 700ms garante que todos os preGeocode (cache hits: sub-ms) já resolveram.
-  // Usa _runStoredGeoAudit() — o mesmo caminho provado que funciona após F5.
-  // Novos clientes têm IDs novos, logo não estão no cache de sessão e serão auditados.
-  setTimeout(()=>_runStoredGeoAudit(),700);
+  // v5.9.0: Auditoria pós-importação desativada (gerava spike de chamadas Google por importação).
+  // setTimeout(()=>_runStoredGeoAudit(),700);
 }
 
 // v5.2.0: OAuth do Trello — server-side key via Worker
@@ -5574,10 +5572,9 @@ function _preGeocodeAmbiguityCheck(client){
 }
 function preGeocode(client){
   if(!client||!client.endereco)return;
-  // v5.8.12: Cliente já tem coords → geocoding veio do cache. Verificar ambiguidade diretamente,
-  // pois o cache hit bypassa o fire-and-forget do nominatim() e o badge nunca aparecia.
+  // v5.9.0: Cliente já tem coords → cache hit, sem recalcular nem verificar ambiguidade.
+  // _preGeocodeAmbiguityCheck gerava 6+ calls Google por cliente em cada adição/reload.
   if(client.lat&&client.lng){
-    _preGeocodeAmbiguityCheck(client);
     return;
   }
   // Cliente sem coords → geocodificar (nominatim dispara a verificação de ambiguidade internamente)
@@ -5671,19 +5668,7 @@ function _extractGeoResult(result){
 async function nominatim(addr,client){
   // v5.8.38: BUG-01 — abandona endereços que falharam demais (evita loop)
   if(!_geoFailOk(addr)){return null;}
-  // v5.8.13: helper para disparar ambiguidade em background em qualquer cache hit
-  function _fireAmbigCheck(result){
-    if(!client||_addrChoiceGet(addr,client.nome))return;
-    const baseAddr=_extractBaseAddr(addr);if(!baseAddr)return;
-    const _cr=client,_res=result;
-    _checkGeoAmbiguity(_res.lat,_res.lng,_res.bairro,_res.cidade,baseAddr).then(ambig=>{
-      if(ambig&&Array.isArray(ambig)&&!_cr._addrPending){
-        _cr._addrPending=true;_cr._addrResults=ambig;
-        try{const k='rota_geo_audit_session';const s=new Set(JSON.parse(sessionStorage.getItem(k)||'[]'));s.add(String(_cr.id));sessionStorage.setItem(k,JSON.stringify([...s]));}catch(e){}
-        renderC();autoSaveRoute();
-      }
-    }).catch(()=>{});
-  }
+  // v5.9.0: _fireAmbigCheck removido — disparava _checkGeoAmbiguity (6+ calls Google) em todo cache hit.
   // v5.8.24: Memória explícita do usuário tem PRIORIDADE sobre qualquer cache
   const mem=_addrChoiceGet(addr,client?.nome);
   if(mem){
@@ -5693,9 +5678,9 @@ async function nominatim(addr,client){
     delete _geoCache[addr];
     _geoCache[addr]=mem;return mem;
   }
-  if(_geoCache[addr]){_fireAmbigCheck(_geoCache[addr]);return _geoCache[addr];}
+  if(_geoCache[addr]){return _geoCache[addr];}
   const cached=localStorage.getItem('geo_'+addr);
-  if(cached){const c=JSON.parse(cached);_geoCache[addr]=c;_fireAmbigCheck(c);return c;}
+  if(cached){const c=JSON.parse(cached);_geoCache[addr]=c;return c;}
   await _resolveGeoAnchor();
   // v5.8.46: GEOCODING MULTI-ESTRATÉGIA para endereços incompletos
   // Problema: "Ulisses Guimarães" (incompleto, deveria ser "Rua Doutor Ulisses Guimarães")
@@ -5743,20 +5728,9 @@ async function nominatim(addr,client){
   const _saveAndReturn=async(result)=>{
     _geoCache[addr]=result;try{localStorage.setItem('geo_'+addr,JSON.stringify(result));}catch(e){}
     _geoFailReset(addr);
+    // v5.9.0: _checkGeoAmbiguity removido do fluxo automático — gerava 6+ calls Google por endereço.
+    // A verificação de ambiguidade fica disponível via _retryGeocode ou ação manual.
     if(!_isNearAnchor(result.lat,result.lng))console.warn('[GEO] '+addr+' resolveu LONGE da âncora: '+result.display);
-    if(client&&!_addrChoiceGet(addr,client.nome)){
-      const baseAddr=_extractBaseAddr(addr);
-      if(baseAddr){
-        const _cr=client,_res=result;
-        _checkGeoAmbiguity(_res.lat,_res.lng,_res.bairro,_res.cidade,baseAddr).then(ambig=>{
-          if(ambig&&Array.isArray(ambig)&&!_cr._addrPending){
-            _cr._addrPending=true;_cr._addrResults=ambig;
-            try{const k='rota_geo_audit_session';const s=new Set(JSON.parse(sessionStorage.getItem(k)||'[]'));s.add(String(_cr.id));sessionStorage.setItem(k,JSON.stringify([...s]));}catch(e){}
-            renderC();autoSaveRoute();
-          }
-        }).catch(()=>{});
-      }
-    }
     return result;
   };
 
