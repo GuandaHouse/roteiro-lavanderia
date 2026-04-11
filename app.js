@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.51';
+const APP_VERSION='v5.8.52';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -834,7 +834,8 @@ function _fmtAddrFromGeo(geoResult,origAddr){
   let s=titleCase(geoResult.route);
   if(geoResult.streetNum)s+=', '+geoResult.streetNum;
   if(comp)s+=', '+comp;
-  if(geoResult.bairro)s+=' \u2014 '+titleCase(geoResult.bairro);
+  // v5.8.51: strip qualificadores "(zona Oeste)" do bairro antes de concatenar
+  if(geoResult.bairro){const _b=geoResult.bairro.replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s{2,}/g,' ').trim();if(_b)s+=' \u2014 '+titleCase(_b);}
   if(geoResult.cidade)s+=' \u2014 '+titleCase(geoResult.cidade);
   return s;
 }
@@ -4125,7 +4126,9 @@ function saveEditC(){
         if(r.route){c.endereco=_fmtAddrFromGeo(r,c.endereco);}
         else if(r.bairro||r.cidade){
           const base=(c.endereco.split('\u2014')[0]||c.endereco).trim();
-          let na=base;if(r.bairro)na+=' \u2014 '+titleCase(r.bairro);if(r.cidade)na+=' \u2014 '+titleCase(r.cidade);
+          // v5.8.51: strip qualificadores "(zona Oeste)" do bairro antes de concatenar
+          const _cleanBairro=r.bairro?r.bairro.replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s{2,}/g,' ').trim():'';
+          let na=base;if(_cleanBairro)na+=' \u2014 '+titleCase(_cleanBairro);if(r.cidade)na+=' \u2014 '+titleCase(r.cidade);
           if(na!==c.endereco)c.endereco=na;
         }
         autoSaveRoute();renderC();
