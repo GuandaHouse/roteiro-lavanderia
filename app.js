@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.3';
+const APP_VERSION='v5.9.4';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -5598,24 +5598,35 @@ async function nominatim(addr,client){
   }catch(e){console.warn('[GEO] Falha OSM:',addr,e);}
 
   // ── Tentativa 2: fallback por CEP (muito mais confiável no Brasil) ────────
-  // v5.9.2: CEP geocodifica melhor que nome de rua no OSM Nominatim.
-  // Fonte do CEP: client.cep → padrão no addr → ViaCEP por rua+cidade
-  let _fbCep=(client?.cep||'').replace(/\D/g,'');
-  if(!_fbCep){
-    const _cm=addr.match(/\b(\d{5})-?(\d{3})\b/);
-    if(_cm)_fbCep=_cm[1]+_cm[2];
-  }
-  // Se ainda sem CEP, tenta ViaCEP pelo nome da rua (gratuito, CORS liberado)
-  if(!_fbCep&&_geoAnchor?.state&&_geoAnchor?.city){
+  // v5.9.4: ViaCEP TEM PRIORIDADE sobre client.cep — o CEP salvo pode estar errado.
+  // ViaCEP usa a base oficial dos Correios: é a fonte mais confiável para ruas brasileiras.
+  // Ordem: ViaCEP por rua+cidade → CEP no addr → client.cep (último recurso)
+  let _fbCep='';
+  // 1º: ViaCEP pela rua (fonte autoritativa — Correios)
+  if(_geoAnchor?.state&&_geoAnchor?.city){
     try{
       const _rua=((_qAddr.split(',')[0]||'').replace(/^(rua|avenida|av\.|alameda|al\.|estrada|travessa|praça)\s+/i,'').trim()).slice(0,40);
       if(_rua.length>=5){
         const _vcUrl='https://viacep.com.br/ws/'+_geoAnchor.state+'/'+encodeURIComponent(_geoAnchor.city)+'/'+encodeURIComponent(_rua)+'/json/';
         const _vcR=await fetch(_vcUrl,{signal:AbortSignal.timeout(4000)});
-        if(_vcR.ok){const _vcD=await _vcR.json();if(Array.isArray(_vcD)&&_vcD.length&&!_vcD[0].erro){_fbCep=(_vcD[0].cep||'').replace(/\D/g,'');if(_fbCep&&client)client.cep=_fbCep.slice(0,5)+'-'+_fbCep.slice(5);}}
+        if(_vcR.ok){
+          const _vcD=await _vcR.json();
+          if(Array.isArray(_vcD)&&_vcD.length&&!_vcD[0].erro){
+            _fbCep=(_vcD[0].cep||'').replace(/\D/g,'');
+            // Corrige client.cep se ViaCEP retornou algo diferente (CEP salvo estava errado)
+            if(_fbCep&&client&&client.cep&&client.cep.replace(/\D/g,'')!==_fbCep){
+              console.log('[GEO-CEP] Corrigindo CEP: '+client.cep+' → '+_fbCep.slice(0,5)+'-'+_fbCep.slice(5));
+            }
+            if(_fbCep&&client)client.cep=_fbCep.slice(0,5)+'-'+_fbCep.slice(5);
+          }
+        }
       }
     }catch(e){}
   }
+  // 2º: CEP embutido no endereço digitado
+  if(!_fbCep){const _cm=addr.match(/\b(\d{5})-?(\d{3})\b/);if(_cm)_fbCep=_cm[1]+_cm[2];}
+  // 3º: client.cep salvo (último recurso — pode estar desatualizado)
+  if(!_fbCep)_fbCep=(client?.cep||'').replace(/\D/g,'');
   if(_fbCep&&_fbCep.length===8){
     const _cepFmt=_fbCep.slice(0,5)+'-'+_fbCep.slice(5);
     try{
