@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.6';
+const APP_VERSION='v5.9.7';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -2316,6 +2316,12 @@ function _initApp(){
   const savedTab=localStorage.getItem('rota_active_tab');
   if(savedTab&&savedTab!=='rota'&&!_isMotoristaMode){const tm={hist:1,dash:2,motor:3,cfg:4};const ti=tm[savedTab];const nt=document.querySelectorAll('.ntab');if(ti!==undefined&&nt[ti])goPage(savedTab,nt[ti]);}
   setTimeout(()=>{preloadDashData();},2000);
+  // v5.9.7: Re-geocodificar clientes que foram salvos sem coordenadas em sessões anteriores
+  // (acontece quando geocoding falhou no import por falta de âncora ou API indisponível)
+  setTimeout(()=>{
+    const _miss=clients.filter(c=>!c.lat&&!c.lng&&c.endereco);
+    if(_miss.length){console.log('[GEO-RETRY] '+_miss.length+' cliente(s) sem coords — retentando...');_miss.forEach(c=>{if(c.endereco){const _fk=c.endereco.slice(0,60);delete _geoFailCount[_fk];}preGeocode(c);});}
+  },3500);
   renderTagsConfig();updateTagSelects();
   // v5.8.48: inicializar _formTags[id] explicitamente — updateTagSelects apenas renderiza HTML
   // mas não seta _formTags[id], então addClient() via Enter ou clique encontrava [] no primeiro uso
@@ -5427,7 +5433,7 @@ function initGoogleMaps(){
 function initLeafMap(){}
 // v4.9.1: Invalidar cache de geocoding quando versão muda (corrige endereços cacheados errados)
 (function(){
-  const GEO_CACHE_VER='5.9.6';
+  const GEO_CACHE_VER='5.9.7';
   if(localStorage.getItem('_geoCacheVer')!==GEO_CACHE_VER){
     let cleared=0;
     for(let i=localStorage.length-1;i>=0;i--){
@@ -5526,6 +5532,30 @@ async function _resolveGeoAnchor(){
       return _geoAnchor;
     }
   }catch(e){console.warn('[GEO-ANCHOR] Falha:',e);}
+  // v5.9.7: Bootstrap âncora a partir do histórico de geocoding (rota_addr_choices / rota_geo_locs)
+  // Necessário quando o endereço da empresa não existe no OSM (e Google está desativado).
+  // Qualquer endereço já geocodificado com sucesso revela o estado/cidade da empresa.
+  try{
+    const _ch=JSON.parse(localStorage.getItem('rota_addr_choices')||'{}');
+    for(const v of Object.values(_ch)){
+      if(!v.lat||!v.lng)continue;
+      const _disp=v.display||v.rawAddr||'';
+      const _stM=_disp.match(/ - ([A-Z]{2}), \d{5}/);
+      if(_stM){_geoAnchor={lat:v.lat,lng:v.lng,state:_stM[1],city:v.cidade||''};
+        try{localStorage.setItem('rota_geo_anchor_v2',JSON.stringify({..._geoAnchor,_base:base,_ts:Date.now()}));}catch(e){}
+        console.log('[GEO-ANCHOR] Bootstrap de choices: '+_geoAnchor.city+', '+_geoAnchor.state);return _geoAnchor;}
+    }
+    const _gl=JSON.parse(localStorage.getItem('rota_geo_locs')||'{}');
+    for(const arr of Object.values(_gl)){
+      if(!Array.isArray(arr)||!arr[0]||arr[0]._empty)continue;
+      const loc=arr[0];if(!loc.lat||!loc.lng)continue;
+      const _disp=loc.display||'';
+      const _stM=_disp.match(/ - ([A-Z]{2}), \d{5}/);
+      if(_stM){_geoAnchor={lat:loc.lat,lng:loc.lng,state:_stM[1],city:loc.cidade||''};
+        try{localStorage.setItem('rota_geo_anchor_v2',JSON.stringify({..._geoAnchor,_base:base,_ts:Date.now()}));}catch(e){}
+        console.log('[GEO-ANCHOR] Bootstrap de locs: '+_geoAnchor.city+', '+_geoAnchor.state);return _geoAnchor;}
+    }
+  }catch(e){}
   return null;
 }
 function _isNearAnchor(lat,lng){
