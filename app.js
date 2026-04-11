@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.8.55';
+const APP_VERSION='v5.8.56';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -1152,12 +1152,11 @@ function onEndInput(prefix){
   // Geocoding agora só dispara no blur (onEndBlur) — veja abaixo
 }
 // v5.8.52: Geocoding só dispara quando o usuário SAI do campo (blur)
-// Isso evita que o sistema insira texto enquanto o usuário ainda está digitando
+// v5.8.56: todos os prefixos usam geocodeCepForPrefix (CEP + bairro/cidade)
 function onEndBlur(prefix){
   const el=document.getElementById(prefix+'-end');if(!el)return;
   const val=el.value.trim();if(val.length<8)return;
-  if(prefix==='f'){schedGeo();}
-  else{geocodeCepForPrefix(prefix);}
+  geocodeCepForPrefix(prefix);
 }
 // v4.4.0: Geocode address to extract CEP for edit modal and smart insert
 const _geoCepLastAddr={}; // v5.8.32: evita re-geocodificar mesmo endereço
@@ -4096,12 +4095,14 @@ function editC(id){
   toggleEmValTipo();
   toggleEmJanela();
   g('edit-modal').classList.add('on');
-  // v5.8.31: Auto-fill CEP — tenta extrair de c.obs (IA às vezes coloca lá), depois geocoda
-  // v5.8.32: delay 3s para não disparar em aberturas rápidas do modal
-  if(!c.cep){
-    const obsMatch=(c.obs||'').match(/\b(\d{5})-?(\d{3})\b/);
-    if(obsMatch){g('em-cep').value=fmtCep(obsMatch[1]+obsMatch[2]);}
-    else if(c.endereco&&c.endereco.length>=8){setTimeout(()=>geocodeCepForPrefix('em'),3000);}
+  // v5.8.31: Auto-fill CEP de obs se disponível
+  const obsMatch=(c.obs||'').match(/\b(\d{5})-?(\d{3})\b/);
+  if(!c.cep&&obsMatch){g('em-cep').value=fmtCep(obsMatch[1]+obsMatch[2]);}
+  // v5.8.56: auto-geocode se endereço incompleto (sem bairro/cidade) OU sem CEP
+  // Não gateado apenas por !c.cep — clientes com CEP mas sem bairro também precisam do auto-complete
+  const _emHasSuffix=(c.endereco||'').includes('\u2014');
+  if((!c.cep||!_emHasSuffix)&&c.endereco&&c.endereco.length>=8){
+    setTimeout(()=>geocodeCepForPrefix('em'),2500);
   }
 }
 function saveEditC(){
@@ -4146,22 +4147,22 @@ function saveEditC(){
   if(c.janela==='custom'&&c.hi&&c.hf&&c.hi>=c.hf){toast(t('err.time_order'),'err');return;}
   closeModal('edit-modal');
   renderC();updStats();renderMotor();updateMapSidebar(); // v5.8.27: atualizar sidebar do mapa expandido
-  if(addrChanged){
-    // v5.8.25: reagendar geocodificação em background + recalcular rota quando tiver resultado
-    toast(t('msg.client_updated')+' — reagendando endereço...','ok');
+  // v5.8.56: re-geocodificar se endereço mudou OU se está sem bairro/cidade
+  const _needsGeo=addrChanged||(!c.endereco.includes('\u2014')&&c.endereco.length>=8);
+  if(_needsGeo){
+    toast(t('msg.client_updated')+' — atualizando endereço...','ok');
+    if(addrChanged){localStorage.removeItem('geo_'+c.endereco);delete _geoCache[c.endereco];}
     nominatim(c.endereco,c).then(r=>{
       if(r){
         c.lat=r.lat;c.lng=r.lng;if(r.cidade)c._cidade=r.cidade;
         if(r.route){c.endereco=_fmtAddrFromGeo(r,c.endereco);}
         else if(r.bairro||r.cidade){
           const base=(c.endereco.split('\u2014')[0]||c.endereco).trim();
-          // v5.8.51: strip qualificadores "(zona Oeste)" do bairro antes de concatenar
           const _cleanBairro=r.bairro?r.bairro.replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s{2,}/g,' ').trim():'';
           let na=base;if(_cleanBairro)na+=' \u2014 '+titleCase(_cleanBairro);if(r.cidade)na+=' \u2014 '+titleCase(r.cidade);
           if(na!==c.endereco)c.endereco=na;
         }
         autoSaveRoute();renderC();
-        // Se já temos rota gerada, recalcular com novo endereço
         if(_routeTotalMin>0&&gMap){recalcRouteFromOrder();}
       }
     }).catch(()=>{});
