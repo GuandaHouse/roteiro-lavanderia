@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.15';
+const APP_VERSION='v5.9.16';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -4511,7 +4511,8 @@ async function _rebuildCachedMatrix(){
 // Etapa 1: Construir matriz de tempos reais (OSRM → Google → Haversine)
 /* v4.7.6: Cache de time matrix em sessionStorage */
 function _matrixCacheKey(allCoords){
-  return 'tmx_'+allCoords.map(c=>c.lat.toFixed(5)+','+c.lng.toFixed(5)).join('|');
+  // v5.9.16: prefixo 'gdm_' — invalida caches OSRM antigos
+  return 'gdm_tmx_v1_'+allCoords.map(c=>c.lat.toFixed(5)+','+c.lng.toFixed(5)).join('|');
 }
 // v4.8.5: Polyfill Promise.any para browsers antigos (Safari <14, Chrome <85)
 if(!Promise.any){Promise.any=function(promises){return new Promise((resolve,reject)=>{let errors=[];let remaining=promises.length;if(!remaining)return reject(new AggregateError([],'All promises were rejected'));promises.forEach((p,i)=>{Promise.resolve(p).then(resolve).catch(e=>{errors[i]=e;if(--remaining===0)reject(new AggregateError(errors,'All promises were rejected'));});});});};}
@@ -4529,7 +4530,7 @@ async function buildTimeMatrix(allCoords){
     if(cached){
       const data=JSON.parse(cached);
       if(data.durations&&data.distances){
-        console.log('[MATRIX] Cache hit — '+N+'x'+N+' ('+Math.round(performance.now()-_mt0)+'ms)');
+        console.log('[MATRIX] Cache hit ('+data.source+') — '+N+'x'+N+' ('+Math.round(performance.now()-_mt0)+'ms)');
         return data;
       }
     }
@@ -4546,8 +4547,52 @@ async function buildTimeMatrix(allCoords){
   }
   const haversineResult={durations:hvDurs,distances:hvDists,source:'haversine'};
   console.log('[MATRIX] Haversine pronto em '+Math.round(performance.now()-_mt0)+'ms — '+N+'x'+N);
-  // v4.8.5: Tentar OSRM e Worker em CORRIDA PARALELA com 3s timeout
-  // Se algum responder a tempo, usa (mais preciso). Se não, haversine já está pronto.
+  // v5.9.16: Google Distance Matrix PRIMEIRO — usa o mesmo motor do Directions API
+  // Garante que BF otimize pelo mesmo critério que o mapa final (sem discrepância OSRM vs Google)
+  if(typeof google?.maps?.DistanceMatrixService!=='undefined'){
+    try{
+      const _gdm0=performance.now();
+      const _svc=new google.maps.DistanceMatrixService();
+      const _latLngs=allCoords.map(c=>new google.maps.LatLng(c.lat,c.lng));
+      const _gdmResult=await new Promise((resolve,reject)=>{
+        const _tid=setTimeout(()=>reject(new Error('Google DM timeout 8s')),8000);
+        _svc.getDistanceMatrix({
+          origins:_latLngs,
+          destinations:_latLngs,
+          travelMode:google.maps.TravelMode.DRIVING,
+          region:'BR',
+          unitSystem:google.maps.UnitSystem.METRIC
+        },(result,status)=>{
+          clearTimeout(_tid);
+          if(status==='OK')resolve(result);
+          else reject(new Error('Google DM status: '+status));
+        });
+      });
+      // Montar matrizes durations (seg) e distances (metros)
+      const gdmDurs=[],gdmDists=[];
+      for(let i=0;i<N;i++){
+        gdmDurs[i]=[];gdmDists[i]=[];
+        for(let j=0;j<N;j++){
+          if(i===j){gdmDurs[i][j]=0;gdmDists[i][j]=0;continue;}
+          const el=_gdmResult.rows[i].elements[j];
+          if(el&&el.status==='OK'){
+            gdmDurs[i][j]=el.duration.value;   // segundos
+            gdmDists[i][j]=el.distance.value;  // metros
+          }else{
+            gdmDurs[i][j]=hvDurs[i][j];
+            gdmDists[i][j]=hvDists[i][j];
+          }
+        }
+      }
+      const gdmMatrix={durations:gdmDurs,distances:gdmDists,source:'google-dm'};
+      console.log('[MATRIX] Google DM OK — '+N+'x'+N+' ('+Math.round(performance.now()-_gdm0)+'ms)');
+      try{sessionStorage.setItem(cacheKey,JSON.stringify(gdmMatrix));}catch(e){}
+      return gdmMatrix;
+    }catch(e){
+      console.warn('[MATRIX] Google DM falhou:',e.message,'— tentando OSRM/Worker');
+    }
+  }
+  // Fallback: OSRM e Worker em CORRIDA PARALELA com 3s timeout
   const coordStr=allCoords.map(c=>c.lng+','+c.lat).join(';');
   const racers=[];
   if(_osrmFailCount<_FAIL_THRESHOLD){
@@ -4559,7 +4604,7 @@ async function buildTimeMatrix(allCoords){
         if(!resp.ok)throw new Error('HTTP '+resp.status);
         const data=await resp.json();
         if(data.code==='Ok'&&data.durations&&data.distances){
-          _osrmFailCount=0; // Reset no sucesso
+          _osrmFailCount=0;
           return {durations:data.durations,distances:data.distances,source:'osrm'};
         }
         throw new Error('OSRM code: '+(data.code||'unknown'));
@@ -4582,7 +4627,6 @@ async function buildTimeMatrix(allCoords){
       }catch(e){clearTimeout(tid);_workerFailCount++;console.warn('[MATRIX] Worker falhou ('+_workerFailCount+'/'+_FAIL_THRESHOLD+'):',e.message);throw e;}
     })());
   } else {console.log('[MATRIX] Worker skip — '+_workerFailCount+' falhas consecutivas');}
-  // Se tem racers, tentar Promise.any (primeiro que resolver ganha)
   if(racers.length>0){
     try{
       const result=await Promise.any(racers);
@@ -4590,11 +4634,9 @@ async function buildTimeMatrix(allCoords){
       try{sessionStorage.setItem(cacheKey,JSON.stringify(result));}catch(e){}
       return result;
     }catch(e){
-      // Todos falharam — usar haversine (já calculado)
-      console.log('[MATRIX] OSRM+Worker falharam — usando haversine ('+Math.round(performance.now()-_mt0)+'ms total desperdiçado em rede)');
+      console.log('[MATRIX] OSRM+Worker falharam — usando haversine');
     }
   }
-  // Fallback: haversine já pronto
   console.log('[MATRIX] Final: haversine × 1.4 — '+N+'x'+N+' ('+Math.round(performance.now()-_mt0)+'ms)');
   return haversineResult;
 }
