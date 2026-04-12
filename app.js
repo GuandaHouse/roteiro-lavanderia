@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.17';
+const APP_VERSION='v5.9.18';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -4718,6 +4718,42 @@ function _evalOrder(order,matrix,alpha,gcIdx){
   return {cost,totalTravel,totalDist,violations,violTime,lastArrival:cur,arrivals};
 }
 
+// v5.9.18: Pós-processamento — move clientes com deadline violado para a posição mais tarde possível
+// onde ainda chegam dentro da janela horária. Chamado após TSP do Google para corrigir janelas.
+function _fixWindowViolationsOrder(ord,matrix,gcIdx){
+  if(!matrix||!gcIdx||!ord||ord.length<2)return ord;
+  let fixed=ord.slice();
+  const maxIter=ord.length*3; // segurança anti-loop infinito
+  for(let iter=0;iter<maxIter;iter++){
+    const ev=_evalOrder(fixed,matrix,0,gcIdx);
+    if(ev.violations===0)break;
+    // Encontrar clientes violando deadline, ordena pelo prazo mais apertado
+    const violated=ev.arrivals.filter(a=>{
+      const dl=_evalCache.deadlines[a.idx];
+      return a.arrival>dl&&dl<23*3600;
+    }).sort((a,b)=>_evalCache.deadlines[a.idx]-_evalCache.deadlines[b.idx]);
+    if(!violated.length)break;
+    const viol=violated[0];
+    const curPos=fixed.indexOf(viol.idx);
+    if(curPos<=0)break; // já na primeira posição
+    let moved=false;
+    // Iterar da posição imediatamente anterior até o início
+    // Pega a posição mais próxima do original (menos disruptiva) que resolve a violação
+    for(let tryPos=curPos-1;tryPos>=0;tryPos--){
+      const test=[...fixed.slice(0,tryPos),viol.idx,...fixed.slice(tryPos,curPos),...fixed.slice(curPos+1)];
+      const testEv=_evalOrder(test,matrix,0,gcIdx);
+      const testA=testEv.arrivals.find(x=>x.idx===viol.idx);
+      if(testA&&testA.arrival<=_evalCache.deadlines[viol.idx]){
+        fixed=test;moved=true;
+        console.log('[FIX-WIN] '+clients[viol.idx].nome+' movido de pos '+(curPos+1)+'\u2192'+(tryPos+1));
+        break;
+      }
+    }
+    if(!moved)break; // não há posição válida — não é possível satisfazer a janela
+  }
+  return fixed;
+}
+
 // Etapa 3: Heurística — Nearest Neighbor com prioridade de deadline
 function _nnDeadline(matrix,gcIdx){
   const N=clients.length;
@@ -6179,6 +6215,13 @@ async function calcRoute(){
         orderedGeo=_wpOrd.map(i=>orderedGeo[i]); // alinhar com legs do Directions
         order=_gOrder.concat(noCoords2);
         console.log('[CALC-ROUTE] Google TSP waypoint_order aplicado: '+_gOrder.map(i=>clients[i].nome.split(' ')[1]||clients[i].nome.slice(0,6)).join('→'));
+        // v5.9.18: Corrigir janelas horárias após TSP
+        const _fixedGOrder=_fixWindowViolationsOrder(_gOrder,optV2.matrix,optV2.gcIdx);
+        if(_fixedGOrder.join(',')!==_gOrder.join(',')){
+          orderedGeo=_fixedGOrder.map(i=>clients[i]);
+          order=_fixedGOrder.concat(noCoords2);
+          console.log('[CALC-ROUTE] Janelas corrigidas: '+_fixedGOrder.map(i=>clients[i].nome.split(' ')[1]||clients[i].nome.slice(0,6)).join('\u2192'));
+        }
       }
     }catch(dirErr){
       console.warn('[ROTA] Google Directions falhou:',dirErr.message,'→ usando estimativas da matriz');
