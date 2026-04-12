@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.22';
+const APP_VERSION='v5.9.23';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -6052,8 +6052,7 @@ function clientDeadlineMin(c){
   return 24*60; // sem restrição
 }
 
-// v5.9.22: Progresso visual no botão "Gerar rota"
-const _RP_ICON='<span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg></span> ';
+/// v5.9.23: Progresso visual no bloco "Calculando rota..." (#rp)
 const _RP_STEPS=[
   {pct:4,  label:'Preparando rota\u2026'},
   {pct:18, label:'Localizando endere\xE7os\u2026'},
@@ -6064,21 +6063,17 @@ const _RP_STEPS=[
   {pct:97, label:'Finalizando\u2026'},
 ];
 function _routeProgress(stepIdx){
-  const btn=g('route-btn');if(!btn)return;
+  const fill=g('rp-fill'),lbl=g('rp-lbl');if(!fill||!lbl)return;
   const s=_RP_STEPS[Math.min(stepIdx,_RP_STEPS.length-1)];
-  btn.classList.add('rp-progressing');
-  btn.style.setProperty('--rp-pct',s.pct+'%');
-  btn.innerHTML='<span class="rp-step">'+s.label+'</span>';
+  fill.style.width=s.pct+'%';
+  lbl.textContent=s.label;
 }
 function _routeProgressDone(){
-  const btn=g('route-btn');if(!btn)return;
-  // Completa rapidamente até 100% e depois restaura
-  btn.style.setProperty('--rp-pct','100%');
-  setTimeout(()=>{
-    btn.classList.remove('rp-progressing');
-    btn.style.removeProperty('--rp-pct');
-    btn.innerHTML=_RP_ICON+'<span data-i18n="btn.generate">Gerar rota</span>';
-  },420);
+  const fill=g('rp-fill'),lbl=g('rp-lbl');if(!fill||!lbl)return;
+  fill.style.width='100%';
+  lbl.textContent='Conclu\xEDdo';
+  // Reset suave — #rp some logo depois (finally do calcRoute)
+  setTimeout(()=>{fill.style.width='4%';lbl.textContent='Preparando rota\u2026';},500);
 }
 // v4.8.5: Wrapper de timing para capturar dead time percebido
 let _calcRouteClickTime=0;
