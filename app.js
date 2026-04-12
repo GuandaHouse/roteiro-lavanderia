@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.32';
+const APP_VERSION='v5.9.33';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -6000,6 +6000,31 @@ async function nominatim(addr,client){
         _geoFailReset(addr);
         console.log('[GEO-VC] '+addr+' → '+result.lat+','+result.lng+' via ViaCEP+OSM');
         return result;
+      }
+      // v5.9.33: OSM não achou com bairro ViaCEP — tenta sem bairro.
+      // Motivo: nomes de bairro do ViaCEP (ex: "Alphaville Empresarial", "Vila Madalena")
+      // frequentemente NÃO existem no índice do OSM Nominatim, causando ZERO_RESULTS.
+      // A mesma rua + cidade (sem bairro) é encontrada normalmente.
+      if(_bairroQ&&(_cityQ||_ufQ)){
+        const _vcQNoBairro=[_street,_num,_cityQ,_ufQ,'Brasil'].filter(Boolean).join(', ');
+        try{
+          const _c3=new AbortController();const _t3=setTimeout(()=>_c3.abort(),8000);
+          const d3=await _geocodeProxy('address='+encodeURIComponent(_vcQNoBairro)+'&region=br',_c3.signal);
+          clearTimeout(_t3);
+          if(d3&&d3.status==='OK'&&d3.results?.length){
+            const result3=_extractGeoResult(d3.results[0]);
+            if(_vcBairro)result3.bairro=_vcBairro;
+            if(_vcCity)result3.cidade=_vcCity;
+            if(_fbCep)result3.cep=_fbCep.slice(0,5)+'-'+_fbCep.slice(5);
+            if(_vcLogr)result3.route=_vcLogr;
+            if(_num)result3.streetNum=_num;
+            _geoCache[addr]=result3;
+            try{localStorage.setItem('geo3_'+addr,JSON.stringify(result3));}catch(e){}
+            _geoFailReset(addr);
+            console.log('[GEO-VC2] '+addr+' → '+result3.lat+','+result3.lng+' (sem bairro)');
+            return result3;
+          }
+        }catch(e){console.warn('[GEO-VC2] Falha:',e);}
       }
     }catch(e){console.warn('[GEO-VC] Falha query canônica:',e);}
   }
