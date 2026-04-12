@@ -2,6 +2,24 @@
 
 > Documento vivo com todas as decisoes tecnicas, features e historico do projeto.
 > Atualizado a cada entrega.
+> Última atualização: 12/04/2026 — v5.9.8
+
+---
+
+## Regras de Atendimento — OBRIGATÓRIAS
+
+1. **Versão SEMPRE incrementa** — toda atualização, mesmo 1 linha, muda o número da versão. Philip confirma visualmente que está no arquivo novo e não no antigo por cache.
+
+2. **Sem looping de correção** — se uma correção falhar na 2ª tentativa, PARAR. Pensar diferente, pesquisar, buscar abordagem alternativa. Nunca repetir a mesma lógica esperando resultado diferente.
+
+3. **Pensar em escala Brasil** — nunca presumir que o usuário está em São Paulo. Toda funcionalidade deve ser genérica e adaptável a qualquer cidade/estado.
+
+4. **NUNCA implementar sem autorização explícita** — quando Philip diz "vai anotando", o assistente só anota e pergunta a próxima. ZERO código escrito. Só implementa quando Philip disser "pode começar" ou equivalente explícito. Implementar antes disso é quebra de confiança e não será tolerado.
+
+5. **Fluxo de coleta de correções:**
+   - Philip passa correção → assistente anota, confirma o entendimento e pergunta "qual a próxima?"
+   - Após todas as correções coletadas → assistente aguarda "pode começar"
+   - Só então implementa tudo de uma vez
 
 ---
 
@@ -18,7 +36,7 @@
 ## Arquitetura
 
 ### Frontend (index.html — SPA monolitico)
-- ~8000+ linhas em arquivo unico
+- index.html + style.css + app.js (~6200 linhas em app.js; v5.9.8)
 - Design system M1 com CSS variables (light/dark mode)
 - i18n completo (PT/EN) via data-i18n attributes
 - Google Maps API para visualizacao de rotas
@@ -115,6 +133,58 @@
 ---
 
 ## Historico de Versoes
+
+### v5.9.8 — 12/04/2026
+- FIX: Campos "Cidade" e "Estado (UF)" removidos das Configurações
+  - Sistema extrai cidade/estado automaticamente via geocoding do endereço de partida
+  - `_resolveGeoAnchor()` simplificado: remove `cidadeExplicita/ufExplicita`, usa só geocoding
+  - `loadCfg()` limpa valores antigos (`cfg.cidade`, `cfg.uf`) do localStorage ao carregar
+  - Placeholder dos campos de endereço atualizado para sugerir incluir cidade/estado
+
+### v5.9.7 — 12/04/2026
+- FIX: Bug "SEM LOCALIZAÇÃO" — clientes importados do Trello ficavam sem coordenadas
+  - **Causa raiz**: mismatch de chaves no cache `rota_geo_locs` (chave longa vs chave curta)
+  - `nominatim()` agora usa `_extractBaseAddr(addr)` antes de buscar em `rota_geo_locs`
+  - `_resolveGeoAnchor()` bootstrap: quando endereço da empresa falha no OSM, extrai estado
+    do histórico em `rota_addr_choices` / `rota_geo_locs` via regex `/ - ([A-Z]{2}), \d{5}/`
+  - Auto-retry na inicialização: 3.5s após load, geocodifica todos os clientes sem coordenadas
+  - Cache KV: `geo_v2_` → `geo_v3_` para invalidar entradas pré-ViaCEP com dados errados
+  - `GEO_CACHE_VER` bumped para 5.9.7 (limpa cache local antigo)
+  - Cache local: `geo_` → `geo3_` prefix (consistência com cache version)
+
+### v5.9.6 — 12/04/2026
+- FIX: Worker — ViaCEP rescue para OSM ZERO_RESULTS
+  - Quando OSM retorna 0 resultados, extrai estado do endereço, consulta ViaCEP, constrói query canônica e retenta no OSM
+  - Fix `_osmToGoogle()`: `estado.slice(0,2)` → `estado.replace(/[^A-Za-z]/g,'').slice(0,2).toUpperCase()` (correção de "SÃ" para "SP")
+  - Cache KV: não serve entradas com `status !== 'OK'` (ZERO_RESULTS/REQUEST_DENIED ignorados)
+  - Adicionado `STATE_CAPITALS` map para fallback de cidade por estado
+
+### v5.9.5 — 11/04/2026
+- FEAT: Google Geocoding API desativada permanentemente (custo R$60/dia — 3.219 chamadas indevidas)
+  - Google Geocoding removido como fallback do Worker (só OSM Nominatim + ViaCEP)
+  - Permissão "Geocoding API" revogada no Google Cloud Console
+  - Stack atual: OSM Nominatim → KV cache → ViaCEP rescue (sem Google)
+
+### v5.8.5 — 09/04/2026
+- FIX: Normalizacao de endereco — formato padrao "Logradouro, No, Complemento — Bairro — Municipio"; sem duplicar separadores
+
+### v5.8.4 — 09/04/2026
+- FIX: _resolveTagId() corrige filtros hardcoded coleta/entrega para usar IDs customizados (tag_XXXX)
+
+### v5.8.3 — 09/04/2026
+- FIX: Plural dinamico nos resumos (7 Coletas / 1 Coleta)
+- FIX: RETIRADAS/ENTREGAS volta a somar quantidade de itens (em vez de count de clientes)
+
+### v5.8.2 — 09/04/2026
+- FIX: updStats mostra contagem de clientes (col/ent.length) em vez de soma de qtd zerada
+- FIX: Label "itens" renomeado para "paradas" nos resumos
+
+### v5.8.1 — 09/04/2026
+- FIX: Worker compara timestamps antes de aceitar tags/cfg — protege contra sobrescrita por versao mais antiga de outro dispositivo
+- FIX: Tags e cfg nunca sobrescritos em sync de dispositivo desatualizado
+
+### v5.8.0 — 09/04/2026
+- FIX: Race condition no sync desktop/mobile — protege cfg, tags e rota contra sobrescrita dentro de 5s apos edicao local
 
 ### v5.5.4 — 05/04/2026
 - FIX: botao "Salvar configuracoes" agora fixo no rodape no mobile (position:fixed!important forçado na media query)
@@ -334,3 +404,7 @@
 6. **Motor client-side** — VRPTW + SA roda no browser, sem custo de servidor
 7. **Trello key server-side** — seguranca, usuario nao precisa configurar nada
 8. **Bottom nav mobile** — abas fixas no rodape (<=768px), desktop inline no topo; zero JS adicional, puro CSS
+9. **Google Geocoding desativada** — custou R$60 em 1 dia (3.219 chamadas). Stack atual: OSM Nominatim (gratuito) + ViaCEP (gratuito) via Worker. Google Geocoding API revogada no Google Cloud Console. Não reverter.
+10. **Cidade/UF extraídos do endereço de partida** — campos manuais removidos das Configurações (v5.9.8). `_resolveGeoAnchor()` extrai cidade e estado automaticamente via geocoding. Se o endereço base falhar no OSM, faz bootstrap do estado a partir de qualquer endereço já geocodificado no histórico (`rota_addr_choices` / `rota_geo_locs`).
+11. **Cache de geocoding em 3 camadas** — (1) localStorage `geo3_` prefix, (2) KV `geo_v3_` no Worker com TTL 90 dias, (3) `rota_geo_locs` com chave curta (rua+número via `_extractBaseAddr`). Resultados ruins (ZERO_RESULTS/REQUEST_DENIED) nunca são cacheados.
+12. **Fluxo de teste obrigatório** — quando um bug é difícil de corrigir, o assistente usa Claude em Chrome para testar visualmente como um usuário real. Nunca reportar "corrigido" sem ter visto com os próprios olhos na interface.
