@@ -2,7 +2,7 @@
 
 > Documento vivo com todas as decisoes tecnicas, features e historico do projeto.
 > Atualizado a cada entrega.
-> Última atualização: 12/04/2026 — v5.9.8
+> Última atualização: 12/04/2026 — v5.9.19
 
 ---
 
@@ -133,6 +133,47 @@
 ---
 
 ## Historico de Versoes
+
+### v5.9.17–5.9.19 — 12/04/2026 — MOTOR DE OTIMIZAÇÃO REESCRITO
+**Contexto**: Sistema não conseguia reproduzir a rota otimizada manualmente por Philip (111km, 3h55min, 0 violações, ordem: Elis→Pim→JFFB→V.C→Rosana→Giorge→Zica→Ana). Após múltiplas tentativas ajustando parâmetros do OSRM, foi identificado o problema raiz.
+
+**Problema raiz**: OSRM e Google Maps divergem completamente em distâncias para São Paulo.
+- OSRM dizia rota A = 78.9km → Google dizia = 131.5km (pior rota)
+- OSRM dizia rota B = 135.6km → Google dizia = 111.0km (melhor rota)
+- Os rankings estavam 100% invertidos. Ajustar parâmetros do OSRM era inútil — o dado era fundamentalmente errado para SP.
+- Causa provável: OSRM usa dados OSM desatualizados para vias expressas de SP, subestimando trechos urbanos complexos.
+
+**Solução implementada em 3 camadas:**
+
+**Camada 1 — Google TSP (v5.9.17)**
+Substituído o uso de OSRM+BF para ordenação por `DirectionsService` com `optimizeWaypoints: true`. O Google resolve o problema do caixeiro-viajante usando dados reais de tráfego, vias e conhecimento local. Os waypoints são passados SEM ordenação prévia; o Google devolve `waypoint_order` com a ordem ótima.
+
+**Camada 2 — Correção de Janelas Horárias (v5.9.18)**
+Google TSP otimiza por distância/tempo mas ignora time windows. Criada função `_fixWindowViolationsOrder(ord, matrix, gcIdx)`:
+- Avalia a ordem do Google via `_evalOrder` (com osrmK=1.15 para ser conservador)
+- Para cada cliente que chega após o deadline, testa movê-lo para posições anteriores (da mais próxima à mais distante da posição atual)
+- Usa a posição mais tarde que ainda resolve a violação (mínima disrupção)
+- Itera até 0 violações ou até não conseguir mais melhorar
+- No caso real: V.C (deadline 14h) estava na posição 5 → movida para posição 4, chegando às 13:48 ✓
+
+**Camada 3 — Re-request Directions (v5.9.19)**
+Quando `_fixWindowViolationsOrder` muda a ordem, as `legs` do Directions original ficam desalinhadas (legs[3] correspondia a Rosana, não a V.C). Fix: nova chamada `DirectionsService` com `optimizeWaypoints: false` e a ordem corrigida pré-definida. Isso garante:
+- ETAs exibidas calculadas sobre o trajeto real
+- Polyline no mapa desenhando a rota correta
+- Distância total refletindo a rota efetiva
+
+**Resultado**: Sistema reproduz exatamente a rota manual de Philip — 111km, 0 violações, V.C às 13:48.
+
+**Funções-chave no app.js:**
+- `_fixWindowViolationsOrder(ord, matrix, gcIdx)` — pós-processamento de janelas (linha ~4721)
+- `calcRoute()` — chamada Google TSP + window fix + re-request (linha ~6148)
+- `_evalOrder(order, matrix, alpha, gcIdx)` — avaliação de custo com osrmK=1.15 para OSRM
+- `estimateTimesOSRM(legs)` — cálculo de ETAs a partir de legs do Google
+
+**Lição aprendida para o futuro:**
+Se o motor de otimização voltar a dar ordens erradas, NÃO ajustar parâmetros (osrmK, alpha, etc.) — questionar primeiro se a fonte de dados de distâncias está correta. Testar: pegar a rota "ótima" do sistema e comparar com a rota manual no Google Maps. Se o Google discorda da fonte (OSRM/haversine), trocar a fonte, não os parâmetros.
+
+Se precisar trocar por API gratuita no futuro: OSRM pode ser mantido para a matriz de distâncias (buildTimeMatrix) mas NUNCA para decidir a ordem final. A ordem deve sempre ser validada pelo Google Directions ou por outra fonte confiável de roteamento urbano.
 
 ### v5.9.8 — 12/04/2026
 - FIX: Campos "Cidade" e "Estado (UF)" removidos das Configurações
@@ -408,3 +449,5 @@
 10. **Cidade/UF extraídos do endereço de partida** — campos manuais removidos das Configurações (v5.9.8). `_resolveGeoAnchor()` extrai cidade e estado automaticamente via geocoding. Se o endereço base falhar no OSM, faz bootstrap do estado a partir de qualquer endereço já geocodificado no histórico (`rota_addr_choices` / `rota_geo_locs`).
 11. **Cache de geocoding em 3 camadas** — (1) localStorage `geo3_` prefix, (2) KV `geo_v3_` no Worker com TTL 90 dias, (3) `rota_geo_locs` com chave curta (rua+número via `_extractBaseAddr`). Resultados ruins (ZERO_RESULTS/REQUEST_DENIED) nunca são cacheados.
 12. **Fluxo de teste obrigatório** — quando um bug é difícil de corrigir, o assistente usa Claude em Chrome para testar visualmente como um usuário real. Nunca reportar "corrigido" sem ter visto com os próprios olhos na interface.
+13. **Motor de otimização: Google TSP é soberano** — a ordem final de paradas é sempre determinada pelo Google Directions (`optimizeWaypoints:true`), não por OSRM. OSRM pode ser usado na matriz de distâncias (buildTimeMatrix) para heurísticas internas, mas o rankeamento final de rotas deve ser validado pelo Google. OSRM diverge sistematicamente do Google para roteamento urbano em SP (rankings 100% invertidos documentados em 12/04/2026). Se a ordem parecer errada, comparar diretamente com Google Maps antes de ajustar qualquer parâmetro interno.
+14. **Correção de janelas horárias é pós-processamento** — `_fixWindowViolationsOrder` roda APÓS o Google TSP resolver a ordem base. Nunca tentar incorporar time windows no TSP do Google (ele ignora). A função move clientes com deadline violado para a posição mais tarde possível que ainda respeita o horário, minimizando disrupção na rota. Após a correção, sempre re-rodar Directions com a nova ordem para obter legs e ETAs precisas.
