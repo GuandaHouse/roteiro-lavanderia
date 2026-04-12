@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.11';
+const APP_VERSION='v5.9.12';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -4711,6 +4711,38 @@ function _nnDeadline(matrix,gcIdx){
   return order;
 }
 
+// Etapa 3aa: Força Bruta exata para N ≤ 10 clientes
+// v5.9.12: 8! = 40.320 permutações (~3ms), 10! = 3.628.800 (~300ms) — ambos viáveis no browser.
+// Garante a rota MATEMATICAMENTE ÓTIMA (sem aproximação, sem sorte).
+// Para N > 10 o SA é usado como fallback.
+function _factorial(n){let r=1;for(let i=2;i<=n;i++)r*=i;return r;}
+function _bruteForceOptimal(matrix,gcIdx){
+  const idx=Object.keys(gcIdx).map(Number); // índices em clients[] para clientes geocodificados
+  const M=idx.length;
+  if(M>10)return null; // muito grande — usa SA
+  let bestOrder=null,bestViol=Infinity,bestTravel=Infinity;
+  // Heap's Algorithm — gera todas as M! permutações in-place, O(M!) avaliações
+  const perm=idx.slice();
+  const c=new Array(M).fill(0);
+  const _chk=()=>{
+    const r=_evalOrder(perm,matrix,0,gcIdx);
+    if(r.violations<bestViol||(r.violations===bestViol&&r.totalTravel<bestTravel)){
+      bestOrder=perm.slice();bestViol=r.violations;bestTravel=r.totalTravel;
+    }
+  };
+  _chk(); // permutação inicial
+  let i=0;
+  while(i<M){
+    if(c[i]<i){
+      if(i%2===0){const tmp=perm[0];perm[0]=perm[i];perm[i]=tmp;}
+      else{const tmp=perm[c[i]];perm[c[i]]=perm[i];perm[i]=tmp;}
+      _chk();c[i]++;i=0;
+    }else{c[i]=0;i++;}
+  }
+  console.log('[BF] '+M+'! = '+_factorial(M)+' permutações → '+Math.round(bestTravel/60)+'min, '+bestViol+' violações (ÓTIMO EXATO)');
+  return bestOrder;
+}
+
 // Etapa 3b: Heurística — Cheapest Insertion com time windows
 function _cheapestInsertTW(matrix,gcIdx){
   const N=clients.length;const alpha=3000; // v4.6.7: consistente com α do SA
@@ -4908,54 +4940,62 @@ async function optimizeRouteV2(geocodedIdx,baseCoords,retCoords){
   _cachedMatrix={matrix,gcIdx,allCoords}; // Cache para recálculos
   // v4.7.4: Construir cache de parâmetros fixos (evita ts() repetido no SA)
   _buildEvalCache();
-  // v5.9.9: 3 seeds construtivos — NN-TW, Cheapest-Insert-TW, NN-PureGeo
-  const nnOrder=_nnDeadline(matrix,gcIdx);
-  const ciOrder=_cheapestInsertTW(matrix,gcIdx);
-  const geoOrder=_nnPureGeo(matrix,gcIdx);
-  const _t3=performance.now();
-  console.log('[OPT-v2] ⏱ Heurísticas (NN+CI+Geo): '+Math.round(_t3-_t2)+'ms');
-  const nnEval=_evalOrder(nnOrder,matrix,0,gcIdx);
-  const ciEval=_evalOrder(ciOrder,matrix,0,gcIdx);
-  const geoEval=_evalOrder(geoOrder,matrix,0,gcIdx);
-  console.log('[OPT-v2] NN: '+Math.round(nnEval.totalTravel/60)+'min, '+nnEval.violations+' violações');
-  console.log('[OPT-v2] CI: '+Math.round(ciEval.totalTravel/60)+'min, '+ciEval.violations+' violações');
-  console.log('[OPT-v2] Geo: '+Math.round(geoEval.totalTravel/60)+'min, '+geoEval.violations+' violações');
-  // v5.9.9: Rodar SA nos 3 seeds e pegar o melhor resultado global
-  const _t4=performance.now();
-  const saFromNN=_runSA(nnOrder,matrix,gcIdx);
-  const _t5=performance.now();
-  const saFromCI=_runSA(ciOrder,matrix,gcIdx);
-  const _t6=performance.now();
-  const saFromGeo=_runSA(geoOrder,matrix,gcIdx);
-  const _t7=performance.now();
-  console.log('[OPT-v2] ⏱ SA-NN: '+Math.round(_t5-_t4)+'ms | SA-CI: '+Math.round(_t6-_t5)+'ms | SA-Geo: '+Math.round(_t7-_t6)+'ms');
-  const saEvalNN=_evalOrder(saFromNN,matrix,0,gcIdx);
-  const saEvalCI=_evalOrder(saFromCI,matrix,0,gcIdx);
-  const saEvalGeo=_evalOrder(saFromGeo,matrix,0,gcIdx);
-  console.log('[OPT-v2] SA-NN: '+Math.round(saEvalNN.totalTravel/60)+'min, '+saEvalNN.violations+' violações');
-  console.log('[OPT-v2] SA-CI: '+Math.round(saEvalCI.totalTravel/60)+'min, '+saEvalCI.violations+' violações');
-  console.log('[OPT-v2] SA-Geo: '+Math.round(saEvalGeo.totalTravel/60)+'min, '+saEvalGeo.violations+' violações');
-  // Escolher entre os 3: menos violações primeiro, depois menor travel
-  const _pickBest=(a,aE,b,bE)=>{
-    if(aE.violations<bE.violations)return{o:a,e:aE};
-    if(bE.violations<aE.violations)return{o:b,e:bE};
-    return aE.totalTravel<=bE.totalTravel?{o:a,e:aE}:{o:b,e:bE};
-  };
-  const {o:saOrderAB,e:saEvalAB}=_pickBest(saFromNN,saEvalNN,saFromCI,saEvalCI);
-  const {o:saOrder,e:saEvalPre}=_pickBest(saOrderAB,saEvalAB,saFromGeo,saEvalGeo);
-  console.log('[OPT-v2] SA melhor: '+Math.round(saEvalPre.totalTravel/60)+'min, '+saEvalPre.violations+' violações');
-  // v5.9.9: Refinamento determinístico pós-SA (2-opt + Or-Opt)
-  const _t8=performance.now();
-  const after2opt=_det2opt(saOrder,matrix,gcIdx);
-  const afterOrOpt=_detOrOpt(after2opt,matrix,gcIdx);
-  const _t9=performance.now();
-  console.log('[OPT-v2] ⏱ 2-opt+Or-Opt: '+Math.round(_t9-_t8)+'ms');
-  const saEval=_evalOrder(afterOrOpt,matrix,0,gcIdx);
-  console.log('[OPT-v2] FINAL: '+Math.round(saEval.totalTravel/60)+'min, '+saEval.violations+' violações');
-  // Mapear de volta para índices globais (array clients[])
-  const finalOrder=afterOrOpt; // já são índices globais de clients[]
-  console.log('[OPT-v2] ⏱ TOTAL: '+Math.round(performance.now()-_t0)+'ms ('+geocodedIdx.length+' clientes)');
-  return {order:finalOrder,eval:saEval,matrix,gcIdx};
+  // v5.9.12: Escolha de motor baseada em N
+  // N ≤ 10: Força Bruta exata — testa TODAS as permutações, garante o ótimo global
+  // N > 10: SA com 3 seeds + refinamento determinístico (heurístico, mas escalável)
+  const _Ngeo=geocodedIdx.length;
+  let finalOrder,finalEval;
+  if(_Ngeo<=10){
+    // ── FORÇA BRUTA (ótimo exato) ──────────────────────────────────────────────
+    const _t3=performance.now();
+    const bfOrder=_bruteForceOptimal(matrix,gcIdx);
+    const _t4=performance.now();
+    console.log('[OPT-v2] ⏱ Brute Force ('+_Ngeo+'!='+_factorial(_Ngeo)+'): '+Math.round(_t4-_t3)+'ms');
+    // Refinamento determinístico (matematicamente redundante após BF, mas deixa por garantia)
+    const _bfR=_det2opt(bfOrder,matrix,gcIdx);
+    const _bfR2=_detOrOpt(_bfR,matrix,gcIdx);
+    finalOrder=_bfR2;
+    finalEval=_evalOrder(finalOrder,matrix,0,gcIdx);
+    console.log('[OPT-v2] FINAL (BF): '+Math.round(finalEval.totalTravel/60)+'min, '+finalEval.violations+' violações');
+  }else{
+    // ── SA com 3 seeds (heurístico para N grande) ─────────────────────────────
+    const nnOrder=_nnDeadline(matrix,gcIdx);
+    const ciOrder=_cheapestInsertTW(matrix,gcIdx);
+    const geoOrder=_nnPureGeo(matrix,gcIdx);
+    const _t3=performance.now();
+    console.log('[OPT-v2] ⏱ Heurísticas (NN+CI+Geo): '+Math.round(_t3-_t2)+'ms');
+    const nnEval=_evalOrder(nnOrder,matrix,0,gcIdx);
+    const ciEval=_evalOrder(ciOrder,matrix,0,gcIdx);
+    const geoEval=_evalOrder(geoOrder,matrix,0,gcIdx);
+    console.log('[OPT-v2] NN: '+Math.round(nnEval.totalTravel/60)+'min, '+nnEval.violations+' violações');
+    console.log('[OPT-v2] CI: '+Math.round(ciEval.totalTravel/60)+'min, '+ciEval.violations+' violações');
+    console.log('[OPT-v2] Geo: '+Math.round(geoEval.totalTravel/60)+'min, '+geoEval.violations+' violações');
+    const _t4=performance.now();
+    const saFromNN=_runSA(nnOrder,matrix,gcIdx);
+    const _t5=performance.now();
+    const saFromCI=_runSA(ciOrder,matrix,gcIdx);
+    const _t6=performance.now();
+    const saFromGeo=_runSA(geoOrder,matrix,gcIdx);
+    const _t7=performance.now();
+    console.log('[OPT-v2] ⏱ SA-NN: '+Math.round(_t5-_t4)+'ms | SA-CI: '+Math.round(_t6-_t5)+'ms | SA-Geo: '+Math.round(_t7-_t6)+'ms');
+    const saEvalNN=_evalOrder(saFromNN,matrix,0,gcIdx);
+    const saEvalCI=_evalOrder(saFromCI,matrix,0,gcIdx);
+    const saEvalGeo=_evalOrder(saFromGeo,matrix,0,gcIdx);
+    const _pickBest=(a,aE,b,bE)=>{
+      if(aE.violations<bE.violations)return{o:a,e:aE};
+      if(bE.violations<aE.violations)return{o:b,e:bE};
+      return aE.totalTravel<=bE.totalTravel?{o:a,e:aE}:{o:b,e:bE};
+    };
+    const {o:saOrderAB,e:saEvalAB}=_pickBest(saFromNN,saEvalNN,saFromCI,saEvalCI);
+    const {o:saOrder}=_pickBest(saOrderAB,saEvalAB,saFromGeo,saEvalGeo);
+    const after2opt=_det2opt(saOrder,matrix,gcIdx);
+    const afterOrOpt=_detOrOpt(after2opt,matrix,gcIdx);
+    finalOrder=afterOrOpt;
+    finalEval=_evalOrder(finalOrder,matrix,0,gcIdx);
+    console.log('[OPT-v2] FINAL (SA): '+Math.round(finalEval.totalTravel/60)+'min, '+finalEval.violations+' violações');
+  }
+  console.log('[OPT-v2] ⏱ TOTAL: '+Math.round(performance.now()-_t0)+'ms ('+_Ngeo+' clientes)');
+  return {order:finalOrder,eval:finalEval,matrix,gcIdx};
 }
 
 // Recálculo rápido de ETAs usando matriz cacheada (para drag-and-drop)
