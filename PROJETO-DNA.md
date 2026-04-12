@@ -2,7 +2,7 @@
 
 > Documento vivo com todas as decisoes tecnicas, features e historico do projeto.
 > Atualizado a cada entrega.
-> Última atualização: 12/04/2026 — v5.9.29
+> Última atualização: 12/04/2026 — v5.9.34
 
 ---
 
@@ -133,6 +133,25 @@
 ---
 
 ## Historico de Versoes
+
+### v5.9.33–5.9.34 — 12/04/2026 — GEOCODING: BAIRROS ViaCEP NÃO INDEXADOS NO OSM
+**Contexto**: Clientes importados do Trello com endereços de Barueri e São Paulo ficavam com badge "SEM LOCALIZAÇÃO". Problema persistia após múltiplas tentativas de ajuste de parâmetros.
+
+**Causa raiz identificada** (lição de "questione a premissa fundamental"):
+A cadeia ViaCEP → OSM montava queries COM o nome do bairro (ex: "Alphaville Empresarial", "Vila Madalena"). Esses nomes de bairro do ViaCEP **não existem no índice do OSM Nominatim** — retornam 0 resultados. A mesma rua + cidade **sem bairro** é encontrada normalmente. Nenhum ajuste de parâmetro resolveria — a premissa de incluir o bairro estava errada.
+
+**v5.9.33** — Retry GEO-VC2 sem bairro:
+- Após query com bairro ViaCEP falhar no OSM, tenta novamente sem o bairro
+- Query: `[logr, num, cidade, uf, 'Brasil'].filter(Boolean).join(', ')`
+- Log: `[GEO-VC2] addr → lat,lng (sem bairro)`
+
+**v5.9.34** — Dois fixes adicionais descobertos em teste:
+- **Fix 1 (Meire — rua com sufixo "B")**: `_parseAddrParts("Rua Bonnard, 132 B, Apto 365")` retornava `logr="Rua Bonnard, 132 B, Apto 365"` com `num=""` (sufixo "B" confunde o parser). A extração de `_rua` para ViaCEP incluía o número como parte do nome da rua, quebrando a busca. Fix: `.split(',')[0]` para garantir que só o nome da rua vai para o ViaCEP.
+- **Fix 2 (Kelly — CEP sem cidade no texto)**: Endereço sem em-dash (sem segmentação de cidade) + âncora na cidade errada (Guarulhos) → ViaCEP por cidade não achava a rua. Fix: após o loop de busca por cidade falhar, faz lookup direto pelo CEP do cliente (`/ws/{cep}/json/`) para obter logradouro + cidade correta.
+- Cadeia confirmada: `[GEO-CEP] lookup CEP 05187010 → Avenida Alexios Jafet, São Paulo` → `[GEO-VC2] → lat=-23.446775`
+
+**Clientes resolvidos**: Meire Pultz (Barueri ✅), Kelly Lemes (São Paulo ✅), Celia (Vila Madalena ✅), Kauan Schumacher (sem cidade, usa âncora ✅).
+**Não resolvível**: Catherine (sem cidade, sem CEP, sem em-dash — estruturalmente impossível com ferramentas gratuitas).
 
 ### v5.9.17–5.9.19 — 12/04/2026 — MOTOR DE OTIMIZAÇÃO REESCRITO
 **Contexto**: Sistema não conseguia reproduzir a rota otimizada manualmente por Philip (111km, 3h55min, 0 violações, ordem: Elis→Pim→JFFB→V.C→Rosana→Giorge→Zica→Ana). Após múltiplas tentativas ajustando parâmetros do OSRM, foi identificado o problema raiz.
@@ -452,4 +471,6 @@ Se precisar trocar por API gratuita no futuro: OSRM pode ser mantido para a matr
 13. **Motor de otimização: Google TSP é soberano** — a ordem final de paradas é sempre determinada pelo Google Directions (`optimizeWaypoints:true`), não por OSRM. OSRM pode ser usado na matriz de distâncias (buildTimeMatrix) para heurísticas internas, mas o rankeamento final de rotas deve ser validado pelo Google. OSRM diverge sistematicamente do Google para roteamento urbano em SP (rankings 100% invertidos documentados em 12/04/2026). Se a ordem parecer errada, comparar diretamente com Google Maps antes de ajustar qualquer parâmetro interno.
 14. **Correção de janelas horárias é pós-processamento** — `_fixWindowViolationsOrder` roda APÓS o Google TSP resolver a ordem base. Nunca tentar incorporar time windows no TSP do Google (ele ignora). A função move clientes com deadline violado para a posição mais tarde possível que ainda respeita o horário, minimizando disrupção na rota. Após a correção, sempre re-rodar Directions com a nova ordem para obter legs e ETAs precisas.
 15. **Geocoding em 3 camadas de fallback** — (1) OSM Nominatim direto, (2) ViaCEP+OSM para clientes com c.cep (strip parênteses do bairro, tenta com bairro/sem bairro/logradouro canônico), (3) Em-dash city fallback para endereços "Rua X, 132 B, Apto 365 — Barueri" → extrai cidade do último segmento em-dash e reconstrói "Rua X, 132, Barueri, Brasil". Taxa alvo: ≥10/12 clientes por rota. Clientes sem cidade/CEP (ex: "Av. Jabaquara, 1744, Apto 1007" sem contexto) são estruturalmente irresolvíveis sem edição do usuário.
+17. **Nomes de bairro do ViaCEP NÃO são indexados no OSM** (v5.9.33/34) — bairros como "Alphaville Empresarial", "Vila Madalena", "Jardim Ipanema (Zona Oeste)" existem no ViaCEP mas NÃO no índice do OSM Nominatim. Queries com esses bairros retornam ZERO_RESULTS. A solução é SEMPRE tentar a query sem o bairro (GEO-VC2) quando a query com bairro falha. Adicionalmente: quando `_parseAddrParts` não extrai `num` separado (endereços com sufixo como "132 B"), o nome da rua para ViaCEP deve usar `.split(',')[0]` para não incluir o número. E quando não há cidade no texto mas há CEP, fazer lookup direto pelo CEP (`/ws/{cep}/json/`) para obter a cidade correta (ignorando a âncora que pode ser outra cidade).
+
 16. **`_geoFailCount[key]=0` não significa falha** — ao interpretar debug de geocoding: fail count 0 pode significar (a) nunca chamado OU (b) chamado e bem-sucedido (sucesso nunca incrementa o contador; `_geoFailReset` deleta a chave; ambos resultam em key=undefined=0). Verificar o resultado real (c.lat/c.lng) para confirmar sucesso, não o fail count.
