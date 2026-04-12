@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.33';
+const APP_VERSION='v5.9.34';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -5940,7 +5940,11 @@ async function nominatim(addr,client){
   // (ex: "Av. Higienópolis — Higienópolis — São Paulo" → extrai "São Paulo")
   if(_geoAnchor?.state){
     try{
-      const _rua=(_origParts.logr.replace(/^(rua|avenida|av\.|alameda|al\.|estrada|travessa|praça)\s+/i,'').trim()).slice(0,40);
+      // v5.9.34: .split(',')[0] garante que só o NOME DA RUA vai para o ViaCEP
+      // (ex: "Bonnard, 132 B, Apto 365" → "Bonnard"). Sem isso, números e complementos
+      // embutidos no logr (quando _parseAddrParts não extrai num separado, ex: "132 B")
+      // quebram a busca ViaCEP que espera apenas o nome da rua.
+      const _rua=(_origParts.logr.replace(/^(rua|avenida|av\.|alameda|al\.|estrada|travessa|praça)\s+/i,'').trim().split(',')[0].trim()).slice(0,40);
       if(_rua.length>=5){
         // Extrai cidade do endereço do cliente (último segmento após —)
         const _addrSegments=addr.split('\u2014').map(s=>s.trim()).filter(Boolean);
@@ -5974,6 +5978,21 @@ async function nominatim(addr,client){
   // 2º: CEP embutido no addr ou em client.cep (só como referência, não para geocodificar bare)
   if(!_fbCep){const _cm=addr.match(/\b(\d{5})-?(\d{3})\b/);if(_cm)_fbCep=_cm[1]+_cm[2];}
   if(!_fbCep)_fbCep=(client?.cep||'').replace(/\D/g,'');
+  // v5.9.34: Se ViaCEP por cidade falhou mas temos CEP, faz lookup direto pelo CEP.
+  // Resolve endereços sem cidade no texto onde a cidade do CEP difere da âncora
+  // (ex: "Av. Alexios Jafet, 555" + CEP 05187-010 → cidade real é São Paulo, não Guarulhos).
+  if(!_vcLogr&&_fbCep&&_fbCep.length===8){
+    try{
+      const _cepR=await fetch('https://viacep.com.br/ws/'+_fbCep+'/json/',{signal:AbortSignal.timeout(4000)});
+      if(_cepR.ok){const _cepD=await _cepR.json();
+        if(!_cepD.erro&&_cepD.logradouro){
+          _vcLogr=_cepD.logradouro;_vcBairro=_cepD.bairro||'';
+          _vcCity=_cepD.localidade||'';_vcUf=_cepD.uf||_geoAnchor?.state||'';
+          console.log('[GEO-CEP] lookup CEP '+_fbCep+': '+_vcLogr+', '+_vcBairro+', '+_vcCity);
+        }
+      }
+    }catch(e){}
+  }
   // Monta query OSM canônica com dados do ViaCEP (muito mais preciso que nome de rua incompleto)
   if(_vcLogr||_fbCep){
     const _street=_vcLogr||_origParts.logr;
