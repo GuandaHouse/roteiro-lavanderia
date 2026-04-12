@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.16';
+const APP_VERSION='v5.9.17';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -6145,14 +6145,17 @@ async function calcRoute(){
       const names=noCoords2.map(i=>clients[i].nome).filter(Boolean).join(', ');
       setTimeout(()=>toast(noCoords2.length+' cliente(s) sem endere\xE7o encontrado no mapa: '+names+'. Verifique o endere\xE7o deles.','warn'),800);
     }
-    // Chamar Google Directions UMA VEZ com a ordem já otimizada (só pra renderizar mapa + ETAs exatos)
-    const orderedGeo=order.filter(i=>clients[i].lat&&clients[i].lng).map(i=>clients[i]);
+    // v5.9.17: Google Directions com optimizeWaypoints:true — usa TSP solver do Google
+    // (mais preciso que OSRM para roteamento urbano em SP e outras cidades BR)
+    // Passa clientes SEM pré-ordenar; usa waypoint_order retornado para atualizar order[]
+    const _geoForWP=geocodedIdx.filter(i=>clients[i].lat&&clients[i].lng);
+    let orderedGeo=_geoForWP.map(i=>clients[i]);
     const waypoints=orderedGeo.map(c=>_waypointFor(c));
     let dirResult;
     try{
       _perf.dirStart=performance.now();
       // v5.8.23: Tenta primeiro com tráfego em tempo real; se falhar (INVALID_REQUEST), retry sem drivingOptions
-      const _dirReq={origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR'};
+      const _dirReq={origin:baseAddr,destination:retAddr,waypoints,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:true,region:'BR'};
       try{
         dirResult=await Promise.race([
           new Promise((rOk,rErr)=>new google.maps.DirectionsService().route({..._dirReq,drivingOptions:{departureTime:new Date()}},(res,status)=>status==='OK'?rOk(res):rErr(new Error(status)))),
@@ -6169,6 +6172,14 @@ async function calcRoute(){
       }
       _perf.dirEnd=performance.now();
       console.log('[CALC-ROUTE] 5/6 Google Directions: '+Math.round(_perf.dirEnd-_perf.dirStart)+'ms');
+      // v5.9.17: Aplicar ordem TSP do Google (waypoint_order) — mais preciso que OSRM para SP
+      const _wpOrd=dirResult.routes[0].waypoint_order;
+      if(_wpOrd&&_wpOrd.length===_geoForWP.length){
+        const _gOrder=_wpOrd.map(i=>_geoForWP[i]);
+        orderedGeo=_wpOrd.map(i=>orderedGeo[i]); // alinhar com legs do Directions
+        order=_gOrder.concat(noCoords2);
+        console.log('[CALC-ROUTE] Google TSP waypoint_order aplicado: '+_gOrder.map(i=>clients[i].nome.split(' ')[1]||clients[i].nome.slice(0,6)).join('→'));
+      }
     }catch(dirErr){
       console.warn('[ROTA] Google Directions falhou:',dirErr.message,'→ usando estimativas da matriz');
       // Usar ETAs da matriz cacheada
