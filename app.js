@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.30';
+const APP_VERSION='v5.9.31';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -5907,18 +5907,12 @@ async function nominatim(addr,client){
   const _hasDash=addr.includes('\u2014');
   const _qAddr=_hasDash?addr.replace(/\s*\u2014\s*/g,', '):addr;
   const _stateStr=_geoAnchor?.state||'';
-  const _cityStr=_geoAnchor?.city||'';
-  // v5.9.30: se o endereço já contém "brasil" (fallbacks CEP/em-dash já montaram query completa),
-  // NÃO adicionar estado novamente — evita "SP, Brasil, SP, Brasil" que confunde o geocoder.
-  // Se não tem "brasil" mas tem cidade âncora, incluir cidade+estado para melhorar precisão
-  // (ex: "Rua Isabel de Castela, 330" → "Rua Isabel de Castela, 330, São Paulo, SP, Brasil").
+  // v5.9.31: se a query já contém "brasil" (fallbacks CEP/em-dash já montaram query completa),
+  // NÃO adicionar estado novamente — evita "SP, Brasil, SP, Brasil" que confunde o OSM.
+  // NÃO adiciona cidade-âncora: âncora pode ser diferente da cidade real do cliente
+  // (ex: âncora = Guarulhos, mas cliente = São Paulo — adicionar errado piora o resultado).
   const _qHasBrasil=/\bbrasil\b/i.test(_qAddr);
-  const _qHasCity=_cityStr?new RegExp(_cityStr.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(_qAddr):false;
-  const _query=_qHasBrasil?_qAddr:(
-    _cityStr&&!_qHasCity&&_stateStr?(_qAddr+', '+_cityStr+', '+_stateStr+', Brasil'):
-    _stateStr?(_qAddr+', '+_stateStr+', Brasil'):
-    (_qAddr+', Brasil')
-  );
+  const _query=_qHasBrasil?_qAddr:(_stateStr?(_qAddr+', '+_stateStr+', Brasil'):(_qAddr+', Brasil'));
   // ── Tentativa 1: OSM por endereço ────────────────────────────────────────
   try{
     const _c=new AbortController();const _t=setTimeout(()=>_c.abort(),8000);
@@ -6207,7 +6201,28 @@ async function calcRoute(){
                   if(_r2.route)_c.endereco=_fmtAddrFromGeo(_r2,_c.endereco);
                   console.log('[PRE-GEO] Geocodificado via CEP+logradouro canônico: '+_c.nome);
                 }else{
-                  console.warn('[PRE-GEO] CEP fallback esgotou tentativas: '+_c.nome+' (CEP: '+_rawCep+')');
+                  // v5.9.31: Tentativa 4 — bairro + cidade (coords aproximadas do bairro)
+                  // Útil quando a rua não existe no OSM mas o bairro sim (ex: ruas muito novas ou locais)
+                  if(_vc.bairro){
+                    const _bClean=_vc.bairro.replace(/\s*\([^)]*\)/g,'').trim();
+                    const _pts3=[_bClean,_vc.localidade,_vc.uf,'Brasil'].filter(Boolean);
+                    const _canon3=_pts3.join(', ');_geoFailReset(_canon3);
+                    const _r3=await nominatim(_canon3,_c).catch(()=>null);
+                    if(_r3){_c.lat=_r3.lat;_c.lng=_r3.lng;
+                      console.log('[PRE-GEO] Geocodificado via bairro (approx): '+_c.nome+' ('+_bClean+', '+_vc.localidade+')');
+                    }
+                  }
+                  if(!_c.lat&&!_c.lng){
+                    // v5.9.31: Tentativa 5 — cidade apenas (último recurso, coloca o cliente no centro da cidade)
+                    const _pts4=[_vc.localidade,_vc.uf,'Brasil'].filter(Boolean);
+                    const _canon4=_pts4.join(', ');_geoFailReset(_canon4);
+                    const _r4=await nominatim(_canon4,_c).catch(()=>null);
+                    if(_r4){_c.lat=_r4.lat;_c.lng=_r4.lng;
+                      console.log('[PRE-GEO] Geocodificado via cidade (very approx): '+_c.nome+' ('+_vc.localidade+')');
+                    }else{
+                      console.warn('[PRE-GEO] CEP fallback esgotou todas as tentativas: '+_c.nome+' (CEP: '+_rawCep+')');
+                    }
+                  }
                 }
               }
             }
