@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.8';
+const APP_VERSION='v5.9.9';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -4623,8 +4623,8 @@ function _evalOrder(order,matrix,alpha,gcIdx){
     const ci=order[i];
     const dl=ec.deadlines[ci];
     const st=ec.starts[ci];
-    if(cur>dl){violations++;violTime+=Math.max(cur-dl,3600);}
-    if(cur<st){violTime+=Math.max(st-cur,1800);}
+    if(cur>dl){violations++;violTime+=(cur-dl);}
+    if(cur<st){violTime+=(st-cur);}
     cur+=ec.tempoSec;
   }
   // Retorno
@@ -4704,6 +4704,81 @@ function _cheapestInsertTW(matrix,gcIdx){
     else break;
   }
   return order;
+}
+
+// Etapa 3c: Heurística — Nearest Neighbor puramente geográfico (sem prioridade TW)
+// v5.9.9: 3º seed para SA — evita que criticals arrastados para início criem zigzag
+function _nnPureGeo(matrix,gcIdx){
+  const N=clients.length;
+  const visited=new Set();const order=[];
+  let curNode=0; // base
+  while(visited.size<N){
+    let best=Infinity,bestId=-1;
+    for(let i=0;i<N;i++){
+      if(visited.has(i))continue;
+      if(gcIdx[i]===undefined)continue;
+      const d=matrix.durations[curNode][gcIdx[i]];
+      if(d<best){best=d;bestId=i;}
+    }
+    if(bestId<0)break;
+    order.push(bestId);visited.add(bestId);curNode=gcIdx[bestId];
+  }
+  return order;
+}
+
+// Etapa 5b: 2-opt determinístico — elimina cruzamentos na rota
+// v5.9.9: aplicado APÓS SA para refinar solução sem riscos de aquecimento
+function _det2opt(order,matrix,gcIdx){
+  const N=order.length;
+  let improved=true;
+  let best=order.slice();
+  let bestEval=_evalOrder(best,matrix,0,gcIdx);
+  while(improved){
+    improved=false;
+    for(let i=0;i<N-1;i++){
+      for(let j=i+2;j<N;j++){
+        const candidate=best.slice();
+        // Reverter segmento [i+1..j]
+        let lo=i+1,hi=j;
+        while(lo<hi){const tmp=candidate[lo];candidate[lo]=candidate[hi];candidate[hi]=tmp;lo++;hi--;}
+        const cEval=_evalOrder(candidate,matrix,0,gcIdx);
+        // Aceitar se: menos violações, ou mesmas violações e menos travel
+        if(cEval.violations<bestEval.violations||(cEval.violations===bestEval.violations&&cEval.totalTravel<bestEval.totalTravel)){
+          best=candidate;bestEval=cEval;improved=true;
+        }
+      }
+    }
+  }
+  return best;
+}
+
+// Etapa 5c: Or-Opt determinístico — reposiciona segmentos de 1-3 clientes
+// v5.9.9: complementa 2-opt ao mover grupos sem inverter
+function _detOrOpt(order,matrix,gcIdx){
+  const N=order.length;
+  let improved=true;
+  let best=order.slice();
+  let bestEval=_evalOrder(best,matrix,0,gcIdx);
+  while(improved){
+    improved=false;
+    for(let segLen=1;segLen<=Math.min(3,N-1);segLen++){
+      for(let from=0;from<N-segLen+1;from++){
+        for(let to=0;to<=N-segLen;to++){
+          if(to===from)continue;
+          const candidate=best.slice();
+          const seg=candidate.splice(from,segLen);
+          const ins=to>from?to-segLen:to;
+          candidate.splice(Math.max(0,Math.min(ins,candidate.length)),0,...seg);
+          if(candidate.length!==N)continue;
+          const cEval=_evalOrder(candidate,matrix,0,gcIdx);
+          if(cEval.violations<bestEval.violations||(cEval.violations===bestEval.violations&&cEval.totalTravel<bestEval.totalTravel)){
+            best=candidate;bestEval=cEval;improved=true;
+          }
+        }
+      }
+    }
+  }
+  return best;
 }
 
 // Etapa 4: Simulated Annealing
@@ -4803,35 +4878,52 @@ async function optimizeRouteV2(geocodedIdx,baseCoords,retCoords){
   _cachedMatrix={matrix,gcIdx,allCoords}; // Cache para recálculos
   // v4.7.4: Construir cache de parâmetros fixos (evita ts() repetido no SA)
   _buildEvalCache();
-  // Rodar duas heurísticas construtivas
+  // v5.9.9: 3 seeds construtivos — NN-TW, Cheapest-Insert-TW, NN-PureGeo
   const nnOrder=_nnDeadline(matrix,gcIdx);
   const ciOrder=_cheapestInsertTW(matrix,gcIdx);
+  const geoOrder=_nnPureGeo(matrix,gcIdx);
   const _t3=performance.now();
-  console.log('[OPT-v2] ⏱ Heurísticas (NN+CI): '+Math.round(_t3-_t2)+'ms');
+  console.log('[OPT-v2] ⏱ Heurísticas (NN+CI+Geo): '+Math.round(_t3-_t2)+'ms');
   const nnEval=_evalOrder(nnOrder,matrix,0,gcIdx);
   const ciEval=_evalOrder(ciOrder,matrix,0,gcIdx);
+  const geoEval=_evalOrder(geoOrder,matrix,0,gcIdx);
   console.log('[OPT-v2] NN: '+Math.round(nnEval.totalTravel/60)+'min, '+nnEval.violations+' violações');
   console.log('[OPT-v2] CI: '+Math.round(ciEval.totalTravel/60)+'min, '+ciEval.violations+' violações');
-  // v4.6.7: Rodar SA nos DOIS seeds e pegar o melhor resultado global
-  // (evita que um seed com menos km mas posição arriscada para clientes críticos domine)
+  console.log('[OPT-v2] Geo: '+Math.round(geoEval.totalTravel/60)+'min, '+geoEval.violations+' violações');
+  // v5.9.9: Rodar SA nos 3 seeds e pegar o melhor resultado global
   const _t4=performance.now();
   const saFromNN=_runSA(nnOrder,matrix,gcIdx);
   const _t5=performance.now();
   const saFromCI=_runSA(ciOrder,matrix,gcIdx);
   const _t6=performance.now();
-  console.log('[OPT-v2] ⏱ SA-NN: '+Math.round(_t5-_t4)+'ms | SA-CI: '+Math.round(_t6-_t5)+'ms');
+  const saFromGeo=_runSA(geoOrder,matrix,gcIdx);
+  const _t7=performance.now();
+  console.log('[OPT-v2] ⏱ SA-NN: '+Math.round(_t5-_t4)+'ms | SA-CI: '+Math.round(_t6-_t5)+'ms | SA-Geo: '+Math.round(_t7-_t6)+'ms');
   const saEvalNN=_evalOrder(saFromNN,matrix,0,gcIdx);
   const saEvalCI=_evalOrder(saFromCI,matrix,0,gcIdx);
+  const saEvalGeo=_evalOrder(saFromGeo,matrix,0,gcIdx);
   console.log('[OPT-v2] SA-NN: '+Math.round(saEvalNN.totalTravel/60)+'min, '+saEvalNN.violations+' violações');
   console.log('[OPT-v2] SA-CI: '+Math.round(saEvalCI.totalTravel/60)+'min, '+saEvalCI.violations+' violações');
-  // Escolher: menos violações primeiro, depois menor travel
-  const saOrder=saEvalNN.violations<saEvalCI.violations?saFromNN:
-    saEvalCI.violations<saEvalNN.violations?saFromCI:
-    saEvalNN.totalTravel<=saEvalCI.totalTravel?saFromNN:saFromCI;
-  const saEval=_evalOrder(saOrder,matrix,0,gcIdx);
-  console.log('[OPT-v2] SA: '+Math.round(saEval.totalTravel/60)+'min, '+saEval.violations+' violações');
+  console.log('[OPT-v2] SA-Geo: '+Math.round(saEvalGeo.totalTravel/60)+'min, '+saEvalGeo.violations+' violações');
+  // Escolher entre os 3: menos violações primeiro, depois menor travel
+  const _pickBest=(a,aE,b,bE)=>{
+    if(aE.violations<bE.violations)return{o:a,e:aE};
+    if(bE.violations<aE.violations)return{o:b,e:bE};
+    return aE.totalTravel<=bE.totalTravel?{o:a,e:aE}:{o:b,e:bE};
+  };
+  const {o:saOrderAB,e:saEvalAB}=_pickBest(saFromNN,saEvalNN,saFromCI,saEvalCI);
+  const {o:saOrder,e:saEvalPre}=_pickBest(saOrderAB,saEvalAB,saFromGeo,saEvalGeo);
+  console.log('[OPT-v2] SA melhor: '+Math.round(saEvalPre.totalTravel/60)+'min, '+saEvalPre.violations+' violações');
+  // v5.9.9: Refinamento determinístico pós-SA (2-opt + Or-Opt)
+  const _t8=performance.now();
+  const after2opt=_det2opt(saOrder,matrix,gcIdx);
+  const afterOrOpt=_detOrOpt(after2opt,matrix,gcIdx);
+  const _t9=performance.now();
+  console.log('[OPT-v2] ⏱ 2-opt+Or-Opt: '+Math.round(_t9-_t8)+'ms');
+  const saEval=_evalOrder(afterOrOpt,matrix,0,gcIdx);
+  console.log('[OPT-v2] FINAL: '+Math.round(saEval.totalTravel/60)+'min, '+saEval.violations+' violações');
   // Mapear de volta para índices globais (array clients[])
-  const finalOrder=saOrder; // já são índices globais de clients[]
+  const finalOrder=afterOrOpt; // já são índices globais de clients[]
   console.log('[OPT-v2] ⏱ TOTAL: '+Math.round(performance.now()-_t0)+'ms ('+geocodedIdx.length+' clientes)');
   return {order:finalOrder,eval:saEval,matrix,gcIdx};
 }
