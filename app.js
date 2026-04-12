@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.35';
+const APP_VERSION='v5.9.36';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -5824,6 +5824,22 @@ async function _resolveGeoAnchor(){
               return _geoAnchor;
             }
           }catch(e){}
+          // v5.9.36: Endereço completo não encontrado no OSM (rua pode não estar indexada).
+          // Fallback: geocodifica apenas a CIDADE para obter coordenadas corretas da região.
+          // Garante que a âncora usa cidade/UF corretos do CEP, não de escolhas anteriores (ex: Guarulhos).
+          try{
+            const _cityQ=_vcD.localidade+', '+_vcD.uf+', Brasil';
+            const _c2=new AbortController();const _t2=setTimeout(()=>_c2.abort(),6000);
+            const d2=await _geocodeProxy('address='+encodeURIComponent(_cityQ)+'&region=br',_c2.signal);
+            clearTimeout(_t2);
+            if(d2&&d2.status==='OK'&&d2.results[0]){
+              const loc2=d2.results[0].geometry.location;
+              _geoAnchor={lat:loc2.lat,lng:loc2.lng,state:_vcD.uf,city:_vcD.localidade};
+              try{localStorage.setItem('rota_geo_anchor_v2',JSON.stringify({..._geoAnchor,_base:_cacheBase,_ts:Date.now()}));}catch(e){}
+              console.log('[GEO-ANCHOR] Cidade via CEP ('+_baseCep+'): '+_vcD.localidade+', '+_vcD.uf+' → '+loc2.lat+','+loc2.lng);
+              return _geoAnchor;
+            }
+          }catch(e){}
         }
       }
     }catch(e){console.warn('[GEO-ANCHOR] CEP lookup falhou:',e);}
@@ -6111,6 +6127,34 @@ async function nominatim(addr,client){
         }
       }catch(e){console.warn('[GEO-PROX] Falha:',e);}
     }
+  }
+  // v5.9.36: GEO-CEP-APPROX — rua não existe no OSM mas temos CEP do ViaCEP.
+  // Geocodifica o CEP (ex: "04726-230, São Paulo, SP, Brasil") para obter coordenadas
+  // aproximadas da área do endereço. Precisão ~100m (centro do CEP), mas muito melhor
+  // que "SEM LOCALIZAÇÃO". Cobre ruas residenciais não indexadas no OSM.
+  if(_fbCep&&_fbCep.length===8){
+    const _cepCity=_vcCity||_geoAnchor?.city||'';
+    const _cepUf=_vcUf||_geoAnchor?.state||'';
+    const _cepFmt=_fbCep.slice(0,5)+'-'+_fbCep.slice(5);
+    const _cepQuery=[_cepFmt,_cepCity,_cepUf,'Brasil'].filter(Boolean).join(', ');
+    try{
+      const _c5=new AbortController();const _t5=setTimeout(()=>_c5.abort(),8000);
+      const d5=await _geocodeProxy('address='+encodeURIComponent(_cepQuery)+'&region=br',_c5.signal);
+      clearTimeout(_t5);
+      if(d5&&d5.status==='OK'&&d5.results?.length){
+        const result5=_extractGeoResult(d5.results[0]);
+        if(_vcBairro)result5.bairro=_vcBairro;
+        if(_vcCity)result5.cidade=_vcCity;else if(_geoAnchor?.city)result5.cidade=_geoAnchor.city;
+        result5.cep=_cepFmt;
+        if(_vcLogr)result5.route=_vcLogr;
+        if(_origParts.num)result5.streetNum=_origParts.num;
+        _geoCache[addr]=result5;
+        try{localStorage.setItem('geo3_'+addr,JSON.stringify(result5));}catch(e){}
+        _geoFailReset(addr);
+        console.log('[GEO-CEP-APPROX] '+addr+' → '+result5.lat+','+result5.lng+' CEP='+_cepFmt+' bairro='+(result5.bairro||'?'));
+        return result5;
+      }
+    }catch(e){console.warn('[GEO-CEP-APPROX] Falha:',e);}
   }
   _geoFailInc(addr);
   return null;
