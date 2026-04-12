@@ -6151,23 +6151,39 @@ async function calcRoute(){
       if(b+GEO_BATCH<needGeo.length)await new Promise(res=>setTimeout(res,200));
     }
     // v5.9.24: Fallback via CEP — para clientes com c.cep preenchido que ainda não geocodificaram
-    // Usa ViaCEP por nº de CEP → endereço canônico → OSM (mesma lógica do _geocodeBaseAddr)
+    // Estratégia: CEP → ViaCEP → obtém cidade/estado/bairro → geocodifica rua ORIGINAL com contexto correto
+    // (não usa a rua do ViaCEP para evitar trocar a rua do cliente pela rua do CEP)
     const _failedWithCep=clients.filter(c=>!c.lat&&!c.lng&&c.cep&&c.cep.replace(/\D/g,'').length===8);
     for(const _c of _failedWithCep){
       const _rawCep=_c.cep.replace(/\D/g,'');
       try{
         const _vcR=await fetch('https://viacep.com.br/ws/'+_rawCep+'/json/',{signal:AbortSignal.timeout(4000)});
         if(_vcR.ok){const _vc=await _vcR.json();
-          if(!_vc.erro&&_vc.logradouro&&_vc.localidade&&_vc.uf){
-            const _pts=[_vc.logradouro];
-            const _nm=_c.endereco.match(/\b(\d+)\b/);if(_nm)_pts.push(_nm[1]);
+          if(!_vc.erro&&_vc.localidade&&_vc.uf){
+            // Usa RUA ORIGINAL do cliente + cidade/bairro do ViaCEP (não substitui a rua pelo logradouro do CEP)
+            const _origRua=(_c.endereco.split('\u2014')[0]||_c.endereco).split(',')[0].trim();
+            const _nm=_c.endereco.match(/[,\s](\d+[A-Za-z]?)\b/);
+            const _pts=[_origRua];
+            if(_nm)_pts.push(_nm[1].trim());
             if(_vc.bairro)_pts.push(_vc.bairro);_pts.push(_vc.localidade,_vc.uf,'Brasil');
             const _canon=_pts.join(', ');
-            _geoFailReset(_canon);
+            _geoFailReset(_canon);_geoFailReset(_c.endereco);
             const _r=await nominatim(_canon,_c).catch(()=>null);
-            if(_r){_c.lat=_r.lat;_c.lng=_r.lng;if(!_c.cep&&_r.cep)_c.cep=_r.cep;
+            if(_r){_c.lat=_r.lat;_c.lng=_r.lng;if(_r.cep&&!_c.cep)_c.cep=_r.cep;
               if(_r.route)_c.endereco=_fmtAddrFromGeo(_r,_c.endereco);
-              console.log('[PRE-GEO] Geocodificado via CEP: '+_c.nome+' ('+_rawCep+')');
+              console.log('[PRE-GEO] Geocodificado via CEP+rua original: '+_c.nome+' ('+_rawCep+' → '+_vc.localidade+')');
+            }else{
+              // Tentativa 2: usar logradouro canônico do ViaCEP (pode ter nome diferente do informal)
+              if(_vc.logradouro){
+                const _pts2=[_vc.logradouro];if(_nm)_pts2.push(_nm[1].trim());
+                if(_vc.bairro)_pts2.push(_vc.bairro);_pts2.push(_vc.localidade,_vc.uf,'Brasil');
+                const _canon2=_pts2.join(', ');_geoFailReset(_canon2);
+                const _r2=await nominatim(_canon2,_c).catch(()=>null);
+                if(_r2){_c.lat=_r2.lat;_c.lng=_r2.lng;if(_r2.cep&&!_c.cep)_c.cep=_r2.cep;
+                  if(_r2.route)_c.endereco=_fmtAddrFromGeo(_r2,_c.endereco);
+                  console.log('[PRE-GEO] Geocodificado via CEP+logradouro canônico: '+_c.nome);
+                }
+              }
             }
           }
         }
