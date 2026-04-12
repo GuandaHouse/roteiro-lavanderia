@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.28';
+const APP_VERSION='v5.9.29';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -6159,10 +6159,8 @@ async function calcRoute(){
     // Estratégia: CEP → ViaCEP → obtém cidade/estado/bairro → geocodifica rua ORIGINAL com contexto correto
     // (não usa a rua do ViaCEP para evitar trocar a rua do cliente pela rua do CEP)
     const _failedWithCep=clients.filter(c=>!c.lat&&!c.lng&&c.cep&&c.cep.replace(/\D/g,'').length===8);
-    console.log('[DBG-FB] CEP fallback: '+_failedWithCep.length+' clientes. Rate usado: '+_geoRateLog.filter(t=>Date.now()-t<60000).length+'/'+_GEO_RATE_MAX);
     for(const _c of _failedWithCep){
       const _rawCep=_c.cep.replace(/\D/g,'');
-      console.log('[DBG-CEP] Tentando: '+_c.nome+' | end: '+_c.endereco+' | cep: '+_rawCep);
       try{
         const _vcR=await fetch('https://viacep.com.br/ws/'+_rawCep+'/json/',{signal:AbortSignal.timeout(4000)});
         if(_vcR.ok){const _vc=await _vcR.json();
@@ -6176,20 +6174,16 @@ async function calcRoute(){
             if(_vc.bairro){const _b=_vc.bairro.replace(/\s*\([^)]*\)/g,'').trim();if(_b)_pts.push(_b);}
             _pts.push(_vc.localidade,_vc.uf,'Brasil');
             const _canon=_pts.join(', ');
-            console.log('[DBG-CEP] Query c/bairro: '+_canon+' | rateUsado:'+_geoRateLog.filter(t=>Date.now()-t<60000).length);
             _geoFailReset(_canon);_geoFailReset(_c.endereco);
             const _r=await nominatim(_canon,_c).catch(()=>null);
-            console.log('[DBG-CEP] Resultado c/bairro: '+((_r)?('lat='+_r.lat+',lng='+_r.lng):'NULL'));
             if(_r){_c.lat=_r.lat;_c.lng=_r.lng;if(_r.cep&&!_c.cep)_c.cep=_r.cep;
               if(_r.route)_c.endereco=_fmtAddrFromGeo(_r,_c.endereco);
-              console.log('[PRE-GEO] Geocodificado via CEP+rua original: '+_c.nome+' ('+_rawCep+' → '+_vc.localidade+')');
+              console.log('[PRE-GEO] Geocodificado via CEP+rua original: '+_c.nome+' ('+_rawCep+' \u2192 '+_vc.localidade+')');
             }else{
               // Tentativa 2: sem bairro (só cidade+estado) — mais genérico, mais chances de encontrar
               const _pts1b=[_origRua];if(_nm)_pts1b.push(_nm[1].trim());_pts1b.push(_vc.localidade,_vc.uf,'Brasil');
               const _canon1b=_pts1b.join(', ');_geoFailReset(_canon1b);
-              console.log('[DBG-CEP] Query sem bairro: '+_canon1b);
               const _r1b=await nominatim(_canon1b,_c).catch(()=>null);
-              console.log('[DBG-CEP] Resultado sem bairro: '+((_r1b)?('lat='+_r1b.lat+',lng='+_r1b.lng):'NULL'));
               if(_r1b){_c.lat=_r1b.lat;_c.lng=_r1b.lng;if(_r1b.cep&&!_c.cep)_c.cep=_r1b.cep;
                 if(_r1b.route)_c.endereco=_fmtAddrFromGeo(_r1b,_c.endereco);
                 console.log('[PRE-GEO] Geocodificado via CEP+rua (sem bairro): '+_c.nome);
@@ -6197,58 +6191,43 @@ async function calcRoute(){
                 // Tentativa 3: logradouro canônico do ViaCEP (pode ter nome diferente do informal)
                 const _pts2=[_vc.logradouro];if(_nm)_pts2.push(_nm[1].trim());_pts2.push(_vc.localidade,_vc.uf,'Brasil');
                 const _canon2=_pts2.join(', ');_geoFailReset(_canon2);
-                console.log('[DBG-CEP] Query logradouro canônico: '+_canon2);
                 const _r2=await nominatim(_canon2,_c).catch(()=>null);
-                console.log('[DBG-CEP] Resultado logradouro: '+((_r2)?('lat='+_r2.lat+',lng='+_r2.lng):'NULL'));
                 if(_r2){_c.lat=_r2.lat;_c.lng=_r2.lng;if(_r2.cep&&!_c.cep)_c.cep=_r2.cep;
                   if(_r2.route)_c.endereco=_fmtAddrFromGeo(_r2,_c.endereco);
                   console.log('[PRE-GEO] Geocodificado via CEP+logradouro canônico: '+_c.nome);
                 }else{
-                  console.warn('[DBG-CEP] TODAS as tentativas falharam para: '+_c.nome);
+                  console.warn('[PRE-GEO] CEP fallback esgotou tentativas: '+_c.nome+' (CEP: '+_rawCep+')');
                 }
-              }else{
-                console.warn('[DBG-CEP] Sem logradouro ViaCEP e rua simples falhou: '+_c.nome+' (ViaCEP logradouro vazio)');
               }
             }
-          }else{
-            console.warn('[DBG-CEP] ViaCEP retornou erro ou sem localidade para CEP: '+_rawCep+' ('+_c.nome+')');
           }
-        }else{
-          console.warn('[DBG-CEP] ViaCEP HTTP falhou para CEP: '+_rawCep+' ('+_c.nome+')');
         }
       }catch(_e){console.warn('[PRE-GEO] CEP fallback falhou:',_c.nome,_e.message);}
     }
     // v5.9.26: Fallback via em-dash city — "Rua X, 132 B, Apto 365 — Barueri" → "Rua X, 132, Barueri, Brasil"
     // Útil quando endereço tem cidade no em-dash mas Nominatim não achou com complementos e apartamento
     const _failedWithDash=clients.filter(c=>!c.lat&&!c.lng&&c.endereco&&c.endereco.includes('\u2014'));
-    console.log('[DBG-FB] EM-DASH fallback: '+_failedWithDash.length+' clientes. Rate usado: '+_geoRateLog.filter(t=>Date.now()-t<60000).length+'/'+_GEO_RATE_MAX);
     for(const _cd of _failedWithDash){
       try{
         const _dparts=_cd.endereco.split('\u2014').map(s=>s.trim()).filter(Boolean);
-        console.log('[DBG-DASH] Tentando: '+_cd.nome+' | end: '+_cd.endereco+' | partes: '+JSON.stringify(_dparts));
-        if(_dparts.length<2){console.warn('[DBG-DASH] Menos de 2 partes — pulando');continue;}
+        if(_dparts.length<2)continue;
         const _lastPart=_dparts[_dparts.length-1];
-        if(_ADDR_NOTE_PAT.test(_lastPart)){console.warn('[DBG-DASH] Última parte é nota ("'+_lastPart+'") — pulando');continue;}
+        if(_ADDR_NOTE_PAT.test(_lastPart))continue; // é nota de entrega, não cidade
         const _sp=_dparts[0]; // parte da rua
         const _sn=_sp.split(',')[0].trim(); // só o nome da rua
         const _nm3=_sp.match(/[,\s]+(\d+)/); // número
         const _num3=_nm3?_nm3[1]:'';
         const _locParts=_dparts.slice(1).join(', '); // todas as partes de localização
         const _cleanAddr3=[_sn,_num3,_locParts,'Brasil'].filter(Boolean).join(', ');
-        const _failBefore=(_geoFailCount[_cleanAddr3.slice(0,60)]||0);
-        console.log('[DBG-DASH] cleanAddr: '+_cleanAddr3+' | failCount antes reset: '+_failBefore+' | rate: '+_geoRateLog.filter(t=>Date.now()-t<60000).length+'/'+_GEO_RATE_MAX);
         _geoFailReset(_cleanAddr3);_geoFailReset(_cd.endereco);
-        console.log('[DBG-DASH] Chamando nominatim("'+_cleanAddr3+'")...');
-        const _r3=await nominatim(_cleanAddr3,_cd).catch(e=>{console.error('[DBG-DASH] nominatim threw:',e);return null;});
-        console.log('[DBG-DASH] nominatim retornou: '+((_r3)?('lat='+_r3.lat+',lng='+_r3.lng+' cidade='+_r3.cidade):'NULL'));
+        const _r3=await nominatim(_cleanAddr3,_cd).catch(()=>null);
         if(_r3){_cd.lat=_r3.lat;_cd.lng=_r3.lng;
           console.log('[PRE-GEO] Geocodificado via em-dash city: '+_cd.nome+' \u2192 '+_cleanAddr3);
         }else{
-          console.warn('[DBG-DASH] EM-DASH fallback falhou para: '+_cd.nome+' (cleanAddr: '+_cleanAddr3+')');
+          console.warn('[PRE-GEO] em-dash fallback sem resultado: '+_cd.nome+' ('+_cleanAddr3+')');
         }
       }catch(_e3){console.warn('[PRE-GEO] em-dash fallback falhou:',_cd.nome,_e3.message);}
     }
-    console.log('[DBG-FB] Fallbacks concluídos. Clientes sem lat/lng: '+clients.filter(c=>!c.lat&&!c.lng).map(c=>c.nome).join(', '));
     _perf.geocode=performance.now();
     console.log('[CALC-ROUTE] 2/6 Geocoding ('+needGeo.length+' precisavam): '+Math.round(_perf.geocode-_perf.anchor)+'ms');
     if(notFound.length)toast(t('err.addr_not_found')+': '+notFound.join(', '),'warn');
