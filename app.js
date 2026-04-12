@@ -39,7 +39,7 @@ pt:{
   'sum.title':'Resumo do dia','sum.clients':'Clientes','sum.pickups':'Retiradas','sum.deliveries':'Entregas','sum.items':'itens',
   // Map
   'map.title':'Rota no mapa','map.hint':'Adicione clientes para ver a rota','map.expand':'Expandir mapa','map.reduce':'Reduzir mapa',
-  'map.panel':'Painel da Rota','map.dist':'Dist\xe2ncia total','map.time':'Dura\xe7\xe3o total','map.done':'Conclu\xeddos','map.last':'Última parada','map.stops':'Paradas',
+  'map.panel':'Painel da Rota','map.dist':'Dist\xe2ncia total','map.time':'Dura\xe7\xe3o total','map.done':'Conclu\xeddos','map.last':'Chegada prevista','map.stops':'Paradas',
   'map.arrival':'Chegada','map.departure':'Partida','map.return':'Retorno','map.remove':'Remover da rota',
   // Config
   'cfg.title':'Configura\xe7\xf5es','cfg.route':'Rota padr\xe3o','cfg.base':'Endere\xe7o de partida','cfg.ret':'Endere\xe7o de retorno',
@@ -242,7 +242,7 @@ en:{
   'cl.title':'Clients in route','cl.empty':'No clients yet','cl.search':'Search by name or address...',
   'sum.title':'Daily summary','sum.clients':'Clients','sum.pickups':'Pickups','sum.deliveries':'Deliveries','sum.items':'items',
   'map.title':'Route on map','map.hint':'Add clients to see the route','map.expand':'Expand map','map.reduce':'Reduce map',
-  'map.panel':'Route Panel','map.dist':'Total distance','map.time':'Total duration','map.done':'Completed','map.last':'Last stop','map.stops':'Stops',
+  'map.panel':'Route Panel','map.dist':'Total distance','map.time':'Total duration','map.done':'Completed','map.last':'Est. return','map.stops':'Stops',
   'map.arrival':'Arrival','map.departure':'Departure','map.return':'Return','map.remove':'Remove from route',
   'cfg.title':'Settings','cfg.route':'Default route','cfg.base':'Departure address','cfg.ret':'Return address',
   'cfg.saida':'Departure time','cfg.retlim':'Return deadline','cfg.tempo':'Time/stop (min)',
@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.20';
+const APP_VERSION='v5.9.21';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -5137,7 +5137,8 @@ function recalcETAsFromCache(){
         cur=ts(c.hi); // snapa para abertura da janela
       } else if(cur>ts(c.hf)){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela encerrada \xE0s '+c.hf;}
     }
-    if(cur>retSec){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
+    // v5.9.21: "Além do limite de retorno" removido dos cards individuais.
+    // O alerta de retorno é exibido como banner único no Painel da Rota (_routeReturnETA vs cfg.ret).
     cur+=tempoSec;
     lastValidNode=toNode;
   }
@@ -5263,7 +5264,7 @@ function fmtEnderecoComCidade(c){
   return addr;
 }
 let _activeInfoWindow=null;
-let _routeTotalKm=0,_routeTotalMin=0,_routeTotalElapsedMin=0;
+let _routeTotalKm=0,_routeTotalMin=0,_routeTotalElapsedMin=0,_routeReturnETA=null;
 let _mapClickListenerSet=false;
 function toggleMapFullscreen(){
   const wrap=g('mapw'),expIcon=g('expand-icon'),colIcon=g('collapse-icon'),btn=g('map-expand-btn');
@@ -5293,7 +5294,7 @@ function updateMapSidebar(){
   const doneCount=order.filter(i=>clients[i]._motDone).length;
   const totalStops=order.length;
   const lastClient=order.length?clients[order[order.length-1]]:null;
-  const etaFim=lastClient?.estT||'--:--';
+  const etaFim=_routeReturnETA||(lastClient?.estT||'--:--');
   let html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
     +'<div style="font-size:15px;font-weight:800;color:var(--tx)">'+t('map.panel_title')+'</div>'
     +'<button class="undo-btn'+((_routeHistory.length>0)?' active':'')+'" onclick="undoRoute()" title="'+t('map.undo_tip')+'">'
@@ -5308,6 +5309,21 @@ function updateMapSidebar(){
     +'<div class="ms-stat"><div class="ms-stat-val">'+doneCount+'/'+totalStops+'</div><div class="ms-stat-label">'+t('map.done')+'</div></div>'
     +'<div class="ms-stat"><div class="ms-stat-val">'+etaFim+'</div><div class="ms-stat-label">'+t('map.last')+'</div></div>'
   +'</div>';
+  // v5.9.21: Banner de retorno — aparece só quando previsão ultrapassa limite configurado
+  if(_routeReturnETA&&cfg.ret){
+    const _retLimit=ts(cfg.ret);
+    const _retPrev=ts(_routeReturnETA);
+    if(_retPrev>_retLimit){
+      const _diffMin=Math.round((_retPrev-_retLimit)/60);
+      html+='<div style="background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.35);border-radius:10px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:flex-start;gap:8px">'
+        +'<svg style="flex-shrink:0;margin-top:1px" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+        +'<div style="font-size:12px;color:#92400e;line-height:1.45">'
+        +'<span style="font-weight:700">Retorno previsto: '+_routeReturnETA+'</span>'
+        +' · Limite: '+cfg.ret
+        +'<br><span style="opacity:.85">+'+_diffMin+'min além do limite. Considere remover uma parada.</span>'
+        +'</div></div>';
+    }
+  }
   // v4.3.4: Progress bar and delay warning
   const progressPercent=totalStops>0?Math.round(doneCount/totalStops*100):0;
   html+='<div style="background:var(--bd);border-radius:6px;height:6px;margin-bottom:12px;overflow:hidden">'
@@ -6293,6 +6309,14 @@ async function calcRoute(){
     // ETAs via Google Directions (precisos, com trânsito em tempo real v5.8.22)
     const legsDur=legs.map(l=>({duration:(l.duration_in_traffic||l.duration).value}));
     estimateTimesOSRM(legsDur);
+    // v5.9.21: Calcular ETA de chegada no endereço de retorno
+    // Último leg = último cliente → endereço de retorno (já inclui tráfego real)
+    const _lastGeoClient=order.filter(i=>clients[i]&&clients[i].lat&&clients[i].lng).map(i=>clients[i]).pop();
+    const _retLeg=legs[legs.length-1];
+    if(_lastGeoClient&&_lastGeoClient.estT&&_retLeg){
+      const _retSec=ts(_lastGeoClient.estT)+(cfg.tempo||10)*60+(_retLeg.duration_in_traffic||_retLeg.duration).value;
+      _routeReturnETA=st2(_retSec);
+    } else { _routeReturnETA=null; }
     const urgCount=geocoded.filter(c=>clientDeadlineMin(c)<24*60).length;
     const urgMsg=urgCount?' ('+urgCount+' com janela de hor\xe1rio priorit\xe1ria)':'';
     renderC();updStats();
@@ -6332,7 +6356,7 @@ function estimateTimesOSRM(legs){
       if(cur<ts(c.hi)){const wm=Math.round((ts(c.hi)-cur)/60);c.conflict=true;c.cmsg='Chegada ~'+c.estT+', aguardar ~'+wm+'min (janela '+c.hi+')';cur=ts(c.hi);}// v5.8.41: snap
       else if(cur>ts(c.hf)){c.conflict=true;c.cmsg='Chegada ~'+c.estT+', janela encerrada \xE0s '+c.hf;}
     }
-    if(cur>retS){c.conflict=true;c.cmsg=(c.cmsg?c.cmsg+' / ':'')+'Al\xE9m do limite de retorno';}
+    // v5.9.21: alerta de retorno centralizado no banner do painel — removido dos cards individuais
     cur+=tempo; // Tempo de parada neste cliente
   });
 }
