@@ -39,7 +39,7 @@ pt:{
   'sum.title':'Resumo do dia','sum.clients':'Clientes','sum.pickups':'Retiradas','sum.deliveries':'Entregas','sum.items':'itens',
   // Map
   'map.title':'Rota no mapa','map.hint':'Adicione clientes para ver a rota','map.expand':'Expandir mapa','map.reduce':'Reduzir mapa',
-  'map.panel':'Painel da Rota','map.dist':'Dist\xe2ncia total','map.time':'Tempo estimado','map.done':'Conclu\xeddos','map.last':'Última parada','map.stops':'Paradas',
+  'map.panel':'Painel da Rota','map.dist':'Dist\xe2ncia total','map.time':'Dura\xe7\xe3o total','map.done':'Conclu\xeddos','map.last':'Última parada','map.stops':'Paradas',
   'map.arrival':'Chegada','map.departure':'Partida','map.return':'Retorno','map.remove':'Remover da rota',
   // Config
   'cfg.title':'Configura\xe7\xf5es','cfg.route':'Rota padr\xe3o','cfg.base':'Endere\xe7o de partida','cfg.ret':'Endere\xe7o de retorno',
@@ -242,7 +242,7 @@ en:{
   'cl.title':'Clients in route','cl.empty':'No clients yet','cl.search':'Search by name or address...',
   'sum.title':'Daily summary','sum.clients':'Clients','sum.pickups':'Pickups','sum.deliveries':'Deliveries','sum.items':'items',
   'map.title':'Route on map','map.hint':'Add clients to see the route','map.expand':'Expand map','map.reduce':'Reduce map',
-  'map.panel':'Route Panel','map.dist':'Total distance','map.time':'Estimated time','map.done':'Completed','map.last':'Last stop','map.stops':'Stops',
+  'map.panel':'Route Panel','map.dist':'Total distance','map.time':'Total duration','map.done':'Completed','map.last':'Last stop','map.stops':'Stops',
   'map.arrival':'Arrival','map.departure':'Departure','map.return':'Return','map.remove':'Remove from route',
   'cfg.title':'Settings','cfg.route':'Default route','cfg.base':'Departure address','cfg.ret':'Return address',
   'cfg.saida':'Departure time','cfg.retlim':'Return deadline','cfg.tempo':'Time/stop (min)',
@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.19';
+const APP_VERSION='v5.9.20';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -5151,6 +5151,8 @@ function applyRouteResult(result){
   order=result.order.slice();
   _routeTotalKm=result.totalKm;
   _routeTotalMin=result.totalMin;
+  const _arN=order.filter(i=>clients[i]&&clients[i].lat&&clients[i].lng).length;
+  _routeTotalElapsedMin=result.totalMin+_arN*((cfg.tempo||10)+(cfg.etaBuffer||20));
   // Re-estimate times
   if(result.legs){
     const legsDur=result.legs.map(l=>({duration:(l.duration_in_traffic||l.duration).value})); // v5.8.22
@@ -5261,7 +5263,7 @@ function fmtEnderecoComCidade(c){
   return addr;
 }
 let _activeInfoWindow=null;
-let _routeTotalKm=0,_routeTotalMin=0;
+let _routeTotalKm=0,_routeTotalMin=0,_routeTotalElapsedMin=0;
 let _mapClickListenerSet=false;
 function toggleMapFullscreen(){
   const wrap=g('mapw'),expIcon=g('expand-icon'),colIcon=g('collapse-icon'),btn=g('map-expand-btn');
@@ -5302,7 +5304,7 @@ function updateMapSidebar(){
   html+='<div class="opt-savings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span class="opt-savings-text"></span></div>';
   html+='<div class="ms-route-stats">'
     +'<div class="ms-stat"><div class="ms-stat-val">'+_routeTotalKm.toFixed(1)+' km</div><div class="ms-stat-label">'+t('map.dist')+'</div></div>'
-    +'<div class="ms-stat"><div class="ms-stat-val">'+fmtDuration(Math.round(_routeTotalMin))+'</div><div class="ms-stat-label">'+t('map.time')+'</div></div>'
+    +'<div class="ms-stat"><div class="ms-stat-val">'+fmtDuration(Math.round(_routeTotalElapsedMin||_routeTotalMin))+'</div><div class="ms-stat-label">'+t('map.time')+'</div></div>'
     +'<div class="ms-stat"><div class="ms-stat-val">'+doneCount+'/'+totalStops+'</div><div class="ms-stat-label">'+t('map.done')+'</div></div>'
     +'<div class="ms-stat"><div class="ms-stat-val">'+etaFim+'</div><div class="ms-stat-label">'+t('map.last')+'</div></div>'
   +'</div>';
@@ -6260,6 +6262,10 @@ async function calcRoute(){
       }
     });
     _routeTotalKm=totalDistKm;_routeTotalMin=totalDurMin;
+    // v5.9.20: Duração total real = tempo de condução + (N paradas × atendimento) + (N paradas × buffer)
+    // _routeTotalMin é só o tempo no carro (legs do Google). Não inclui atendimento nem buffers.
+    const _geoN=order.filter(i=>clients[i]&&clients[i].lat&&clients[i].lng).length;
+    _routeTotalElapsedMin=totalDurMin+_geoN*((cfg.tempo||10)+(cfg.etaBuffer||20));
     // v5.8.29: mapa cliente→parada real para alinhar numeração marcador com cartão
     const _ordGeoStopMap=new Map();
     order.forEach((ci,stopIdx)=>{if(clients[ci]&&clients[ci].lat&&clients[ci].lng)_ordGeoStopMap.set(clients[ci],stopIdx);});
