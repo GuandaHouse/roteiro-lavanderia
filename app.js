@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.36';
+const APP_VERSION='v5.9.37';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -5791,6 +5791,17 @@ async function _resolveGeoAnchor(){
   // (ex: "Rua Baquirivu" resolvia para Guarulhos; com CEP, resolve para São Paulo corretamente)
   const _baseCep=(cfg.base_cep||'').replace(/\D/g,'');
   const _cacheBase=base+(_baseCep?'|cep:'+_baseCep:'');
+  // v5.9.37: lê cidade da âncora ANTERIOR para detectar mudança e invalidar caches stale
+  let _prevAnchorCity='';
+  try{const _pa=JSON.parse(localStorage.getItem('rota_geo_anchor_v2')||'null');_prevAnchorCity=_pa?.city||'';}catch(e){}
+  // Helper: registra mudança de cidade da âncora para que nominatim() invalide caches stale
+  const _onAnchorSet=()=>{
+    if(_prevAnchorCity&&_prevAnchorCity!==_geoAnchor.city){
+      try{localStorage.setItem('rota_geo_stale_city',_prevAnchorCity);}catch(e){}
+      console.log('[GEO-ANCHOR] Cidade mudou: '+_prevAnchorCity+' → '+_geoAnchor.city+' (caches stale serão re-geocodificados)');
+    }
+    return _geoAnchor;
+  };
   // v5.9.8: cidade/uf não são mais configurados manualmente — extraídos via geocoding
   // v5.9.1: Cache localStorage — evita geocoding do endereço da empresa a cada sessão (TTL 7 dias)
   try{
@@ -5821,7 +5832,7 @@ async function _resolveGeoAnchor(){
               _geoAnchor={lat:loc.lat,lng:loc.lng,state:_vcD.uf,city:_vcD.localidade};
               try{localStorage.setItem('rota_geo_anchor_v2',JSON.stringify({..._geoAnchor,_base:_cacheBase,_ts:Date.now()}));}catch(e){}
               console.log('[GEO-ANCHOR] Resolvida via CEP ('+_baseCep+'): '+_vcD.localidade+', '+_vcD.uf+' → '+loc.lat+','+loc.lng);
-              return _geoAnchor;
+              return _onAnchorSet();
             }
           }catch(e){}
           // v5.9.36: Endereço completo não encontrado no OSM (rua pode não estar indexada).
@@ -5837,7 +5848,7 @@ async function _resolveGeoAnchor(){
               _geoAnchor={lat:loc2.lat,lng:loc2.lng,state:_vcD.uf,city:_vcD.localidade};
               try{localStorage.setItem('rota_geo_anchor_v2',JSON.stringify({..._geoAnchor,_base:_cacheBase,_ts:Date.now()}));}catch(e){}
               console.log('[GEO-ANCHOR] Cidade via CEP ('+_baseCep+'): '+_vcD.localidade+', '+_vcD.uf+' → '+loc2.lat+','+loc2.lng);
-              return _geoAnchor;
+              return _onAnchorSet();
             }
           }catch(e){}
         }
@@ -5857,7 +5868,7 @@ async function _resolveGeoAnchor(){
       // Persistir por 7 dias — endereço da empresa raramente muda
       try{localStorage.setItem('rota_geo_anchor_v2',JSON.stringify({..._geoAnchor,_base:_cacheBase,_ts:Date.now()}));}catch(e){}
       console.log('[GEO-ANCHOR] Resolvida e cacheada: '+city+', '+state);
-      return _geoAnchor;
+      return _onAnchorSet();
     }
   }catch(e){console.warn('[GEO-ANCHOR] Falha:',e);}
   // v5.9.7: Bootstrap âncora a partir do histórico de geocoding (rota_addr_choices / rota_geo_locs)
@@ -5871,7 +5882,7 @@ async function _resolveGeoAnchor(){
       const _stM=_disp.match(/ - ([A-Z]{2}), \d{5}/);
       if(_stM){_geoAnchor={lat:v.lat,lng:v.lng,state:_stM[1],city:v.cidade||''};
         try{localStorage.setItem('rota_geo_anchor_v2',JSON.stringify({..._geoAnchor,_base:base,_ts:Date.now()}));}catch(e){}
-        console.log('[GEO-ANCHOR] Bootstrap de choices: '+_geoAnchor.city+', '+_geoAnchor.state);return _geoAnchor;}
+        console.log('[GEO-ANCHOR] Bootstrap de choices: '+_geoAnchor.city+', '+_geoAnchor.state);return _onAnchorSet();}
     }
     const _gl=JSON.parse(localStorage.getItem('rota_geo_locs')||'{}');
     for(const arr of Object.values(_gl)){
@@ -5881,7 +5892,7 @@ async function _resolveGeoAnchor(){
       const _stM=_disp.match(/ - ([A-Z]{2}), \d{5}/);
       if(_stM){_geoAnchor={lat:loc.lat,lng:loc.lng,state:_stM[1],city:loc.cidade||''};
         try{localStorage.setItem('rota_geo_anchor_v2',JSON.stringify({..._geoAnchor,_base:base,_ts:Date.now()}));}catch(e){}
-        console.log('[GEO-ANCHOR] Bootstrap de locs: '+_geoAnchor.city+', '+_geoAnchor.state);return _geoAnchor;}
+        console.log('[GEO-ANCHOR] Bootstrap de locs: '+_geoAnchor.city+', '+_geoAnchor.state);return _onAnchorSet();}
     }
   }catch(e){}
   return null;
@@ -5935,7 +5946,20 @@ async function nominatim(addr,client){
   }
   if(_geoCache[addr]){return _geoCache[addr];}
   const cached=localStorage.getItem('geo3_'+addr);
-  if(cached){const c=JSON.parse(cached);_geoCache[addr]=c;return c;}
+  if(cached){
+    const c=JSON.parse(cached);
+    // v5.9.37: re-geocodifica entradas stale se a âncora mudou de cidade.
+    // ex: âncora era Guarulhos, agora é São Paulo — entradas com cidade=Guarulhos
+    // que não mencionam "Guarulhos" explicitamente no endereço são suspeitas.
+    const _sc=localStorage.getItem('rota_geo_stale_city')||'';
+    if(_sc&&c.cidade===_sc){
+      localStorage.removeItem('geo3_'+addr);
+      console.log('[GEO-STALE] '+addr.slice(0,50)+' — cidade "'+_sc+'" stale, re-geocodificando');
+      // Fall through to re-geocode
+    } else {
+      _geoCache[addr]=c;return c;
+    }
+  }
   // v5.9.7: Verificar rota_geo_locs pelo endereço base (rua+número, sem complemento)
   // Cobre clientes com endereço formatado (ex: "Rua X, 123 — Bairro — Cidade") que já foram
   // geocodificados antes mas sob chave curta (sem o complemento/bairro/cidade).
