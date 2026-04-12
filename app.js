@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.31';
+const APP_VERSION='v5.9.32';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -6253,6 +6253,8 @@ async function calcRoute(){
           console.warn('[PRE-GEO] em-dash fallback sem resultado: '+_cd.nome+' ('+_cleanAddr3+')');
         }
       }catch(_e3){console.warn('[PRE-GEO] em-dash fallback falhou:',_cd.nome,_e3.message);}
+      // v5.9.32: pausa entre iterações para não pressionar OSM quando há vários em-dash em sequência
+      await new Promise(r=>setTimeout(r,300));
     }
     _perf.geocode=performance.now();
     console.log('[CALC-ROUTE] 2/6 Geocoding ('+needGeo.length+' precisavam): '+Math.round(_perf.geocode-_perf.anchor)+'ms');
