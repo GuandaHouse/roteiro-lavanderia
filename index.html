@@ -923,8 +923,20 @@ html:not(.auth-pending) #auth-screen{display:none;}
     <div class="card">
       <p class="ct" data-i18n="cfg.route">Rota padr&#xE3;o</p>
       <div class="fg2">
-        <div class="fg full"><label data-i18n="cfg.base">Endere&#xE7;o de partida</label><input type="text" id="cfg-base" placeholder="Ex: Rua Central, 100, S&#xE3;o Paulo, SP"/></div>
-        <div class="fg full"><label data-i18n="cfg.ret">Endere&#xE7;o de retorno</label><input type="text" id="cfg-retaddr" placeholder="Ex: Av. Brasil, 50, S&#xE3;o Paulo, SP"/></div>
+        <div class="fg full"><label>Endere&#xE7;o de partida</label>
+          <div style="display:flex;gap:8px;align-items:flex-end">
+            <div class="fg" style="flex:1;margin:0"><label style="font-size:11px;opacity:.6">Logradouro</label><input type="text" id="cfg-base-logr" placeholder="Ex: Rua Baquirivu"/></div>
+            <div class="fg" style="width:80px;margin:0"><label style="font-size:11px;opacity:.6">N&#xFA;mero</label><input type="text" id="cfg-base-num" placeholder="454"/></div>
+            <div class="fg" style="width:110px;margin:0"><label style="font-size:11px;opacity:.6">CEP</label><input type="text" id="cfg-base-cep" placeholder="00000-000" maxlength="9"/></div>
+          </div>
+        </div>
+        <div class="fg full"><label>Endere&#xE7;o de retorno</label>
+          <div style="display:flex;gap:8px;align-items:flex-end">
+            <div class="fg" style="flex:1;margin:0"><label style="font-size:11px;opacity:.6">Logradouro</label><input type="text" id="cfg-retaddr-logr" placeholder="Ex: Rua Kalil Nader"/></div>
+            <div class="fg" style="width:80px;margin:0"><label style="font-size:11px;opacity:.6">N&#xFA;mero</label><input type="text" id="cfg-retaddr-num" placeholder="776"/></div>
+            <div class="fg" style="width:110px;margin:0"><label style="font-size:11px;opacity:.6">CEP</label><input type="text" id="cfg-retaddr-cep" placeholder="00000-000" maxlength="9"/></div>
+          </div>
+        </div>
         <div class="fg"><label data-i18n="cfg.saida">Hor&#xE1;rio de sa&#xED;da</label><input type="time" id="cfg-saida" value="10:00"/></div>
         <div class="fg"><label data-i18n="cfg.retlim">Limite de retorno</label><input type="time" id="cfg-ret" value="17:00"/></div>
         <div class="fg"><label data-i18n="cfg.tempo">Tempo/parada (min)</label><input type="number" id="cfg-tempo" value="10" min="1" max="999"/></div>
@@ -1220,7 +1232,7 @@ html:not(.auth-pending) #auth-screen{display:none;}
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="app.js?v=5.9.10"></script>
+<script src="app.js?v=5.9.11"></script>
 <script>
 (function(){
   try{

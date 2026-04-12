@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.10';
+const APP_VERSION='v5.9.11';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -2326,6 +2326,10 @@ function _initApp(){
   // v5.8.48: inicializar _formTags[id] explicitamente — updateTagSelects apenas renderiza HTML
   // mas não seta _formTags[id], então addClient() via Enter ou clique encontrava [] no primeiro uso
   initTagMultiSelect('f-tipo',[]);initTagMultiSelect('em-tipo',[]);initTagMultiSelect('si-tipo',[]);
+  // v5.9.11: máscara de CEP nos campos de endereço de partida/retorno
+  ['cfg-base-cep','cfg-retaddr-cep'].forEach(id=>{const el=g(id);if(!el)return;
+    el.addEventListener('input',()=>{let v=el.value.replace(/\D/g,'').slice(0,8);if(v.length>5)v=v.slice(0,5)+'-'+v.slice(5);el.value=v;});
+  });
   initPreferredTab();initCustomSelects();renderAddrChoices();
   applyI18n();updateLangBtns();
   if(!cfg.ttoken){const el=g('trello-nocred');if(el)el.style.display='block';const s1=g('trello-step1');if(s1)s1.style.display='none';}
@@ -2481,12 +2485,38 @@ function loadCfg(){
   cfg=safeJsonParse('rota_cfg',{});
   // v5.9.8: cidade/uf removidos da UI — extraídos automaticamente via geocoding do endereço de partida
   delete cfg.cidade; delete cfg.uf;
-  ['saida','ret','tempo','base','retaddr','al1','al2','tkey','ttoken','akey','gkey','etaBuffer'].forEach(k=>{if(cfg[k]!==undefined&&g('cfg-'+k))g('cfg-'+k).value=cfg[k];});
+  // v5.9.11: Carregar campos separados logr/num/cep
+  // Backward compat: se só tem cfg.base (formato antigo "Rua X, 123"), separar em logr+num
+  if(cfg.base&&!cfg.base_logr){
+    const _m=cfg.base.match(/^(.*?)[,\s]+(\d+[A-Za-z]?)$/);
+    if(_m){cfg.base_logr=_m[1].trim();cfg.base_num=_m[2].trim();}else{cfg.base_logr=cfg.base;cfg.base_num='';}
+  }
+  if(cfg.retaddr&&!cfg.retaddr_logr){
+    const _m=cfg.retaddr.match(/^(.*?)[,\s]+(\d+[A-Za-z]?)$/);
+    if(_m){cfg.retaddr_logr=_m[1].trim();cfg.retaddr_num=_m[2].trim();}else{cfg.retaddr_logr=cfg.retaddr;cfg.retaddr_num='';}
+  }
+  if(g('cfg-base-logr')&&cfg.base_logr!==undefined)g('cfg-base-logr').value=cfg.base_logr;
+  if(g('cfg-base-num')&&cfg.base_num!==undefined)g('cfg-base-num').value=cfg.base_num;
+  if(g('cfg-base-cep')&&cfg.base_cep!==undefined)g('cfg-base-cep').value=cfg.base_cep;
+  if(g('cfg-retaddr-logr')&&cfg.retaddr_logr!==undefined)g('cfg-retaddr-logr').value=cfg.retaddr_logr;
+  if(g('cfg-retaddr-num')&&cfg.retaddr_num!==undefined)g('cfg-retaddr-num').value=cfg.retaddr_num;
+  if(g('cfg-retaddr-cep')&&cfg.retaddr_cep!==undefined)g('cfg-retaddr-cep').value=cfg.retaddr_cep;
+  ['saida','ret','tempo','al1','al2','tkey','ttoken','akey','gkey','etaBuffer'].forEach(k=>{if(cfg[k]!==undefined&&g('cfg-'+k))g('cfg-'+k).value=cfg[k];});
   // v4.6.2: routePriority config load removido
 }
 function saveCfg(){
+  // v5.9.11: montar cfg.base e cfg.retaddr a partir dos 3 campos separados
+  const _bLogr=(v('cfg-base-logr')||'').trim();
+  const _bNum=(v('cfg-base-num')||'').trim();
+  const _bCep=(v('cfg-base-cep')||'').replace(/\D/g,'').replace(/^(\d{5})(\d{3})$/,'$1-$2');
+  const _rLogr=(v('cfg-retaddr-logr')||'').trim();
+  const _rNum=(v('cfg-retaddr-num')||'').trim();
+  const _rCep=(v('cfg-retaddr-cep')||'').replace(/\D/g,'').replace(/^(\d{5})(\d{3})$/,'$1-$2');
+  const _baseStr=_bLogr&&_bNum?_bLogr+', '+_bNum:_bLogr;
+  const _retStr=_rLogr&&_rNum?_rLogr+', '+_rNum:_rLogr;
   cfg={saida:v('cfg-saida'),ret:v('cfg-ret'),tempo:parseInt(v('cfg-tempo'))||10,
-    base:v('cfg-base'),retaddr:v('cfg-retaddr'),
+    base:_baseStr,base_logr:_bLogr,base_num:_bNum,base_cep:_bCep,
+    retaddr:_retStr,retaddr_logr:_rLogr,retaddr_num:_rNum,retaddr_cep:_rCep,
     etaBuffer:(()=>{const _eb=parseInt(v('cfg-etaBuffer'));return Math.min(999,Math.max(0,isNaN(_eb)?20:_eb));})(), // v5.8.31: fix 0 válido, max 999
     al1:v('cfg-al1'),al2:v('cfg-al2'),
     tkey:v('cfg-tkey'),ttoken:v('cfg-ttoken'),
@@ -5919,11 +5949,40 @@ async function calcRoute(){
     // ── v4.6.6: MOTOR DE OTIMIZAÇÃO v2 — VRPTW com SA ──
     _routeMode=getRouteMode();
     _routeResults={time:null,distance:null};
-    // v4.8.0: Resolver base e retorno em PARALELO
     // v5.9.10: reset fail guard para base/retorno antes de tentar (evita bloqueio por falhas anteriores na sessão)
     _geoFailReset(baseAddr);_geoFailReset(retAddr);
+    // v5.9.11: geocodificar base/retorno via CEP quando disponível (muito mais confiável que nome de rua)
+    async function _geocodeBaseAddr(addr,cep){
+      if(!addr)return null;
+      _geoFailReset(addr);
+      // Se tem CEP, usar ViaCEP para obter logradouro canônico → OSM
+      if(cep){const _rawCep=cep.replace(/\D/g,'');
+        if(_rawCep.length===8){
+          try{
+            const _vcR=await fetch('https://viacep.com.br/ws/'+_rawCep+'/json/',{signal:AbortSignal.timeout(4000)});
+            if(_vcR.ok){const _vc=await _vcR.json();
+              if(!_vc.erro&&_vc.logradouro&&_vc.localidade&&_vc.uf){
+                // Monta query canônica: "Rua X, num, bairro, cidade, UF" — muito mais preciso
+                const _parts=[_vc.logradouro];
+                const _m=addr.match(/\b(\d+[A-Za-z]?)\b/);if(_m)_parts.push(_m[1]);
+                if(_vc.bairro)_parts.push(_vc.bairro);
+                _parts.push(_vc.localidade,_vc.uf,'Brasil');
+                const _canonAddr=_parts.join(', ');
+                console.log('[GEO-BASE] Via CEP: '+_canonAddr);
+                const _r=await nominatim(_canonAddr);
+                if(_r)return _r;
+              }
+            }
+          }catch(e){}
+        }
+      }
+      return nominatim(addr);
+    }
     let baseCoords,retCoords;
-    const [baseGeo,retGeo]=await Promise.all([nominatim(baseAddr),nominatim(retAddr)]);
+    const [baseGeo,retGeo]=await Promise.all([
+      _geocodeBaseAddr(baseAddr,cfg.base_cep),
+      _geocodeBaseAddr(retAddr,cfg.retaddr_cep)
+    ]);
     if(baseGeo){baseCoords={lat:baseGeo.lat,lng:baseGeo.lng};}
     else if(_geoAnchor?.lat){
       // v5.9.10: fallback ao âncora geográfico (coordenada central dos clientes) quando base falha
