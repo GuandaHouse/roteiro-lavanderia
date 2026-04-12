@@ -2,7 +2,7 @@
 
 > Documento vivo com todas as decisoes tecnicas, features e historico do projeto.
 > Atualizado a cada entrega.
-> Última atualização: 12/04/2026 — v5.9.19
+> Última atualização: 12/04/2026 — v5.9.29
 
 ---
 
@@ -451,3 +451,5 @@ Se precisar trocar por API gratuita no futuro: OSRM pode ser mantido para a matr
 12. **Fluxo de teste obrigatório** — quando um bug é difícil de corrigir, o assistente usa Claude em Chrome para testar visualmente como um usuário real. Nunca reportar "corrigido" sem ter visto com os próprios olhos na interface.
 13. **Motor de otimização: Google TSP é soberano** — a ordem final de paradas é sempre determinada pelo Google Directions (`optimizeWaypoints:true`), não por OSRM. OSRM pode ser usado na matriz de distâncias (buildTimeMatrix) para heurísticas internas, mas o rankeamento final de rotas deve ser validado pelo Google. OSRM diverge sistematicamente do Google para roteamento urbano em SP (rankings 100% invertidos documentados em 12/04/2026). Se a ordem parecer errada, comparar diretamente com Google Maps antes de ajustar qualquer parâmetro interno.
 14. **Correção de janelas horárias é pós-processamento** — `_fixWindowViolationsOrder` roda APÓS o Google TSP resolver a ordem base. Nunca tentar incorporar time windows no TSP do Google (ele ignora). A função move clientes com deadline violado para a posição mais tarde possível que ainda respeita o horário, minimizando disrupção na rota. Após a correção, sempre re-rodar Directions com a nova ordem para obter legs e ETAs precisas.
+15. **Geocoding em 3 camadas de fallback** — (1) OSM Nominatim direto, (2) ViaCEP+OSM para clientes com c.cep (strip parênteses do bairro, tenta com bairro/sem bairro/logradouro canônico), (3) Em-dash city fallback para endereços "Rua X, 132 B, Apto 365 — Barueri" → extrai cidade do último segmento em-dash e reconstrói "Rua X, 132, Barueri, Brasil". Taxa alvo: ≥10/12 clientes por rota. Clientes sem cidade/CEP (ex: "Av. Jabaquara, 1744, Apto 1007" sem contexto) são estruturalmente irresolvíveis sem edição do usuário.
+16. **`_geoFailCount[key]=0` não significa falha** — ao interpretar debug de geocoding: fail count 0 pode significar (a) nunca chamado OU (b) chamado e bem-sucedido (sucesso nunca incrementa o contador; `_geoFailReset` deleta a chave; ambos resultam em key=undefined=0). Verificar o resultado real (c.lat/c.lng) para confirmar sucesso, não o fail count.
