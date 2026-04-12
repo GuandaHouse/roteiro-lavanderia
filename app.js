@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.37';
+const APP_VERSION='v5.9.38';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -5935,6 +5935,24 @@ function _extractGeoResult(result){
 }
 // v5.8.8: nominatim — verificação de ambiguidade via chamada sem bounds
 async function nominatim(addr,client){
+  // v5.9.38: GEO-STALE check roda ANTES de tudo (fail count + memory cache podem bloquear retry).
+  // Quando a âncora mudou de cidade (ex: Guarulhos→SP), caches e fail counts antigos são inválidos.
+  // Precisa rodar aqui para que _geoFailOk() não bloqueie addresses que deveriam ser re-geocodificadas.
+  const _scPre=localStorage.getItem('rota_geo_stale_city')||'';
+  if(_scPre){
+    // Verifica cache em memória primeiro
+    const _memC=_geoCache[addr];
+    if(_memC&&_memC.cidade===_scPre){
+      delete _geoCache[addr];localStorage.removeItem('geo3_'+addr);_geoFailReset(addr);
+      console.log('[GEO-STALE] mem:'+addr.slice(0,45)+' — "'+_scPre+'" stale, reset');
+    } else {
+      const _lsC=localStorage.getItem('geo3_'+addr);
+      if(_lsC){try{const _lsP=JSON.parse(_lsC);
+        if(_lsP.cidade===_scPre){localStorage.removeItem('geo3_'+addr);_geoFailReset(addr);
+          console.log('[GEO-STALE] ls:'+addr.slice(0,45)+' — "'+_scPre+'" stale, reset');}
+      }catch(e){}}
+    }
+  }
   // v5.8.38: BUG-01 — abandona endereços que falharam demais (evita loop)
   if(!_geoFailOk(addr)){return null;}
   // v5.8.24: Memória explícita do usuário tem PRIORIDADE sobre qualquer cache
@@ -5948,13 +5966,9 @@ async function nominatim(addr,client){
   const cached=localStorage.getItem('geo3_'+addr);
   if(cached){
     const c=JSON.parse(cached);
-    // v5.9.37: re-geocodifica entradas stale se a âncora mudou de cidade.
-    // ex: âncora era Guarulhos, agora é São Paulo — entradas com cidade=Guarulhos
-    // que não mencionam "Guarulhos" explicitamente no endereço são suspeitas.
-    const _sc=localStorage.getItem('rota_geo_stale_city')||'';
-    if(_sc&&c.cidade===_sc){
+    // (GEO-STALE já tratado acima; aqui só retorna ou cai no re-geocoding)
+    if(_scPre&&c.cidade===_scPre){
       localStorage.removeItem('geo3_'+addr);
-      console.log('[GEO-STALE] '+addr.slice(0,50)+' — cidade "'+_sc+'" stale, re-geocodificando');
       // Fall through to re-geocode
     } else {
       _geoCache[addr]=c;return c;
@@ -6018,7 +6032,11 @@ async function nominatim(addr,client){
       if(_rua.length>=5){
         // Extrai cidade do endereço do cliente (último segmento após —)
         const _addrSegments=addr.split('\u2014').map(s=>s.trim()).filter(Boolean);
-        const _clientCityGuess=_addrSegments.length>=2?_addrSegments[_addrSegments.length-1].replace(/,.*$/,'').trim():'';
+        const _cityRaw=_addrSegments.length>=2?_addrSegments[_addrSegments.length-1].replace(/,.*$/,'').trim():'';
+        // v5.9.38: ignora segmentos que são instruções de entrega (ex: "Na Portaria", "Apto 42", "Bl B")
+        // Critério: segmento com preposição inicial OU só dígitos/complemento → não é nome de cidade
+        const _isInstruction=_cityRaw&&/^(na|no|ao|para|em|ap|apto|bloco|bl|loja|sl|sala|cj|andar|fund)\b/i.test(_cityRaw);
+        const _clientCityGuess=_isInstruction?'':_cityRaw;
         const _anchorCity=_geoAnchor?.city||'';
         // Lista de cidades para tentar: cidade extraída do addr (se diferente da âncora) + âncora
         const _citiesToTry=[...new Set([_clientCityGuess,_anchorCity].filter(c=>c&&c.length>1))];
