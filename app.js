@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.7';
+const APP_VERSION='v5.9.8';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -2479,13 +2479,14 @@ function toggleEye(fid,btn){
 
 function loadCfg(){
   cfg=safeJsonParse('rota_cfg',{});
-  ['saida','ret','tempo','base','retaddr','cidade','uf','al1','al2','tkey','ttoken','akey','gkey','etaBuffer'].forEach(k=>{if(cfg[k]!==undefined&&g('cfg-'+k))g('cfg-'+k).value=cfg[k];});
+  // v5.9.8: cidade/uf removidos da UI — extraídos automaticamente via geocoding do endereço de partida
+  delete cfg.cidade; delete cfg.uf;
+  ['saida','ret','tempo','base','retaddr','al1','al2','tkey','ttoken','akey','gkey','etaBuffer'].forEach(k=>{if(cfg[k]!==undefined&&g('cfg-'+k))g('cfg-'+k).value=cfg[k];});
   // v4.6.2: routePriority config load removido
 }
 function saveCfg(){
   cfg={saida:v('cfg-saida'),ret:v('cfg-ret'),tempo:parseInt(v('cfg-tempo'))||10,
     base:v('cfg-base'),retaddr:v('cfg-retaddr'),
-    cidade:v('cfg-cidade').trim(),uf:v('cfg-uf').trim().toUpperCase().slice(0,2),
     etaBuffer:(()=>{const _eb=parseInt(v('cfg-etaBuffer'));return Math.min(999,Math.max(0,isNaN(_eb)?20:_eb));})(), // v5.8.31: fix 0 válido, max 999
     al1:v('cfg-al1'),al2:v('cfg-al2'),
     tkey:v('cfg-tkey'),ttoken:v('cfg-ttoken'),
@@ -5503,8 +5504,7 @@ async function _resolveGeoAnchor(){
   if(_geoAnchor)return _geoAnchor;
   const base=cfg.base;
   if(!base)return null;
-  const cidadeExplicita=cfg.cidade?cfg.cidade.trim():'';
-  const ufExplicita=cfg.uf?cfg.uf.trim().toUpperCase():'';
+  // v5.9.8: cidade/uf não são mais configurados manualmente — extraídos via geocoding
   // v5.9.1: Cache localStorage — evita geocoding do endereço da empresa a cada sessão (TTL 7 dias)
   try{
     const _ckey='rota_geo_anchor_v2';
@@ -5515,16 +5515,15 @@ async function _resolveGeoAnchor(){
       return _geoAnchor;
     }
   }catch(e){}
-  const suffix=cidadeExplicita?(', '+cidadeExplicita+(ufExplicita?', '+ufExplicita:'')+', Brasil'):', Brasil';
   try{
     const _acCtrl=new AbortController();const _acTid=setTimeout(()=>_acCtrl.abort(),6000);
-    const d=await _geocodeProxy('address='+encodeURIComponent(base+suffix)+'&region=br',_acCtrl.signal);
+    const d=await _geocodeProxy('address='+encodeURIComponent(base+', Brasil')+'&region=br',_acCtrl.signal);
     clearTimeout(_acTid);
     if(d&&d.status==='OK'&&d.results[0]){
       const loc=d.results[0].geometry.location;
       const comps=d.results[0].address_components;
-      const state=ufExplicita||(comps.find(c=>c.types.includes('administrative_area_level_1'))||{}).short_name||'';
-      const city=cidadeExplicita||(comps.find(c=>c.types.includes('administrative_area_level_2'))||comps.find(c=>c.types.includes('locality'))||{}).long_name||'';
+      const state=(comps.find(c=>c.types.includes('administrative_area_level_1'))||{}).short_name||'';
+      const city=(comps.find(c=>c.types.includes('administrative_area_level_2'))||comps.find(c=>c.types.includes('locality'))||{}).long_name||'';
       _geoAnchor={lat:loc.lat,lng:loc.lng,state,city};
       // Persistir por 7 dias — endereço da empresa raramente muda
       try{localStorage.setItem('rota_geo_anchor_v2',JSON.stringify({..._geoAnchor,_base:base,_ts:Date.now()}));}catch(e){}
