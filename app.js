@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.9';
+const APP_VERSION='v5.9.10';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -5920,10 +5920,16 @@ async function calcRoute(){
     _routeMode=getRouteMode();
     _routeResults={time:null,distance:null};
     // v4.8.0: Resolver base e retorno em PARALELO
+    // v5.9.10: reset fail guard para base/retorno antes de tentar (evita bloqueio por falhas anteriores na sessão)
+    _geoFailReset(baseAddr);_geoFailReset(retAddr);
     let baseCoords,retCoords;
     const [baseGeo,retGeo]=await Promise.all([nominatim(baseAddr),nominatim(retAddr)]);
     if(baseGeo){baseCoords={lat:baseGeo.lat,lng:baseGeo.lng};}
-    else{toast(t('err.start_addr'),'err');return;}
+    else if(_geoAnchor?.lat){
+      // v5.9.10: fallback ao âncora geográfico (coordenada central dos clientes) quando base falha
+      console.warn('[CALC-ROUTE] Base não geocodificada — usando âncora geográfico como fallback');
+      baseCoords={lat:_geoAnchor.lat,lng:_geoAnchor.lng};
+    }else{toast(t('err.start_addr'),'err');return;}
     retCoords=retGeo?{lat:retGeo.lat,lng:retGeo.lng}:{...baseCoords};
     _perf.baseRet=performance.now();
     console.log('[CALC-ROUTE] 3/6 Base+Retorno: '+Math.round(_perf.baseRet-_perf.geocode)+'ms');
