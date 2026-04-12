@@ -860,6 +860,18 @@ async function handleRequest(request, env) {
               countrycodes: 'br',
               'accept-language': 'pt-BR,pt',
             });
+            // v5.9.35: GEO-PROX — se cliente passou proximity=lat,lng, adiciona viewbox ao OSM
+            // para priorizar resultados próximos ao ponto de partida do usuário.
+            // bounded=0 = preferência, não exclusão (ainda aceita resultados fora do box se necessário).
+            const proximityParam = url.searchParams.get('proximity');
+            if (proximityParam) {
+              const [proxLat, proxLng] = proximityParam.split(',').map(Number);
+              if (!isNaN(proxLat) && !isNaN(proxLng)) {
+                const delta = 1.2; // ~130km — cobre Grande SP/RJ/etc
+                osmParams.set('viewbox', `${proxLng-delta},${proxLat+delta},${proxLng+delta},${proxLat-delta}`);
+                osmParams.set('bounded', '0');
+              }
+            }
             const osmRes = await fetch('https://nominatim.openstreetmap.org/search?' + osmParams, {
               headers: {
                 'User-Agent': 'RoteirodeColeta/5.9 (nigel.guandalini@gmail.com)',

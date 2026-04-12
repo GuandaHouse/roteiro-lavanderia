@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.34';
+const APP_VERSION='v5.9.35';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -5787,17 +5787,47 @@ async function _resolveGeoAnchor(){
   if(_geoAnchor)return _geoAnchor;
   const base=cfg.base;
   if(!base)return null;
+  // v5.9.35: chave de cache inclui CEP para invalidar entradas antigas sem ele
+  // (ex: "Rua Baquirivu" resolvia para Guarulhos; com CEP, resolve para São Paulo corretamente)
+  const _baseCep=(cfg.base_cep||'').replace(/\D/g,'');
+  const _cacheBase=base+(_baseCep?'|cep:'+_baseCep:'');
   // v5.9.8: cidade/uf não são mais configurados manualmente — extraídos via geocoding
   // v5.9.1: Cache localStorage — evita geocoding do endereço da empresa a cada sessão (TTL 7 dias)
   try{
     const _ckey='rota_geo_anchor_v2';
     const _hit=JSON.parse(localStorage.getItem(_ckey)||'null');
-    if(_hit&&_hit._base===base&&(Date.now()-(_hit._ts||0))<7*86400000){
+    if(_hit&&_hit._base===_cacheBase&&(Date.now()-(_hit._ts||0))<7*86400000){
       _geoAnchor={lat:_hit.lat,lng:_hit.lng,state:_hit.state,city:_hit.city};
       console.log('[GEO-ANCHOR] localStorage cache: '+_geoAnchor.city+', '+_geoAnchor.state);
       return _geoAnchor;
     }
   }catch(e){}
+  // v5.9.35: Se tem CEP configurado, usa ViaCEP para obter cidade/estado corretos SEM ambiguidade.
+  // Evita que o OSM escolha rua homônima em outra cidade (ex: "Rua Baquirivu" em Guarulhos).
+  // Com a cidade correta em mãos, geocodifica o endereço completo para obter as coordenadas.
+  if(_baseCep&&_baseCep.length===8){
+    try{
+      const _vcR=await fetch('https://viacep.com.br/ws/'+_baseCep+'/json/',{signal:AbortSignal.timeout(4000)});
+      if(_vcR.ok){const _vcD=await _vcR.json();
+        if(!_vcD.erro&&_vcD.localidade&&_vcD.uf){
+          // Geocodifica endereço com cidade+estado corretos (eliminando ambiguidade)
+          const _addrFull=base+', '+_vcD.localidade+', '+_vcD.uf+', Brasil';
+          try{
+            const _c=new AbortController();const _t=setTimeout(()=>_c.abort(),6000);
+            const d=await _geocodeProxy('address='+encodeURIComponent(_addrFull)+'&region=br',_c.signal);
+            clearTimeout(_t);
+            if(d&&d.status==='OK'&&d.results[0]){
+              const loc=d.results[0].geometry.location;
+              _geoAnchor={lat:loc.lat,lng:loc.lng,state:_vcD.uf,city:_vcD.localidade};
+              try{localStorage.setItem('rota_geo_anchor_v2',JSON.stringify({..._geoAnchor,_base:_cacheBase,_ts:Date.now()}));}catch(e){}
+              console.log('[GEO-ANCHOR] Resolvida via CEP ('+_baseCep+'): '+_vcD.localidade+', '+_vcD.uf+' → '+loc.lat+','+loc.lng);
+              return _geoAnchor;
+            }
+          }catch(e){}
+        }
+      }
+    }catch(e){console.warn('[GEO-ANCHOR] CEP lookup falhou:',e);}
+  }
   try{
     const _acCtrl=new AbortController();const _acTid=setTimeout(()=>_acCtrl.abort(),6000);
     const d=await _geocodeProxy('address='+encodeURIComponent(base+', Brasil')+'&region=br',_acCtrl.signal);
@@ -5809,7 +5839,7 @@ async function _resolveGeoAnchor(){
       const city=(comps.find(c=>c.types.includes('administrative_area_level_2'))||comps.find(c=>c.types.includes('locality'))||{}).long_name||'';
       _geoAnchor={lat:loc.lat,lng:loc.lng,state,city};
       // Persistir por 7 dias — endereço da empresa raramente muda
-      try{localStorage.setItem('rota_geo_anchor_v2',JSON.stringify({..._geoAnchor,_base:base,_ts:Date.now()}));}catch(e){}
+      try{localStorage.setItem('rota_geo_anchor_v2',JSON.stringify({..._geoAnchor,_base:_cacheBase,_ts:Date.now()}));}catch(e){}
       console.log('[GEO-ANCHOR] Resolvida e cacheada: '+city+', '+state);
       return _geoAnchor;
     }
@@ -6046,6 +6076,41 @@ async function nominatim(addr,client){
         }catch(e){console.warn('[GEO-VC2] Falha:',e);}
       }
     }catch(e){console.warn('[GEO-VC] Falha query canônica:',e);}
+  }
+  // v5.9.35: GEO-PROX — fallback por proximidade geográfica.
+  // Quando o endereço não tem cidade nem CEP (ex: "Av. Jabaquara, 2958"),
+  // tenta OSM com só rua + estado e passa as coordenadas da âncora como viewbox.
+  // OSM retorna resultados priorizando a região próxima ao ponto de partida.
+  // Princípio: quem sai de SP quase nunca roteia para Aracaju. A probabilidade
+  // do endereço estar na região da âncora é muito alta.
+  if(_geoAnchor?.lat&&_geoAnchor?.lng){
+    const _proxStreet=_vcLogr||_origParts.logr;
+    const _proxNum=_origParts.num||'';
+    const _proxUf=_vcUf||_geoAnchor.state||'';
+    if(_proxStreet&&_proxUf){
+      const _proxQuery=[_proxStreet,_proxNum,_proxUf,'Brasil'].filter(Boolean).join(', ');
+      try{
+        const _c4=new AbortController();const _t4=setTimeout(()=>_c4.abort(),8000);
+        const d4=await _geocodeProxy(
+          'address='+encodeURIComponent(_proxQuery)+'&region=br&proximity='+_geoAnchor.lat+','+_geoAnchor.lng,
+          _c4.signal
+        );
+        clearTimeout(_t4);
+        if(d4&&d4.status==='OK'&&d4.results?.length){
+          const result4=_extractGeoResult(d4.results[0]);
+          if(_vcBairro)result4.bairro=_vcBairro;
+          if(_vcCity)result4.cidade=_vcCity;else if(_geoAnchor.city)result4.cidade=_geoAnchor.city;
+          if(_fbCep)result4.cep=_fbCep.slice(0,5)+'-'+_fbCep.slice(5);
+          if(_proxStreet)result4.route=_proxStreet;
+          if(_proxNum)result4.streetNum=_proxNum;
+          _geoCache[addr]=result4;
+          try{localStorage.setItem('geo3_'+addr,JSON.stringify(result4));}catch(e){}
+          _geoFailReset(addr);
+          console.log('[GEO-PROX] '+addr+' → '+result4.lat+','+result4.lng+' (proximidade âncora)');
+          return result4;
+        }
+      }catch(e){console.warn('[GEO-PROX] Falha:',e);}
+    }
   }
   _geoFailInc(addr);
   return null;
