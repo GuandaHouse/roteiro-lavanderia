@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.14';
+const APP_VERSION='v5.9.15';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -1317,8 +1317,8 @@ async function checkAmb(){}
    CLOUD SYNC — Cloudflare Worker + KV
    ══════════════════════════════════════════════════════════════ */
 const WORKER_URL='https://roteiro-lavanderia.nigel-guandalini.workers.dev';
-/// v5.8.38: Rate limiter global — máximo 30 chamadas Geocoding por 60s (era 15)
-const _GEO_RATE_MAX=30;
+/// v5.8.38: Rate limiter global — máximo 60 chamadas Geocoding por 60s (era 30, bumped v5.9.15)
+const _GEO_RATE_MAX=60;
 let _geoRateLog=[];
 // v5.8.38: BUG-01 — guard de tentativas por endereço (evita loop infinito)
 const _geoFailCount={}; // addr → nº de falhas consecutivas na sessão
@@ -5831,24 +5831,37 @@ async function nominatim(addr,client){
   let _fbCep='',_vcLogr='',_vcBairro='',_vcCity='',_vcUf='';
   const _origParts=_parseAddrParts(addr);
   // 1º: ViaCEP pelo nome da rua (Correios — fonte autoritativa)
-  if(_geoAnchor?.state&&_geoAnchor?.city){
+  // v5.9.15: tenta cidade do próprio endereço do cliente ANTES de usar _geoAnchor.city
+  // (ex: "Av. Higienópolis — Higienópolis — São Paulo" → extrai "São Paulo")
+  if(_geoAnchor?.state){
     try{
       const _rua=(_origParts.logr.replace(/^(rua|avenida|av\.|alameda|al\.|estrada|travessa|praça)\s+/i,'').trim()).slice(0,40);
       if(_rua.length>=5){
-        const _vcUrl='https://viacep.com.br/ws/'+_geoAnchor.state+'/'+encodeURIComponent(_geoAnchor.city)+'/'+encodeURIComponent(_rua)+'/json/';
-        const _vcR=await fetch(_vcUrl,{signal:AbortSignal.timeout(5000)});
-        if(_vcR.ok){
-          const _vcD=await _vcR.json();
-          if(Array.isArray(_vcD)&&_vcD.length&&!_vcD[0].erro){
-            const _vc=_vcD[0];
-            _fbCep=(_vc.cep||'').replace(/\D/g,'');
-            _vcLogr=_vc.logradouro||'';
-            _vcBairro=_vc.bairro||'';
-            _vcCity=_vc.localidade||_geoAnchor.city;
-            _vcUf=_vc.uf||_geoAnchor.state;
-            if(_fbCep&&client)client.cep=_fbCep.slice(0,5)+'-'+_fbCep.slice(5);
-            console.log('[GEO-VC] ViaCEP achou: '+_vcLogr+', '+_vcBairro+', '+_vcCity+' CEP='+_fbCep);
-          }
+        // Extrai cidade do endereço do cliente (último segmento após —)
+        const _addrSegments=addr.split('\u2014').map(s=>s.trim()).filter(Boolean);
+        const _clientCityGuess=_addrSegments.length>=2?_addrSegments[_addrSegments.length-1].replace(/,.*$/,'').trim():'';
+        const _anchorCity=_geoAnchor?.city||'';
+        // Lista de cidades para tentar: cidade extraída do addr (se diferente da âncora) + âncora
+        const _citiesToTry=[...new Set([_clientCityGuess,_anchorCity].filter(c=>c&&c.length>1))];
+        for(const _tryCity of _citiesToTry){
+          try{
+            const _vcUrl='https://viacep.com.br/ws/'+_geoAnchor.state+'/'+encodeURIComponent(_tryCity)+'/'+encodeURIComponent(_rua)+'/json/';
+            const _vcR=await fetch(_vcUrl,{signal:AbortSignal.timeout(5000)});
+            if(_vcR.ok){
+              const _vcD=await _vcR.json();
+              if(Array.isArray(_vcD)&&_vcD.length&&!_vcD[0].erro){
+                const _vc=_vcD[0];
+                _fbCep=(_vc.cep||'').replace(/\D/g,'');
+                _vcLogr=_vc.logradouro||'';
+                _vcBairro=_vc.bairro||'';
+                _vcCity=_vc.localidade||_tryCity;
+                _vcUf=_vc.uf||_geoAnchor.state;
+                if(_fbCep&&client)client.cep=_fbCep.slice(0,5)+'-'+_fbCep.slice(5);
+                console.log('[GEO-VC] ViaCEP achou (cidade='+_tryCity+'): '+_vcLogr+', '+_vcBairro+', '+_vcCity+' CEP='+_fbCep);
+                break; // encontrou — não precisa tentar outra cidade
+              }
+            }
+          }catch(e){}
         }
       }
     }catch(e){}
