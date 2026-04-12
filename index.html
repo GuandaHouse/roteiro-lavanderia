@@ -806,7 +806,11 @@ html:not(.auth-pending) #auth-screen{display:none;}
 
   <div class="card">
     <p class="ct" data-i18n="map.title">Rota no mapa</p>
-    <div class="rp" id="rp"><span class="spin"></span><span data-i18n="map.calc">Calculando rota...</span></div>
+    <div class="rp" id="rp">
+      <div class="rp-hd"><span class="spin"></span><span data-i18n="map.calc">Calculando rota...</span></div>
+      <div class="rp-track"><div class="rp-fill" id="rp-fill"></div></div>
+      <span class="rp-lbl" id="rp-lbl">Preparando rota…</span>
+    </div>
     <div class="mapw" id="mapw">
       <div id="map" style="position:absolute;inset:0;display:none"></div>
       <div class="mph" id="mph"><span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></span><span data-i18n="map.hint">Adicione clientes para ver a rota</span></div>
