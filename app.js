@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.23';
+const APP_VERSION='v5.9.24';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -6107,6 +6107,32 @@ async function calcRoute(){
     // v4.8.0: Geocode clients in parallel batches (5 at a time) instead of sequential
     const notFound=[];
     const needGeo=clients.filter(c=>!c.lat||!c.lng);
+    // v5.9.24: Pré-processamento inteligente — corrige problemas comuns em endereços importados do Trello
+    // antes de geocodificar, evitando que o endereço seja suspenso por falhas desnecessárias
+    const _ADDR_NOTE_PAT=/^(na portaria|portaria|com porteiro|porteiro|na recep[cç][aã]o|recep[cç][aã]o|s\/n\.?|fundo|fundos|avisar|ligar antes?|ap\.?t?o?\.?\s*\d*|bloco\s+\d*|casa\s*\d*|sala\s*\d*)$/i;
+    for(const _c of needGeo){
+      // 1. Limpar vírgula dupla ("Rua X,, 120" → "Rua X, 120") — erro de digitação comum
+      if(_c.endereco&&/,\s*,/.test(_c.endereco)){
+        const _old=_c.endereco;
+        _c.endereco=_c.endereco.replace(/,\s*,+/g,',').trim();
+        if(_c.endereco!==_old){_geoFailReset(_old);console.log('[PRE-GEO] Dupla vírgula limpa: '+_c.nome);}
+      }
+      // 2. Extrair CEP do campo obs se c.cep estiver vazio ("CEP 05187-010" nas observações)
+      if(!_c.cep&&_c.obs){
+        const _cepM=_c.obs.match(/\b(\d{5}-?\d{3})\b/);
+        if(_cepM){_c.cep=_cepM[1];_geoFailReset(_c.endereco);console.log('[PRE-GEO] CEP extraído do obs: '+_c.nome+' → '+_c.cep);}
+      }
+      // 3. Remover sufixo "— Nota de entrega" que não é cidade/bairro ("— Na Portaria", etc.)
+      if(_c.endereco&&_c.endereco.includes('\u2014')){
+        const _parts=_c.endereco.split('\u2014').map(s=>s.trim()).filter(Boolean);
+        const _last=_parts[_parts.length-1]||'';
+        if(_ADDR_NOTE_PAT.test(_last)&&_parts.length>=2){
+          const _old=_c.endereco;_parts.pop();
+          const _clean=_parts.join(' \u2014 ');
+          if(_clean.length>=8){_c.endereco=_clean;_geoFailReset(_old);console.log('[PRE-GEO] Nota removida: "'+_last+'" de '+_c.nome);}
+        }
+      }
+    }
     const GEO_BATCH=5;
     for(let b=0;b<needGeo.length;b+=GEO_BATCH){
       const batch=needGeo.slice(b,b+GEO_BATCH);
@@ -6123,6 +6149,29 @@ async function calcRoute(){
       });
       // Rate limit: 200ms pause between batches (not between each client)
       if(b+GEO_BATCH<needGeo.length)await new Promise(res=>setTimeout(res,200));
+    }
+    // v5.9.24: Fallback via CEP — para clientes com c.cep preenchido que ainda não geocodificaram
+    // Usa ViaCEP por nº de CEP → endereço canônico → OSM (mesma lógica do _geocodeBaseAddr)
+    const _failedWithCep=clients.filter(c=>!c.lat&&!c.lng&&c.cep&&c.cep.replace(/\D/g,'').length===8);
+    for(const _c of _failedWithCep){
+      const _rawCep=_c.cep.replace(/\D/g,'');
+      try{
+        const _vcR=await fetch('https://viacep.com.br/ws/'+_rawCep+'/json/',{signal:AbortSignal.timeout(4000)});
+        if(_vcR.ok){const _vc=await _vcR.json();
+          if(!_vc.erro&&_vc.logradouro&&_vc.localidade&&_vc.uf){
+            const _pts=[_vc.logradouro];
+            const _nm=_c.endereco.match(/\b(\d+)\b/);if(_nm)_pts.push(_nm[1]);
+            if(_vc.bairro)_pts.push(_vc.bairro);_pts.push(_vc.localidade,_vc.uf,'Brasil');
+            const _canon=_pts.join(', ');
+            _geoFailReset(_canon);
+            const _r=await nominatim(_canon,_c).catch(()=>null);
+            if(_r){_c.lat=_r.lat;_c.lng=_r.lng;if(!_c.cep&&_r.cep)_c.cep=_r.cep;
+              if(_r.route)_c.endereco=_fmtAddrFromGeo(_r,_c.endereco);
+              console.log('[PRE-GEO] Geocodificado via CEP: '+_c.nome+' ('+_rawCep+')');
+            }
+          }
+        }
+      }catch(_e){console.warn('[PRE-GEO] CEP fallback falhou:',_c.nome,_e.message);}
     }
     _perf.geocode=performance.now();
     console.log('[CALC-ROUTE] 2/6 Geocoding ('+needGeo.length+' precisavam): '+Math.round(_perf.geocode-_perf.anchor)+'ms');
