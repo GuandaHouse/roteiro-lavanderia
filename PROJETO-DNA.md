@@ -2,7 +2,7 @@
 
 > Documento vivo com todas as decisoes tecnicas, features e historico do projeto.
 > Atualizado a cada entrega.
-> Última atualização: 12/04/2026 — v5.9.34
+> Última atualização: 12/04/2026 — v5.9.37
 
 ---
 
@@ -152,6 +152,39 @@ A cadeia ViaCEP → OSM montava queries COM o nome do bairro (ex: "Alphaville Em
 
 **Clientes resolvidos**: Meire Pultz (Barueri ✅), Kelly Lemes (São Paulo ✅), Celia (Vila Madalena ✅), Kauan Schumacher (sem cidade, usa âncora ✅).
 **Não resolvível**: Catherine (sem cidade, sem CEP, sem em-dash — estruturalmente impossível com ferramentas gratuitas).
+
+### v5.9.35–5.9.37 — 12/04/2026 — ÂNCORA CORRETA + KAUAN + INVALIDAÇÃO STALE
+**Contexto**: Após v5.9.34, Kauan Schumacher ("Rua Capitão Fonseca Rosa, 120") continuava "SEM LOCALIZAÇÃO". Âncora também continuava resolvendo para Guarulhos em vez de São Paulo (CEP 04404-030 = Cidade Ademar, SP). Lição: "questione a premissa fundamental" — não ajustar parâmetros, trocar a abordagem.
+
+**Diagnóstico (v5.9.35)**:
+1. `_resolveGeoAnchor()` geocodificava "Rua Baquirivu, 454" sem CEP → OSM achava rua homônima em Guarulhos → âncora errada.
+2. Com âncora = Guarulhos, ViaCEP buscava "Capitão Fonseca Rosa" em Guarulhos → 0 resultados → SEM LOCALIZAÇÃO.
+3. OSM não indexa "Rua Capitão Fonseca Rosa" para nenhuma consulta direta → GEO-PROX também falha.
+
+**v5.9.35 — Âncora via CEP + GEO-PROX**:
+- `_resolveGeoAnchor()`: se `cfg.base_cep` existe, faz ViaCEP lookup → obtém cidade/UF corretos → geocodifica endereço com cidade explícita
+- Cache key inclui CEP para invalidar entradas antigas: `"Rua Baquirivu, 454|cep:04404030"`
+- **GEO-PROX**: novo fallback em `nominatim()` — quando endereço sem cidade/CEP, tenta OSM com `viewbox` centrado nas coordenadas da âncora
+- Worker `/api/geocode`: aceita parâmetro `proximity=lat,lng` → gera viewbox ±1.2 graus ao redor da âncora
+
+**v5.9.36 — City fallback + GEO-CEP-APPROX**:
+- `_resolveGeoAnchor()`: se ViaCEP retorna cidade correta mas OSM não acha a rua → fallback geocodifica só a CIDADE (ex: "São Paulo, SP, Brasil") para obter coords corretas da região. Corrige âncora mesmo quando a rua específica não está no OSM.
+- **GEO-CEP-APPROX**: novo último fallback em `nominatim()` — se ViaCEP encontrou o CEP da rua via busca por cidade+nome mas OSM/GEO-PROX falham → geocodifica `"04726-230, São Paulo, SP, Brasil"` como localização aproximada. Precisão ~100m (centro do CEP), mas elimina "SEM LOCALIZAÇÃO" para ruas residenciais não indexadas.
+- **Kauan Schumacher**: ViaCEP acha "Rua Capitão Fonseca Rosa" → CEP 04726-230 → Vila Cruzeiro, SP. GEO-CEP-APPROX geocodifica o CEP → `{-23.5383, -46.6392}` ✅
+
+**v5.9.37 — Invalidação de caches stale ao mudar cidade da âncora**:
+- **Problema descoberto**: após âncora corrigir de Guarulhos → São Paulo, entradas `geo3_` em localStorage que tinham `cidade: "Guarulhos"` (geocodificadas com âncora errada) continuavam sendo servidas do cache → exibiam "Guarulhos" no nome do cliente mesmo com coords corretas.
+- **Fix**: `_resolveGeoAnchor()` registra a cidade anterior em `rota_geo_stale_city` quando a cidade da âncora muda. `nominatim()` verifica: se entrada `geo3_` tem `cidade === stale_city`, descarta o cache e re-geocodifica automaticamente.
+- Log: `[GEO-ANCHOR] Cidade mudou: Guarulhos → São Paulo (caches stale serão re-geocodificados)` + `[GEO-STALE] addr — cidade "Guarulhos" stale, re-geocodificando`
+
+**Resultado final v5.9.37** (12 clientes, 0 SEM LOCALIZAÇÃO):
+- Âncora: São Paulo, SP ✅
+- Kauan Schumacher: Vila Cruzeiro — São Paulo ✅ (era SEM LOCALIZAÇÃO)
+- Catherine: Jabaquara — São Paulo ✅ (era Guarulhos por âncora errada)
+- Celia: Vila Madalena — São Paulo ✅ (era Guarulhos por âncora errada)
+- Todos os demais: coordenadas corretas ✅
+
+**Lição de debugging** (reforça regra do DNA): quando problema persiste após 2 tentativas, identificar a **fonte de dados** como problema raiz. Aqui: âncora = Guarulhos era a causa de TUDO. Ajustar GEO-PROX parâmetros não resolveria. A solução foi corrigir a fonte (âncora via CEP), não os parâmetros downstream.
 
 ### v5.9.17–5.9.19 — 12/04/2026 — MOTOR DE OTIMIZAÇÃO REESCRITO
 **Contexto**: Sistema não conseguia reproduzir a rota otimizada manualmente por Philip (111km, 3h55min, 0 violações, ordem: Elis→Pim→JFFB→V.C→Rosana→Giorge→Zica→Ana). Após múltiplas tentativas ajustando parâmetros do OSRM, foi identificado o problema raiz.
