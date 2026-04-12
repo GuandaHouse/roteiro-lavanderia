@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.25';
+const APP_VERSION='v5.9.26';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -6165,7 +6165,9 @@ async function calcRoute(){
             const _nm=_c.endereco.match(/[,\s](\d+[A-Za-z]?)\b/);
             const _pts=[_origRua];
             if(_nm)_pts.push(_nm[1].trim());
-            if(_vc.bairro)_pts.push(_vc.bairro);_pts.push(_vc.localidade,_vc.uf,'Brasil');
+            // v5.9.26: strip parentheses from bairro ("Jardim Ipanema (Zona Oeste)" → "Jardim Ipanema")
+            if(_vc.bairro){const _b=_vc.bairro.replace(/\s*\([^)]*\)/g,'').trim();if(_b)_pts.push(_b);}
+            _pts.push(_vc.localidade,_vc.uf,'Brasil');
             const _canon=_pts.join(', ');
             _geoFailReset(_canon);_geoFailReset(_c.endereco);
             const _r=await nominatim(_canon,_c).catch(()=>null);
@@ -6173,10 +6175,16 @@ async function calcRoute(){
               if(_r.route)_c.endereco=_fmtAddrFromGeo(_r,_c.endereco);
               console.log('[PRE-GEO] Geocodificado via CEP+rua original: '+_c.nome+' ('+_rawCep+' → '+_vc.localidade+')');
             }else{
-              // Tentativa 2: usar logradouro canônico do ViaCEP (pode ter nome diferente do informal)
-              if(_vc.logradouro){
-                const _pts2=[_vc.logradouro];if(_nm)_pts2.push(_nm[1].trim());
-                if(_vc.bairro)_pts2.push(_vc.bairro);_pts2.push(_vc.localidade,_vc.uf,'Brasil');
+              // Tentativa 2: sem bairro (só cidade+estado) — mais genérico, mais chances de encontrar
+              const _pts1b=[_origRua];if(_nm)_pts1b.push(_nm[1].trim());_pts1b.push(_vc.localidade,_vc.uf,'Brasil');
+              const _canon1b=_pts1b.join(', ');_geoFailReset(_canon1b);
+              const _r1b=await nominatim(_canon1b,_c).catch(()=>null);
+              if(_r1b){_c.lat=_r1b.lat;_c.lng=_r1b.lng;if(_r1b.cep&&!_c.cep)_c.cep=_r1b.cep;
+                if(_r1b.route)_c.endereco=_fmtAddrFromGeo(_r1b,_c.endereco);
+                console.log('[PRE-GEO] Geocodificado via CEP+rua (sem bairro): '+_c.nome);
+              }else if(_vc.logradouro){
+                // Tentativa 3: logradouro canônico do ViaCEP (pode ter nome diferente do informal)
+                const _pts2=[_vc.logradouro];if(_nm)_pts2.push(_nm[1].trim());_pts2.push(_vc.localidade,_vc.uf,'Brasil');
                 const _canon2=_pts2.join(', ');_geoFailReset(_canon2);
                 const _r2=await nominatim(_canon2,_c).catch(()=>null);
                 if(_r2){_c.lat=_r2.lat;_c.lng=_r2.lng;if(_r2.cep&&!_c.cep)_c.cep=_r2.cep;
@@ -6188,6 +6196,28 @@ async function calcRoute(){
           }
         }
       }catch(_e){console.warn('[PRE-GEO] CEP fallback falhou:',_c.nome,_e.message);}
+    }
+    // v5.9.26: Fallback via em-dash city — "Rua X, 132 B, Apto 365 — Barueri" → "Rua X, 132, Barueri, Brasil"
+    // Útil quando endereço tem cidade no em-dash mas Nominatim não achou com complementos e apartamento
+    const _failedWithDash=clients.filter(c=>!c.lat&&!c.lng&&c.endereco&&c.endereco.includes('\u2014'));
+    for(const _cd of _failedWithDash){
+      try{
+        const _dparts=_cd.endereco.split('\u2014').map(s=>s.trim()).filter(Boolean);
+        if(_dparts.length<2)continue;
+        const _lastPart=_dparts[_dparts.length-1];
+        if(_ADDR_NOTE_PAT.test(_lastPart))continue; // é nota de entrega, não cidade
+        const _sp=_dparts[0]; // parte da rua
+        const _sn=_sp.split(',')[0].trim(); // só o nome da rua
+        const _nm3=_sp.match(/[,\s]+(\d+)/); // número
+        const _num3=_nm3?_nm3[1]:'';
+        const _locParts=_dparts.slice(1).join(', '); // todas as partes de localização
+        const _cleanAddr3=[_sn,_num3,_locParts,'Brasil'].filter(Boolean).join(', ');
+        _geoFailReset(_cleanAddr3);_geoFailReset(_cd.endereco);
+        const _r3=await nominatim(_cleanAddr3,_cd).catch(()=>null);
+        if(_r3){_cd.lat=_r3.lat;_cd.lng=_r3.lng;
+          console.log('[PRE-GEO] Geocodificado via em-dash city: '+_cd.nome+' \u2192 '+_cleanAddr3);
+        }
+      }catch(_e3){console.warn('[PRE-GEO] em-dash fallback falhou:',_cd.nome,_e3.message);}
     }
     _perf.geocode=performance.now();
     console.log('[CALC-ROUTE] 2/6 Geocoding ('+needGeo.length+' precisavam): '+Math.round(_perf.geocode-_perf.anchor)+'ms');
