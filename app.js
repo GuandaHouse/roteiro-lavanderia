@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.12';
+const APP_VERSION='v5.9.14';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -4637,15 +4637,24 @@ function _buildEvalCache(){
 }
 function _evalOrder(order,matrix,alpha,gcIdx){
   const ec=_evalCache;
-  let cur=ec.saidaSec,totalTravel=0,violations=0,violTime=0;
+  // v5.9.13: Fator de calibração OSRM → aprox. Google Directions.
+  // OSRM usa velocidades ideais do OSM (sem tráfego real). Google roteador é ~15% mais lento em média.
+  // Aplicado SOMENTE em cur (verificação de janela horária), não em totalTravel (métrica de comparação).
+  const src=matrix?matrix.source:'';
+  const osrmK=(src==='osrm'||src==='worker-proxy')?1.15:1.0;
+  let cur=ec.saidaSec,totalTravel=0,totalDist=0,violations=0,violTime=0;
   const arrivals=[];
   const durs=matrix.durations;
+  // v5.9.13: usa distâncias (metros) para ranking, não tempo — garante que o BF otimize por km real
+  const dists=matrix.distances||matrix.durations;
   for(let i=0;i<order.length;i++){
     const fromNode=i===0?0:gcIdx[order[i-1]];
     const toNode=gcIdx[order[i]];
-    const travel=durs[fromNode][toNode];
-    cur+=travel+ec.etaBufferSec; // v5.8.28: buffer por leg — otimizador opera com mesmos ETAs do display
-    totalTravel+=travel;
+    const travel=durs[fromNode][toNode];   // tempo (seg) — para ETA e deadline check
+    const dist=dists[fromNode][toNode];    // distância (m) — para ranking por km
+    cur+=travel*osrmK+ec.etaBufferSec; // v5.9.13: osrmK corrige otimismo do OSRM vs real
+    totalTravel+=travel; // tempo raw (SA usa isso)
+    totalDist+=dist;     // distância real em metros (BF usa isso)
     // Pausa almoço
     if(ec.hasAlmoco&&cur>=ec.al1Sec&&cur<ec.al2Sec)cur=ec.al2Sec;
     arrivals.push({idx:order[i],arrival:cur});
@@ -4661,9 +4670,10 @@ function _evalOrder(order,matrix,alpha,gcIdx){
   const lastNode=gcIdx[order[order.length-1]];
   const retNode=durs.length-1;
   const travelRet=durs[lastNode][retNode];
-  cur+=travelRet;totalTravel+=travelRet;
-  const cost=totalTravel+alpha*violTime;
-  return {cost,totalTravel,violations,violTime,lastArrival:cur,arrivals};
+  const distRet=dists[lastNode][retNode];
+  cur+=travelRet*osrmK;totalTravel+=travelRet;totalDist+=distRet;
+  const cost=totalTravel+alpha*violTime; // custo SA (tempo-baseado)
+  return {cost,totalTravel,totalDist,violations,violTime,lastArrival:cur,arrivals};
 }
 
 // Etapa 3: Heurística — Nearest Neighbor com prioridade de deadline
@@ -4713,21 +4723,29 @@ function _nnDeadline(matrix,gcIdx){
 
 // Etapa 3aa: Força Bruta exata para N ≤ 10 clientes
 // v5.9.12: 8! = 40.320 permutações (~3ms), 10! = 3.628.800 (~300ms) — ambos viáveis no browser.
-// Garante a rota MATEMATICAMENTE ÓTIMA (sem aproximação, sem sorte).
+// v5.9.13: Otimiza por km real (matrix.distances) com penalidade suave por violação de janela.
+//   BF_ALPHA = 6 m/seg → ~360m/min de violação. Ex: V.C 15min atrasada = 5.4km de "custo extra".
+//   Se a rota com violação economiza >5.4km → o BF a escolhe (como um humano faria).
+//   Isso resolve o caso onde a rota sem violação tem 120km e a com 1 conflito tem 114km.
 // Para N > 10 o SA é usado como fallback.
+const BF_ALPHA=6; // metros por segundo de violação (soft penalty)
 function _factorial(n){let r=1;for(let i=2;i<=n;i++)r*=i;return r;}
 function _bruteForceOptimal(matrix,gcIdx){
   const idx=Object.keys(gcIdx).map(Number); // índices em clients[] para clientes geocodificados
   const M=idx.length;
   if(M>10)return null; // muito grande — usa SA
-  let bestOrder=null,bestViol=Infinity,bestTravel=Infinity;
+  let bestOrder=null,bestKmCost=Infinity,bestViol=0,bestTravelSec=0,bestDistM=0;
   // Heap's Algorithm — gera todas as M! permutações in-place, O(M!) avaliações
   const perm=idx.slice();
   const c=new Array(M).fill(0);
   const _chk=()=>{
     const r=_evalOrder(perm,matrix,0,gcIdx);
-    if(r.violations<bestViol||(r.violations===bestViol&&r.totalTravel<bestTravel)){
-      bestOrder=perm.slice();bestViol=r.violations;bestTravel=r.totalTravel;
+    // v5.9.13: custo km = distância total (metros) + penalidade suave por violação de janela
+    // Permite que o BF escolha rotas com 1 conflito pequeno se economizarem km suficientes
+    const kmCost=r.totalDist+BF_ALPHA*r.violTime;
+    if(kmCost<bestKmCost){
+      bestKmCost=kmCost;bestOrder=perm.slice();
+      bestViol=r.violations;bestTravelSec=r.totalTravel;bestDistM=r.totalDist;
     }
   };
   _chk(); // permutação inicial
@@ -4739,7 +4757,10 @@ function _bruteForceOptimal(matrix,gcIdx){
       _chk();c[i]++;i=0;
     }else{c[i]=0;i++;}
   }
-  console.log('[BF] '+M+'! = '+_factorial(M)+' permutações → '+Math.round(bestTravel/60)+'min, '+bestViol+' violações (ÓTIMO EXATO)');
+  console.log('[BF] '+M+'! = '+_factorial(M)+' permutações → '
+    +Math.round(bestDistM/1000*10)/10+'km, '
+    +Math.round(bestTravelSec/60)+'min, '
+    +bestViol+' violação(ões) — custo km: '+Math.round(bestKmCost/1000*10)/10+'km-eq (ÓTIMO EXATO)');
   return bestOrder;
 }
 
