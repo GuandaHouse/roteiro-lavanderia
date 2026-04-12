@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.26';
+const APP_VERSION='v5.9.27';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -1320,6 +1320,8 @@ const WORKER_URL='https://roteiro-lavanderia.nigel-guandalini.workers.dev';
 /// v5.8.38: Rate limiter global — máximo 60 chamadas Geocoding por 60s (era 30, bumped v5.9.15)
 const _GEO_RATE_MAX=60;
 let _geoRateLog=[];
+// v5.9.27: flag para pausar geocoding de background durante calcRoute (evita competição de rate limit)
+let _calcRouteActive=false;
 // v5.8.38: BUG-01 — guard de tentativas por endereço (evita loop infinito)
 const _geoFailCount={}; // addr → nº de falhas consecutivas na sessão
 const _GEO_MAX_FAILS=3; // após 3 falhas, abandona o endereço na sessão
@@ -2320,7 +2322,7 @@ function _initApp(){
   // (acontece quando geocoding falhou no import por falta de âncora ou API indisponível)
   setTimeout(()=>{
     const _miss=clients.filter(c=>!c.lat&&!c.lng&&c.endereco);
-    if(_miss.length){console.log('[GEO-RETRY] '+_miss.length+' cliente(s) sem coords — retentando...');_miss.forEach(c=>{if(c.endereco){const _fk=c.endereco.slice(0,60);delete _geoFailCount[_fk];}preGeocode(c);});}
+    if(_miss.length&&!_calcRouteActive){console.log('[GEO-RETRY] '+_miss.length+' cliente(s) sem coords — retentando...');_miss.forEach(c=>{if(c.endereco){const _fk=c.endereco.slice(0,60);delete _geoFailCount[_fk];}preGeocode(c);});}
   },3500);
   renderTagsConfig();updateTagSelects();
   // v5.8.48: inicializar _formTags[id] explicitamente — updateTagSelects apenas renderiza HTML
@@ -5754,6 +5756,8 @@ function preGeocode(client){
   if(client.lat&&client.lng){
     return;
   }
+  // v5.9.27: não geocodificar em background enquanto calcRoute está ativo (evita competição de rate limit)
+  if(_calcRouteActive)return;
   // Cliente sem coords → geocodificar (nominatim dispara a verificação de ambiguidade internamente)
   // v5.8.59: reset fail count para clientes recém-adicionados (evita suspensão por tentativa anterior na sessão)
   if(client.endereco){const _fk=client.endereco.slice(0,60);delete _geoFailCount[_fk];}
@@ -6094,6 +6098,7 @@ async function calcRoute(){
   }
   g('rp').classList.add('on');
   g('route-btn').disabled=true;
+  _calcRouteActive=true; // v5.9.27: pausa geocoding de background durante cálculo
   _routeProgress(0); // Passo 0: Preparando
   try{
     // v4.8.1: INSTRUMENTACAO DE PERFORMANCE — timing de cada etapa
@@ -6456,7 +6461,7 @@ async function calcRoute(){
     _routeProgressDone();
     toast(t('t.optimized')+urgMsg,'ok');
   }catch(e){_routeProgressDone();toast(t('e.calc')+': '+e.message,'err');console.error(e);}
-  finally{g('rp').classList.remove('on');g('route-btn').disabled=!clients.length;}
+  finally{_calcRouteActive=false;g('rp').classList.remove('on');g('route-btn').disabled=!clients.length;}
 }
 
 function estimateTimesOSRM(legs){
