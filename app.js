@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.18';
+const APP_VERSION='v5.9.19';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -6221,6 +6221,19 @@ async function calcRoute(){
           orderedGeo=_fixedGOrder.map(i=>clients[i]);
           order=_fixedGOrder.concat(noCoords2);
           console.log('[CALC-ROUTE] Janelas corrigidas: '+_fixedGOrder.map(i=>clients[i].nome.split(' ')[1]||clients[i].nome.slice(0,6)).join('\u2192'));
+          // v5.9.19: Re-rodar Directions com ordem corrigida para ETAs e polyline precisas
+          // Sem o re-request, as legs do call original (ordem TSP) ficam desalinhadas com a ordem corrigida
+          try{
+            const _fwp=orderedGeo.map(c=>_waypointFor(c));
+            const _fReq={origin:baseAddr,destination:retAddr,waypoints:_fwp,travelMode:google.maps.TravelMode.DRIVING,optimizeWaypoints:false,region:'BR'};
+            dirResult=await Promise.race([
+              new Promise((ok,err)=>new google.maps.DirectionsService().route(_fReq,(res,st)=>st==='OK'?ok(res):err(new Error(st)))),
+              new Promise((_,err)=>setTimeout(()=>err(new Error('TIMEOUT')),8000))
+            ]);
+            console.log('[FIX-WIN] Directions re-computado com ordem corrigida \u2713');
+          }catch(_fe){
+            console.warn('[FIX-WIN] Directions re-request falhou:',_fe.message,'\u2014 ETAs e polyline podem ser imprecisas');
+          }
         }
       }
     }catch(dirErr){
