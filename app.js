@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.29';
+const APP_VERSION='v5.9.30';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -5907,7 +5907,18 @@ async function nominatim(addr,client){
   const _hasDash=addr.includes('\u2014');
   const _qAddr=_hasDash?addr.replace(/\s*\u2014\s*/g,', '):addr;
   const _stateStr=_geoAnchor?.state||'';
-  const _query=_stateStr?(_qAddr+', '+_stateStr+', Brasil'):(_qAddr+', Brasil');
+  const _cityStr=_geoAnchor?.city||'';
+  // v5.9.30: se o endereço já contém "brasil" (fallbacks CEP/em-dash já montaram query completa),
+  // NÃO adicionar estado novamente — evita "SP, Brasil, SP, Brasil" que confunde o geocoder.
+  // Se não tem "brasil" mas tem cidade âncora, incluir cidade+estado para melhorar precisão
+  // (ex: "Rua Isabel de Castela, 330" → "Rua Isabel de Castela, 330, São Paulo, SP, Brasil").
+  const _qHasBrasil=/\bbrasil\b/i.test(_qAddr);
+  const _qHasCity=_cityStr?new RegExp(_cityStr.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(_qAddr):false;
+  const _query=_qHasBrasil?_qAddr:(
+    _cityStr&&!_qHasCity&&_stateStr?(_qAddr+', '+_cityStr+', '+_stateStr+', Brasil'):
+    _stateStr?(_qAddr+', '+_stateStr+', Brasil'):
+    (_qAddr+', Brasil')
+  );
   // ── Tentativa 1: OSM por endereço ────────────────────────────────────────
   try{
     const _c=new AbortController();const _t=setTimeout(()=>_c.abort(),8000);
