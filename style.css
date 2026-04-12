@@ -76,12 +76,12 @@ body.dark .card:hover{background:rgba(255,255,255,.06);box-shadow:0 4px 8px rgba
 .btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none;transform:none}
 .bp{background:linear-gradient(135deg,#6C5CE7,#8b5cf6);color:#fff;border:none}.bp:hover{box-shadow:0 4px 16px rgba(108,92,231,.3)}
 body.dark .bp{background:linear-gradient(135deg,#7c6cf0,#a78bfa)}
-/* v5.9.22 — Botão de progresso de rota */
-#route-btn.rp-progressing{background:#3d2fa0 !important;cursor:default !important;pointer-events:none !important;box-shadow:none !important;position:relative;overflow:hidden;transform:none !important}
-#route-btn.rp-progressing::before{content:'';position:absolute;inset:0;width:var(--rp-pct,4%);background:linear-gradient(135deg,#6C5CE7,#8b5cf6);transition:width .55s cubic-bezier(.4,0,.2,1);border-radius:inherit}
-#route-btn.rp-progressing .rp-step{position:relative;z-index:1;font-size:12.5px;font-weight:600;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-body.dark #route-btn.rp-progressing{background:#2d2270 !important}
-body.dark #route-btn.rp-progressing::before{background:linear-gradient(135deg,#7c6cf0,#a78bfa)}
+/* v5.9.23 — Barra de progresso dentro do bloco #rp */
+.rp{flex-direction:column;gap:5px}
+.rp-hd{display:flex;align-items:center;gap:8px}
+.rp-track{width:100%;height:3px;background:rgba(108,92,231,.18);border-radius:4px;overflow:hidden}
+.rp-fill{height:100%;width:4%;background:#6C5CE7;border-radius:4px;transition:width .55s cubic-bezier(.4,0,.2,1)}
+.rp-lbl{font-size:11px;color:var(--mu);font-weight:400;line-height:1}
 .bo{background:rgba(255,255,255,.8);color:var(--tx);border-color:var(--bd)}.bo:hover{background:#fff;border-color:rgba(108,92,231,.2);box-shadow:0 2px 8px rgba(108,92,231,.1)}
 body.dark .bo{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.1);color:#e4e4e7}body.dark .bo:hover{background:rgba(255,255,255,.14)}
 .bg{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none}.bg:hover{box-shadow:0 4px 16px rgba(34,197,94,.3)}
