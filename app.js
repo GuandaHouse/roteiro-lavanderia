@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.21';
+const APP_VERSION='v5.9.22';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -6052,6 +6052,34 @@ function clientDeadlineMin(c){
   return 24*60; // sem restrição
 }
 
+// v5.9.22: Progresso visual no botão "Gerar rota"
+const _RP_ICON='<span class="mot-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg></span> ';
+const _RP_STEPS=[
+  {pct:4,  label:'Preparando rota\u2026'},
+  {pct:18, label:'Localizando endere\xE7os\u2026'},
+  {pct:38, label:'Calculando dist\xE2ncias\u2026'},
+  {pct:56, label:'Encontrando a melhor ordem\u2026'},
+  {pct:74, label:'Tra\xE7ando rota com tr\xE2nsito\u2026'},
+  {pct:88, label:'Ajustando hor\xE1rios\u2026'},
+  {pct:97, label:'Finalizando\u2026'},
+];
+function _routeProgress(stepIdx){
+  const btn=g('route-btn');if(!btn)return;
+  const s=_RP_STEPS[Math.min(stepIdx,_RP_STEPS.length-1)];
+  btn.classList.add('rp-progressing');
+  btn.style.setProperty('--rp-pct',s.pct+'%');
+  btn.innerHTML='<span class="rp-step">'+s.label+'</span>';
+}
+function _routeProgressDone(){
+  const btn=g('route-btn');if(!btn)return;
+  // Completa rapidamente até 100% e depois restaura
+  btn.style.setProperty('--rp-pct','100%');
+  setTimeout(()=>{
+    btn.classList.remove('rp-progressing');
+    btn.style.removeProperty('--rp-pct');
+    btn.innerHTML=_RP_ICON+'<span data-i18n="btn.generate">Gerar rota</span>';
+  },420);
+}
 // v4.8.5: Wrapper de timing para capturar dead time percebido
 let _calcRouteClickTime=0;
 function calcRouteClick(){
@@ -6071,6 +6099,7 @@ async function calcRoute(){
   }
   g('rp').classList.add('on');
   g('route-btn').disabled=true;
+  _routeProgress(0); // Passo 0: Preparando
   try{
     // v4.8.1: INSTRUMENTACAO DE PERFORMANCE — timing de cada etapa
     const _perf={start:performance.now()};
@@ -6079,6 +6108,7 @@ async function calcRoute(){
     await _resolveGeoAnchor();
     _perf.anchor=performance.now();
     console.log('[CALC-ROUTE] 1/6 Ancora: '+Math.round(_perf.anchor-_perf.start)+'ms');
+    _routeProgress(1); // Passo 1: Localizando endereços
     // v4.8.0: Geocode clients in parallel batches (5 at a time) instead of sequential
     const notFound=[];
     const needGeo=clients.filter(c=>!c.lat||!c.lng);
@@ -6102,6 +6132,7 @@ async function calcRoute(){
     _perf.geocode=performance.now();
     console.log('[CALC-ROUTE] 2/6 Geocoding ('+needGeo.length+' precisavam): '+Math.round(_perf.geocode-_perf.anchor)+'ms');
     if(notFound.length)toast(t('err.addr_not_found')+': '+notFound.join(', '),'warn');
+    _routeProgress(2); // Passo 2: Calculando distâncias
     const geocodedIdx=[];
     for(let i=0;i<clients.length;i++){if(clients[i].lat&&clients[i].lng)geocodedIdx.push(i);}
     const geocoded=geocodedIdx.map(i=>clients[i]);
@@ -6162,6 +6193,7 @@ async function calcRoute(){
     retCoords=retGeo?{lat:retGeo.lat,lng:retGeo.lng}:{...baseCoords};
     _perf.baseRet=performance.now();
     console.log('[CALC-ROUTE] 3/6 Base+Retorno: '+Math.round(_perf.baseRet-_perf.geocode)+'ms');
+    _routeProgress(3); // Passo 3: Encontrando a melhor ordem
     // Otimizar via motor v2 (matriz + heurísticas + SA)
     toast(t('msg.optimizing'),'');
     const optV2=await optimizeRouteV2(geocodedIdx,baseCoords,retCoords);
@@ -6206,6 +6238,7 @@ async function calcRoute(){
     let orderedGeo=_geoForWP.map(i=>clients[i]);
     const waypoints=orderedGeo.map(c=>_waypointFor(c));
     let dirResult;
+    _routeProgress(4); // Passo 4: Traçando rota com trânsito
     try{
       _perf.dirStart=performance.now();
       // v5.8.23: Tenta primeiro com tráfego em tempo real; se falhar (INVALID_REQUEST), retry sem drivingOptions
@@ -6256,6 +6289,7 @@ async function calcRoute(){
       }
     }catch(dirErr){
       console.warn('[ROTA] Google Directions falhou:',dirErr.message,'→ usando estimativas da matriz');
+      _routeProgressDone();
       // Usar ETAs da matriz cacheada
       recalcETAsFromCache();
       renderC();updStats();saveHist();
@@ -6306,9 +6340,11 @@ async function calcRoute(){
     }
     gMap.addListener('click',()=>{if(_activeInfoWindow){_activeInfoWindow.close();_activeInfoWindow=null;}});
     const bnds=new google.maps.LatLngBounds();orderedGeo.forEach(c=>bnds.extend({lat:c.lat,lng:c.lng}));gMap.fitBounds(bnds,{top:40,bottom:40,left:40,right:40});google.maps.event.addListenerOnce(gMap,'idle',()=>{if(gMap.getZoom()>16)gMap.setZoom(16);if(gMap.getZoom()<10)gMap.setZoom(10);});if(orderedGeo.length===1)gMap.setZoom(15);
+    _routeProgress(5); // Passo 5: Ajustando horários
     // ETAs via Google Directions (precisos, com trânsito em tempo real v5.8.22)
     const legsDur=legs.map(l=>({duration:(l.duration_in_traffic||l.duration).value}));
     estimateTimesOSRM(legsDur);
+    _routeProgress(6); // Passo 6: Finalizando
     // v5.9.21: Calcular ETA de chegada no endereço de retorno
     // Último leg = último cliente → endereço de retorno (já inclui tráfego real)
     const _lastGeoClient=order.filter(i=>clients[i]&&clients[i].lat&&clients[i].lng).map(i=>clients[i]).pop();
@@ -6327,8 +6363,9 @@ async function calcRoute(){
     console.log('[CALC-ROUTE] Breakdown: Ancora='+Math.round((_perf.anchor-_perf.start))+'ms | Geocode='+Math.round((_perf.geocode-_perf.anchor))+'ms | Base/Ret='+Math.round((_perf.baseRet-_perf.geocode))+'ms | OptV2='+Math.round((_perf.optimize-_perf.baseRet))+'ms | GDir='+Math.round(((_perf.dirEnd||_perf.optimize)-_perf.optimize))+'ms | Render='+Math.round((_perf.end-(_perf.dirEnd||_perf.optimize)))+'ms');
     // v4.8.5: Timing percebido (desde clique do botão até fim completo)
     if(_calcRouteClickTime>0){console.log('[PERF] TOTAL PERCEBIDO (clique→fim): '+Math.round(_perf.end-_calcRouteClickTime)+'ms');_calcRouteClickTime=0;}
+    _routeProgressDone();
     toast(t('t.optimized')+urgMsg,'ok');
-  }catch(e){toast(t('e.calc')+': '+e.message,'err');console.error(e);}
+  }catch(e){_routeProgressDone();toast(t('e.calc')+': '+e.message,'err');console.error(e);}
   finally{g('rp').classList.remove('on');g('route-btn').disabled=!clients.length;}
 }
 
