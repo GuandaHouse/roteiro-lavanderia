@@ -419,7 +419,7 @@ function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{const
    Paleta de 12 cores pr\xe9-selecionadas (estilo Trello).
    ══════════════════════════════════════════════════════════════ */
 // Versão do app — atualizar aqui reflete automaticamente no rodapé de Configurações
-const APP_VERSION='v5.9.38';
+const APP_VERSION='v5.9.39';
 // v5.8.25: margem de segurança nas ETAs (+20 min) — compensa ausência de trânsito em tempo real
 // v5.8.28: ETA_BUFFER agora é dinâmico via cfg.etaBuffer (configurável pelo usuário, padrão 20 min)
 function _getEtaBufferSec(){return((cfg&&cfg.etaBuffer!==undefined?cfg.etaBuffer:20)|0)*60;}
@@ -6017,7 +6017,7 @@ async function nominatim(addr,client){
   // Usamos esses dados para montar uma query OSM muito mais específica e confiável
   // do que o nome de rua incompleto digitado pelo usuário.
   // NÃO tentamos geocodificar o CEP diretamente (OSM não indexa CEPs bare).
-  let _fbCep='',_vcLogr='',_vcBairro='',_vcCity='',_vcUf='';
+  let _fbCep='',_vcLogr='',_vcBairro='',_vcCity='',_vcUf='',_detectedClientCity='';
   const _origParts=_parseAddrParts(addr);
   // 1º: ViaCEP pelo nome da rua (Correios — fonte autoritativa)
   // v5.9.15: tenta cidade do próprio endereço do cliente ANTES de usar _geoAnchor.city
@@ -6028,7 +6028,11 @@ async function nominatim(addr,client){
       // (ex: "Bonnard, 132 B, Apto 365" → "Bonnard"). Sem isso, números e complementos
       // embutidos no logr (quando _parseAddrParts não extrai num separado, ex: "132 B")
       // quebram a busca ViaCEP que espera apenas o nome da rua.
-      const _rua=(_origParts.logr.replace(/^(rua|avenida|av\.|alameda|al\.|estrada|travessa|praça)\s+/i,'').trim().split(',')[0].trim()).slice(0,40);
+      const _ruaRaw=(_origParts.logr.replace(/^(rua|avenida|av\.|alameda|al\.|estrada|travessa|praça)\s+/i,'').trim().split(',')[0].trim()).slice(0,40);
+      // v5.9.39: Bug1 "Tabajaras no 100ap" → strip "no/nº NNN" informal embutido no nome
+      // v5.9.39: Bug3 "Lázaro Rodrigues 409" → strip número final sem vírgula separador
+      const _ruaVC=_ruaRaw.replace(/\s+n[oºô°][.]?\s*\d+.*/i,'').replace(/\s+\d+\w*\s*$/,'').trim();
+      const _rua=_ruaVC.length>=4?_ruaVC:_ruaRaw;
       if(_rua.length>=5){
         // Extrai cidade do endereço do cliente (último segmento após —)
         const _addrSegments=addr.split('\u2014').map(s=>s.trim()).filter(Boolean);
@@ -6036,7 +6040,15 @@ async function nominatim(addr,client){
         // v5.9.38: ignora segmentos que são instruções de entrega (ex: "Na Portaria", "Apto 42", "Bl B")
         // Critério: segmento com preposição inicial OU só dígitos/complemento → não é nome de cidade
         const _isInstruction=_cityRaw&&/^(na|no|ao|para|em|ap|apto|bloco|bl|loja|sl|sala|cj|andar|fund)\b/i.test(_cityRaw);
-        const _clientCityGuess=_isInstruction?'':_cityRaw;
+        let _clientCityGuess=_isInstruction?'':_cityRaw;
+        // v5.9.39: Bug4 — quando último seg é instrução (ex: "Bloco andina"), extrai cidade do penúltimo seg
+        // Ex: "Av. X, 461 — Jaguaribe, Osasco - Sp — Bloco andina, Apto 93" → "Jaguaribe, Osasco - Sp" → "Osasco"
+        if(_isInstruction&&_addrSegments.length>=3){
+          const _penultSeg=_addrSegments[_addrSegments.length-2];
+          const _lci=_penultSeg.lastIndexOf(',');
+          const _penultCity=(_lci>=0?_penultSeg.slice(_lci+1):_penultSeg).replace(/\s*[-–]\s*[A-Za-z]{2}\s*$/,'').trim();
+          if(_penultCity&&_penultCity.length>=3&&!/^\d/.test(_penultCity)){_clientCityGuess=_penultCity;_detectedClientCity=_penultCity;}
+        } else if(_clientCityGuess){_detectedClientCity=_clientCityGuess;}
         const _anchorCity=_geoAnchor?.city||'';
         // Lista de cidades para tentar: cidade extraída do addr (se diferente da âncora) + âncora
         const _citiesToTry=[...new Set([_clientCityGuess,_anchorCity].filter(c=>c&&c.length>1))];
@@ -6146,7 +6158,9 @@ async function nominatim(addr,client){
     const _proxNum=_origParts.num||'';
     const _proxUf=_vcUf||_geoAnchor.state||'';
     if(_proxStreet&&_proxUf){
-      const _proxQuery=[_proxStreet,_proxNum,_proxUf,'Brasil'].filter(Boolean).join(', ');
+      // v5.9.39: inclui cidade detectada nos segmentos para melhor precisão (ex: Osasco ao invés de só SP)
+      const _proxCity=_vcCity||_detectedClientCity||'';
+      const _proxQuery=[_proxStreet,_proxNum,_proxCity,_proxUf,'Brasil'].filter(Boolean).join(', ');
       try{
         const _c4=new AbortController();const _t4=setTimeout(()=>_c4.abort(),8000);
         const d4=await _geocodeProxy(
